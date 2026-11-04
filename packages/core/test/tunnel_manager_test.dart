@@ -289,6 +289,18 @@ void main() {
     expect(store.tunnels, [proxy]);
   });
 
+  test('handle runs each command', () async {
+    final manager = await loaded();
+    const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
+
+    await manager.handle(const AgentCommand.save(added));
+    await manager.handle(const AgentCommand.toggle('a1'));
+    await manager.handle(const AgentCommand.remove('b2'));
+
+    expect(manager.snapshot.tunnels, [database, added]);
+    expect(manager.snapshot.statusOf('a1'), const Connected());
+  });
+
   test('close stops every tunnel, ends changes, and is idempotent', () async {
     when(openAnySocksProxy).thenAnswer(abortable);
     final manager = await loaded();
