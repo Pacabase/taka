@@ -16,7 +16,7 @@ permissions:
 jobs:
   core:
     name: core (${{ matrix.os }})
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -24,16 +24,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     defaults:
       run:
-        working-directory: packages/taka_core
+        working-directory: packages/core
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/flutter
-      - run: fvm dart pub get --enforce-lockfile
-      - run: fvm dart format --output=none --set-exit-if-changed .
-      - run: fvm dart analyze --fatal-infos
-      - run: fvm dart test --tags unit
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+        with:
+          # The Dart that ships with the Flutter in .fvmrc.
+          sdk: 3.13.7
+      - run: dart pub get --enforce-lockfile
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: dart analyze --fatal-infos
+      - run: dart test --tags unit
 
   # The one required check, so jobs can be added without touching branch rules.
   ci:

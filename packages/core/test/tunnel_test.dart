@@ -1,8 +1,8 @@
 @Tags(['unit'])
 library;
 
+import 'package:core/core.dart';
 import 'package:system_ssh/system_ssh.dart';
-import 'package:taka_core/taka_core.dart';
 import 'package:test/test.dart';
 
 void main() {

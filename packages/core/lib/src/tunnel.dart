@@ -8,7 +8,6 @@ enum TunnelKind { local, socks }
 @freezed
 sealed class const Tunnel._() with _$Tunnel {
   /// [sshHost] is a `~/.ssh/config` alias, a host or `user@host`.
-  /// [remoteHost] and [remotePort] are for [TunnelKind.local] only.
   const factory({
     required String id,
     @Default('') String name,
@@ -49,7 +48,6 @@ sealed class const Tunnel._() with _$Tunnel {
 
   String get title => name.isNotEmpty ? name : summary;
 
-  /// What to point a client at once the tunnel is up.
   String get address => switch (kind) {
     TunnelKind.local => 'localhost:$localPort',
     TunnelKind.socks => 'socks5h://localhost:$localPort',

@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:taka_core/src/paths.dart';
-import 'package:taka_core/src/tunnel.dart';
-import 'package:taka_core/src/tunnel_store.dart';
+import 'package:core/src/paths.dart';
+import 'package:core/src/tunnel.dart';
+import 'package:core/src/tunnel_store.dart';
 
-/// Tunnels in a JSON file. Nothing secret goes in it: keys stay with the ssh
-/// agent.
 class LocalTunnelStore({required final File file}) implements TunnelStore {
   static const _version = 1;
 

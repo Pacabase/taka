@@ -4,7 +4,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:taka_core/taka_core.dart';
+import 'package:core/core.dart';
 import 'package:test/test.dart';
 
 void main() {

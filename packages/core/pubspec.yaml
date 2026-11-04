@@ -1,4 +1,4 @@
-name: taka_core
+name: core
 description: Taka's tunnels, their store, the code that runs them, and the protocol between the app and its agent.
 
 publish_to: 'none'
