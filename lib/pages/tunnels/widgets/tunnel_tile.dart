@@ -33,11 +33,10 @@ class const TunnelTile({
         mainAxisSize: MainAxisSize.min,
         children: [
           Switch(value: status.isOn, onChanged: (_) => onToggle()),
-          PopupMenuButton<void Function()>(
-            onSelected: (action) => action(),
+          PopupMenuButton<void>(
             itemBuilder: (context) => [
-              PopupMenuItem(value: onEdit, child: const Text('Edit')),
-              PopupMenuItem(value: onDelete, child: const Text('Delete')),
+              PopupMenuItem(onTap: onEdit, child: const Text('Edit')),
+              PopupMenuItem(onTap: onDelete, child: const Text('Delete')),
             ],
           ),
         ],

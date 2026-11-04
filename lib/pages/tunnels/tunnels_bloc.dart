@@ -17,10 +17,6 @@ class TunnelsBloc({required AgentClient agent})
       emit(const Closed());
     });
 
-    on<Save>((event, emit) => agent.send(AgentCommand.save(event.tunnel)));
-
-    on<Remove>((event, emit) => agent.send(AgentCommand.remove(event.id)));
-
-    on<Toggle>((event, emit) => agent.send(AgentCommand.toggle(event.id)));
+    on<Send>((event, emit) => agent.send(event.command));
   }
 }

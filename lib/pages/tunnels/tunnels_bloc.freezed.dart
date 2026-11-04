@@ -56,14 +56,12 @@ extension TunnelsEventPatterns on TunnelsEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Started value)?  started,TResult Function( Save value)?  save,TResult Function( Remove value)?  remove,TResult Function( Toggle value)?  toggle,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Started value)?  started,TResult Function( Send value)?  send,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Started() when started != null:
-return started(_that);case Save() when save != null:
-return save(_that);case Remove() when remove != null:
-return remove(_that);case Toggle() when toggle != null:
-return toggle(_that);case _:
+return started(_that);case Send() when send != null:
+return send(_that);case _:
   return orElse();
 
 }
@@ -81,14 +79,12 @@ return toggle(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Started value)  started,required TResult Function( Save value)  save,required TResult Function( Remove value)  remove,required TResult Function( Toggle value)  toggle,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Started value)  started,required TResult Function( Send value)  send,}){
 final _that = this;
 switch (_that) {
 case Started():
-return started(_that);case Save():
-return save(_that);case Remove():
-return remove(_that);case Toggle():
-return toggle(_that);}
+return started(_that);case Send():
+return send(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -102,14 +98,12 @@ return toggle(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Started value)?  started,TResult? Function( Save value)?  save,TResult? Function( Remove value)?  remove,TResult? Function( Toggle value)?  toggle,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Started value)?  started,TResult? Function( Send value)?  send,}){
 final _that = this;
 switch (_that) {
 case Started() when started != null:
-return started(_that);case Save() when save != null:
-return save(_that);case Remove() when remove != null:
-return remove(_that);case Toggle() when toggle != null:
-return toggle(_that);case _:
+return started(_that);case Send() when send != null:
+return send(_that);case _:
   return null;
 
 }
@@ -126,13 +120,11 @@ return toggle(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function( AgentCommand command)?  send,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Started() when started != null:
-return started();case Save() when save != null:
-return save(_that.tunnel);case Remove() when remove != null:
-return remove(_that.id);case Toggle() when toggle != null:
-return toggle(_that.id);case _:
+return started();case Send() when send != null:
+return send(_that.command);case _:
   return orElse();
 
 }
@@ -150,13 +142,11 @@ return toggle(_that.id);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function( AgentCommand command)  send,}) {final _that = this;
 switch (_that) {
 case Started():
-return started();case Save():
-return save(_that.tunnel);case Remove():
-return remove(_that.id);case Toggle():
-return toggle(_that.id);}
+return started();case Send():
+return send(_that.command);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -170,13 +160,11 @@ return toggle(_that.id);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function( AgentCommand command)?  send,}) {final _that = this;
 switch (_that) {
 case Started() when started != null:
-return started();case Save() when save != null:
-return save(_that.tunnel);case Remove() when remove != null:
-return remove(_that.id);case Toggle() when toggle != null:
-return toggle(_that.id);case _:
+return started();case Send() when send != null:
+return send(_that.command);case _:
   return null;
 
 }
@@ -219,65 +207,65 @@ String toString() {
 /// @nodoc
 
 
-class Save implements TunnelsEvent {
-  const Save(this.tunnel);
+class Send implements TunnelsEvent {
+  const Send(this.command);
   
 
- final  Tunnel tunnel;
+ final  AgentCommand command;
 
 /// Create a copy of TunnelsEvent
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$SaveCopyWith<Save> get copyWith => _$SaveCopyWithImpl<Save>(this, _$identity);
+$SendCopyWith<Send> get copyWith => _$SendCopyWithImpl<Send>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Save&&(identical(other.tunnel, tunnel) || other.tunnel == tunnel));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Send&&(identical(other.command, command) || other.command == command));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,tunnel);
+    return Object.hash(runtimeType,command);
 }
 
 @override
 String toString() {
-    return 'TunnelsEvent.save(tunnel: $tunnel)';
+    return 'TunnelsEvent.send(command: $command)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class $SaveCopyWith<$Res> implements $TunnelsEventCopyWith<$Res> {
-  factory $SaveCopyWith(Save value, $Res Function(Save) _then) = _$SaveCopyWithImpl;
+abstract mixin class $SendCopyWith<$Res> implements $TunnelsEventCopyWith<$Res> {
+  factory $SendCopyWith(Send value, $Res Function(Send) _then) = _$SendCopyWithImpl;
 @useResult
 $Res call({
- Tunnel tunnel
+ AgentCommand command
 });
 
 
-$TunnelCopyWith<$Res> get tunnel;
+$AgentCommandCopyWith<$Res> get command;
 
 }
 /// @nodoc
-class _$SaveCopyWithImpl<$Res>
-    implements $SaveCopyWith<$Res> {
-  _$SaveCopyWithImpl(this._self, this._then);
+class _$SendCopyWithImpl<$Res>
+    implements $SendCopyWith<$Res> {
+  _$SendCopyWithImpl(this._self, this._then);
 
-  final Save _self;
-  final $Res Function(Save) _then;
+  final Send _self;
+  final $Res Function(Send) _then;
 
 /// Create a copy of TunnelsEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? tunnel = null,}) {
-  return _then(Save(
-null == tunnel ? _self.tunnel : tunnel // ignore: cast_nullable_to_non_nullable
-as Tunnel,
+@pragma('vm:prefer-inline') $Res call({Object? command = null,}) {
+  return _then(Send(
+null == command ? _self.command : command // ignore: cast_nullable_to_non_nullable
+as AgentCommand,
   ));
 }
 
@@ -285,148 +273,12 @@ as Tunnel,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$TunnelCopyWith<$Res> get tunnel {
+$AgentCommandCopyWith<$Res> get command {
   
-  return $TunnelCopyWith<$Res>(_self.tunnel, (value) {
-    return _then(_self.copyWith(tunnel: value));
+  return $AgentCommandCopyWith<$Res>(_self.command, (value) {
+    return _then(_self.copyWith(command: value));
   });
 }
-}
-
-/// @nodoc
-
-
-class Remove implements TunnelsEvent {
-  const Remove(this.id);
-  
-
- final  String id;
-
-/// Create a copy of TunnelsEvent
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$RemoveCopyWith<Remove> get copyWith => _$RemoveCopyWithImpl<Remove>(this, _$identity);
-
-
-
-@override
-bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Remove&&(identical(other.id, id) || other.id == id));
-}
-
-
-@override
-int get hashCode {
-    return Object.hash(runtimeType,id);
-}
-
-@override
-String toString() {
-    return 'TunnelsEvent.remove(id: $id)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $RemoveCopyWith<$Res> implements $TunnelsEventCopyWith<$Res> {
-  factory $RemoveCopyWith(Remove value, $Res Function(Remove) _then) = _$RemoveCopyWithImpl;
-@useResult
-$Res call({
- String id
-});
-
-
-
-
-}
-/// @nodoc
-class _$RemoveCopyWithImpl<$Res>
-    implements $RemoveCopyWith<$Res> {
-  _$RemoveCopyWithImpl(this._self, this._then);
-
-  final Remove _self;
-  final $Res Function(Remove) _then;
-
-/// Create a copy of TunnelsEvent
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? id = null,}) {
-  return _then(Remove(
-null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,
-  ));
-}
-
-
-}
-
-/// @nodoc
-
-
-class Toggle implements TunnelsEvent {
-  const Toggle(this.id);
-  
-
- final  String id;
-
-/// Create a copy of TunnelsEvent
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$ToggleCopyWith<Toggle> get copyWith => _$ToggleCopyWithImpl<Toggle>(this, _$identity);
-
-
-
-@override
-bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Toggle&&(identical(other.id, id) || other.id == id));
-}
-
-
-@override
-int get hashCode {
-    return Object.hash(runtimeType,id);
-}
-
-@override
-String toString() {
-    return 'TunnelsEvent.toggle(id: $id)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $ToggleCopyWith<$Res> implements $TunnelsEventCopyWith<$Res> {
-  factory $ToggleCopyWith(Toggle value, $Res Function(Toggle) _then) = _$ToggleCopyWithImpl;
-@useResult
-$Res call({
- String id
-});
-
-
-
-
-}
-/// @nodoc
-class _$ToggleCopyWithImpl<$Res>
-    implements $ToggleCopyWith<$Res> {
-  _$ToggleCopyWithImpl(this._self, this._then);
-
-  final Toggle _self;
-  final $Res Function(Toggle) _then;
-
-/// Create a copy of TunnelsEvent
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? id = null,}) {
-  return _then(Toggle(
-null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,
-  ));
-}
-
-
 }
 
 /// @nodoc

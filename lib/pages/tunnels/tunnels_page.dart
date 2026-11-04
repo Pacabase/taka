@@ -29,11 +29,11 @@ class const TunnelsPage({super.key}) extends StatelessWidget {
                   tunnel: tunnel,
                   status: snapshot.statusOf(tunnel.id),
                   onToggle: () => context.read<TunnelsBloc>().add(
-                    TunnelsEvent.toggle(tunnel.id),
+                    TunnelsEvent.send(AgentCommand.toggle(tunnel.id)),
                   ),
                   onEdit: () => _edit(context, tunnel),
                   onDelete: () => context.read<TunnelsBloc>().add(
-                    TunnelsEvent.remove(tunnel.id),
+                    TunnelsEvent.send(AgentCommand.remove(tunnel.id)),
                   ),
                 ),
             ],
@@ -49,6 +49,6 @@ class const TunnelsPage({super.key}) extends StatelessWidget {
       context: context,
       builder: (context) => TunnelForm(initial: tunnel),
     );
-    if (saved != null) bloc.add(TunnelsEvent.save(saved));
+    if (saved != null) bloc.add(TunnelsEvent.send(AgentCommand.save(saved)));
   }
 }

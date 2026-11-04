@@ -40,6 +40,7 @@ class _TunnelFormState extends State<TunnelForm> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.initial == null ? 'Add tunnel' : 'Edit tunnel'),
+      scrollable: true,
       content: SizedBox(
         width: 420,
         child: Form(
@@ -90,15 +91,17 @@ class _TunnelFormState extends State<TunnelForm> {
   }) => TextFormField(
     controller: controller,
     decoration: InputDecoration(labelText: label, hintText: hint),
-    validator: (value) {
-      final text = value?.trim() ?? '';
-      if (text.isEmpty) return 'Required';
-      if (!isPort) return null;
-
-      final port = int.tryParse(text, radix: 10);
-      return port == null || port < 1 || port > 65535 ? '1 to 65535' : null;
+    validator: (value) => switch (value!.trim()) {
+      '' => 'Required',
+      final text when isPort && _port(text) == null => '1 to 65535',
+      _ => null,
     },
   );
+
+  int? _port(String text) => switch (int.tryParse(text, radix: 10)) {
+    final port? when port >= 1 && port <= 65535 => port,
+    _ => null,
+  };
 
   void _save() {
     if (!_form.currentState!.validate()) return;
@@ -113,9 +116,9 @@ class _TunnelFormState extends State<TunnelForm> {
         name: _name.text.trim(),
         kind: _kind,
         sshHost: _sshHost.text.trim(),
-        localPort: int.parse(_localPort.text.trim()),
+        localPort: _port(_localPort.text.trim())!,
         remoteHost: isLocal ? _remoteHost.text.trim() : null,
-        remotePort: isLocal ? int.parse(_remotePort.text.trim()) : null,
+        remotePort: isLocal ? _port(_remotePort.text.trim()) : null,
       ),
     );
   }

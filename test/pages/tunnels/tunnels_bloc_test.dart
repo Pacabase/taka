@@ -39,18 +39,12 @@ void main() {
 
   setUp(() => agent = FakeAgent());
 
-  test('toString is the class name', () async {
-    final bloc = TunnelsBloc(agent: agent);
-    addTearDown(bloc.close);
-
-    expect('$bloc', 'TunnelsBloc');
-  });
-
-  test('starts Loading', () async {
+  test('starts Loading and names itself', () async {
     final bloc = TunnelsBloc(agent: agent);
     addTearDown(bloc.close);
 
     expect(bloc.state, const Loading());
+    expect('$bloc', 'TunnelsBloc');
   });
 
   blocTest<TunnelsBloc, TunnelsState>(
@@ -80,12 +74,12 @@ void main() {
   );
 
   blocTest<TunnelsBloc, TunnelsState>(
-    'hands save, remove and toggle to the agent',
+    'hands each command to the agent in order',
     build: () => TunnelsBloc(agent: agent),
     act: (bloc) => bloc
-      ..add(const TunnelsEvent.save(database))
-      ..add(const TunnelsEvent.toggle('a1'))
-      ..add(const TunnelsEvent.remove('a1')),
+      ..add(const TunnelsEvent.send(AgentCommand.save(database)))
+      ..add(const TunnelsEvent.send(AgentCommand.toggle('a1')))
+      ..add(const TunnelsEvent.send(AgentCommand.remove('a1'))),
     expect: () => const <TunnelsState>[],
     verify: (_) => expect(agent.sent, const [
       AgentCommand.save(database),
