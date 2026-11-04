@@ -9,8 +9,6 @@ import 'package:test/test.dart';
 import 'fakes/fakes.dart';
 
 void main() {
-  Object? throughJson(Object? json) => jsonDecode(jsonEncode(json));
-
   group('AgentCommand', () {
     for (final command in const [
       AgentCommand.save(database),
@@ -19,15 +17,14 @@ void main() {
     ]) {
       test('$command round-trips', () {
         expect(
-          AgentCommand.fromJson(
-            throughJson(command.toJson())! as Map<String, Object?>,
-          ),
+          AgentCommand.fromJson(jsonDecode(jsonEncode(command.toJson()))),
           command,
         );
       });
     }
 
     for (final json in [
+      {'command': 'reboot'},
       {'command': 'remove'},
       {'command': 'toggle', 'id': 3},
       {
@@ -40,12 +37,5 @@ void main() {
         expect(() => AgentCommand.fromJson(json), throwsFormatException);
       });
     }
-
-    test('an unknown command is a FormatException', () {
-      expect(
-        () => AgentCommand.fromJson({'command': 'reboot'}),
-        throwsFormatException,
-      );
-    });
   });
 }

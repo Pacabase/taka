@@ -15,8 +15,9 @@ abstract interface class AgentClient {
 }
 
 class SocketAgentClient(final Socket _socket) implements AgentClient {
-  final _snapshots = StreamController<TunnelsSnapshot>();
-  StreamSubscription<String>? _lines;
+  this {
+    _socket.done.ignore();
+  }
 
   static Future<SocketAgentClient> connect(String path) async =>
       SocketAgentClient(
@@ -24,39 +25,20 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
           InternetAddress(path, type: InternetAddressType.unix),
           0,
         ),
-      ).._listen();
-
-  void _listen() => _lines = utf8.decoder
-      .bind(_socket)
-      .transform(const LineSplitter())
-      .listen(
-        _read,
-        onError: (Object _) => unawaited(close()),
-        onDone: () => unawaited(close()),
-        cancelOnError: true,
       );
 
+  // A socket error is always followed by done, so this only skips bad lines.
   @override
-  Stream<TunnelsSnapshot> get snapshots => _snapshots.stream;
-
-  void _read(String line) {
-    try {
-      _snapshots.add(TunnelsSnapshot.fromJson(jsonDecode(line)));
-    } on FormatException catch (exception) {
-      stderr.writeln('Ignoring a bad snapshot: $exception');
-    }
-  }
+  late final Stream<TunnelsSnapshot> snapshots = utf8.decoder
+      .bind(_socket)
+      .transform(const LineSplitter())
+      .map((line) => TunnelsSnapshot.fromJson(jsonDecode(line)))
+      .handleError((Object exception) => stderr.writeln('Ignoring $exception'));
 
   @override
   void send(AgentCommand command) =>
       _socket.writeln(jsonEncode(command.toJson()));
 
   @override
-  Future<void> close() async {
-    unawaited(_socket.done.catchError((Object _) => _socket));
-    _socket.destroy();
-    await _lines?.cancel();
-    // Closing a controller waits for its listener, which may never come.
-    unawaited(_snapshots.close());
-  }
+  Future<void> close() async => _socket.destroy();
 }

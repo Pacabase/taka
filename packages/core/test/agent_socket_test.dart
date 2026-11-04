@@ -1,12 +1,10 @@
 @Tags(['unit'])
 library;
 
-import 'dart:async';
 import 'dart:io';
 
+import 'package:async/async.dart';
 import 'package:core/core.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:system_ssh/system_ssh.dart';
 import 'package:test/test.dart';
 
 import 'fakes/fakes.dart';
@@ -14,16 +12,15 @@ import 'fakes/fakes.dart';
 void main() {
   late Directory directory;
   late String path;
-  late MockSshClient client;
   late TunnelManager manager;
-
-  setUpAll(() => registerFallbackValue(const SshTarget('fallback')));
 
   setUp(() async {
     directory = await Directory.systemTemp.createTemp('taka_socket');
     path = '${directory.path}/agent.sock';
-    client = MockSshClient();
-    manager = TunnelManager(store: FakeStore([database]), client: client);
+    manager = TunnelManager(
+      store: FakeStore([database]),
+      client: MockSshClient(),
+    );
     await manager.load();
   });
 
@@ -38,36 +35,33 @@ void main() {
     return server;
   }
 
-  Future<StreamIterator<TunnelsSnapshot>> connect() async {
+  Future<SocketAgentClient> connect() async {
     final agent = await SocketAgentClient.connect(path);
     addTearDown(agent.close);
-    return StreamIterator(agent.snapshots);
+    return agent;
   }
+
+  Future<StreamQueue<TunnelsSnapshot>> listen() async =>
+      StreamQueue((await connect()).snapshots);
 
   test('a client gets the snapshot when it connects', () async {
     await serve();
-    final snapshots = await connect();
 
-    expect(await snapshots.moveNext(), isTrue);
-    expect(snapshots.current, manager.snapshot);
+    expect(await (await listen()).next, manager.snapshot);
   });
 
   test('a command reaches the manager and every client sees it', () async {
     await serve();
-    final agent = await SocketAgentClient.connect(path);
-    addTearDown(agent.close);
-    final mine = StreamIterator(agent.snapshots);
-    final theirs = await connect();
-    await mine.moveNext();
-    await theirs.moveNext();
+    final agent = await connect();
+    final mine = StreamQueue(agent.snapshots);
+    final theirs = await listen();
+    await (mine.next, theirs.next).wait;
     const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
 
     agent.send(const AgentCommand.save(added));
 
-    expect(await mine.moveNext(), isTrue);
-    expect(mine.current.tunnels, [database, added]);
-    expect(await theirs.moveNext(), isTrue);
-    expect(theirs.current.tunnels, [database, added]);
+    expect((await mine.next).tunnels, [database, added]);
+    expect((await theirs.next).tunnels, [database, added]);
   });
 
   test('a bad line is ignored and the client stays connected', () async {
@@ -77,8 +71,8 @@ void main() {
       0,
     );
     addTearDown(socket.destroy);
-    final snapshots = await connect();
-    await snapshots.moveNext();
+    final snapshots = await listen();
+    await snapshots.next;
 
     socket
       ..writeln('not json')
@@ -86,18 +80,17 @@ void main() {
       ..writeln('{"command": "toggle"}');
     await manager.save(proxy);
 
-    expect(await snapshots.moveNext(), isTrue);
-    expect(snapshots.current.tunnels, [database, proxy]);
+    expect((await snapshots.next).tunnels, [database, proxy]);
   });
 
   test('snapshots end when the agent closes', () async {
     final server = await serve();
-    final snapshots = await connect();
-    await snapshots.moveNext();
+    final snapshots = await listen();
+    await snapshots.next;
 
     await server.close();
 
-    expect(await snapshots.moveNext(), isFalse);
+    expect(await snapshots.hasNext, isFalse);
     expect(File(path).existsSync(), isFalse);
   });
 
@@ -116,8 +109,7 @@ void main() {
     File(path).createSync();
 
     await serve();
-    final snapshots = await connect();
 
-    expect(await snapshots.moveNext(), isTrue);
+    expect(await (await listen()).next, manager.snapshot);
   });
 }

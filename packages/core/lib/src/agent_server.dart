@@ -7,13 +7,18 @@ import 'package:core/src/tunnel_manager.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 
 /// One JSON object per line each way: snapshots out, commands in.
-class AgentServer(
-  final ServerSocket _server,
-  final TunnelManager _manager,
-  final String _path,
-) {
+class AgentServer(final ServerSocket _server, final TunnelManager _manager) {
   final Set<Socket> _clients = {};
-  StreamSubscription<TunnelsSnapshot>? _changes;
+  late final StreamSubscription<TunnelsSnapshot> _changes;
+
+  this {
+    _changes = _manager.changes.listen((snapshot) {
+      for (final client in _clients) {
+        _send(client, snapshot);
+      }
+    });
+    _server.listen(_accept);
+  }
 
   /// Listens on [path], or returns null when another agent already does.
   static Future<AgentServer?> bind(String path, TunnelManager manager) async {
@@ -30,25 +35,15 @@ class AgentServer(
 
     await file.parent.create(recursive: true);
     try {
-      return AgentServer(await ServerSocket.bind(address, 0), manager, path)
-        .._start();
+      return AgentServer(await ServerSocket.bind(address, 0), manager);
     } on SocketException {
       return null;
     }
   }
 
-  void _start() {
-    _changes = _manager.changes.listen((snapshot) {
-      for (final client in _clients) {
-        _send(client, snapshot);
-      }
-    });
-    _server.listen(_accept);
-  }
-
   void _accept(Socket client) {
     _clients.add(client);
-    unawaited(client.done.catchError((Object _) => client));
+    client.done.ignore();
     _send(client, _manager.snapshot);
 
     utf8.decoder
@@ -62,20 +57,12 @@ class AgentServer(
         );
   }
 
-  void _handle(String line) {
-    final AgentCommand command;
+  Future<void> _handle(String line) async {
     try {
-      command = AgentCommand.fromJson(jsonDecode(line));
-    } on FormatException catch (exception) {
-      stderr.writeln('Ignoring a bad command: $exception');
-      return;
+      await _manager.handle(AgentCommand.fromJson(jsonDecode(line)));
+    } on Object catch (exception) {
+      stderr.writeln('Ignoring $line: $exception');
     }
-
-    unawaited(
-      _manager.handle(command).catchError((Object exception) {
-        stderr.writeln('$command failed: $exception');
-      }),
-    );
   }
 
   void _send(Socket client, TunnelsSnapshot snapshot) =>
@@ -86,18 +73,10 @@ class AgentServer(
     client.destroy();
   }
 
+  /// Closing the server socket also deletes its file.
   Future<void> close() async {
-    await _changes?.cancel();
+    await _changes.cancel();
     await _server.close();
-    final clients = [..._clients];
-    _clients.clear();
-    for (final client in clients) {
-      client.destroy();
-    }
-    try {
-      await File(_path).delete();
-    } on FileSystemException {
-      return;
-    }
+    [..._clients].forEach(_drop);
   }
 }
