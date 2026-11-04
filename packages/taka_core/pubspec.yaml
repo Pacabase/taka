@@ -1,0 +1,17 @@
+name: taka_core
+description: Taka's tunnels, their store, the code that runs them, and the protocol between the app and its agent.
+
+publish_to: 'none'
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  freezed_annotation: 3.1.0
+  system_ssh: 0.3.0
+
+dev_dependencies:
+  build_runner: 2.16.1
+  freezed: 4.0.1
+  lints: 6.1.0
+  test: 1.31.1

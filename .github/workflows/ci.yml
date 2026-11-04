@@ -14,10 +14,33 @@ permissions:
   contents: read
 
 jobs:
+  core:
+    name: core (${{ matrix.os }})
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: packages/taka_core
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/flutter
+      - run: fvm dart pub get --enforce-lockfile
+      - run: fvm dart format --output=none --set-exit-if-changed .
+      - run: fvm dart analyze --fatal-infos
+      - run: fvm dart test --tags unit
+
   # The one required check, so jobs can be added without touching branch rules.
   ci:
     if: always()
+    needs: [core]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - run: echo "Nothing to check yet"
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
