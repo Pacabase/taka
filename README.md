@@ -13,6 +13,7 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Say why a tunnel dropped** — today it says "Disconnected"; needs `system_ssh` to report ssh's last lines.
 - [ ] **Reconnect a dropped tunnel** with backoff and keepalive, and stop on a failure that won't heal (host key changed, port in use).
 - [ ] **Launch at login**, and reconnect the tunnels that were on.
+- [ ] **Bring up 1Password's approval prompt** — 1Password keeps it in the menu bar when the app asking isn't in front, and the agent that starts `ssh` never is; bring the agent forward first, or ship it as its own small app.
 - [ ] **Look and feel** — themes, fonts, app and tray icons, a compact window with empty and error states.
 - [ ] **Releases** — a universal `.dmg` from CI on a version tag, a Homebrew tap, and signed auto-updates.
 
