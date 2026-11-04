@@ -13,36 +13,36 @@ import 'fakes/fakes.dart';
 void main() {
   late MockSshClient client;
   late FakeStore store;
+  late FakeTunnel tunnel;
+
+  Future<SshTunnel> openAnyTunnel() => client.openTunnel(
+    any(),
+    remoteHost: any(named: 'remoteHost'),
+    remotePort: any(named: 'remotePort'),
+    localPort: any(named: 'localPort'),
+    abortTrigger: any(named: 'abortTrigger'),
+  );
+
+  Future<SshTunnel> openAnySocksProxy() => client.openSocksProxy(
+    any(),
+    localPort: any(named: 'localPort'),
+    abortTrigger: any(named: 'abortTrigger'),
+  );
+
+  Future<SshTunnel> abortable(Invocation invocation) async {
+    await (invocation.namedArguments[#abortTrigger]! as Future<void>);
+    throw const SshTunnelAbortedException();
+  }
 
   setUpAll(() => registerFallbackValue(const SshTarget('fallback')));
 
   setUp(() {
     client = MockSshClient();
     store = FakeStore([database, proxy]);
+    tunnel = FakeTunnel(15432);
+    when(openAnyTunnel).thenAnswer((_) async => tunnel);
+    when(openAnySocksProxy).thenAnswer((_) async => FakeTunnel(1080));
   });
-
-  void whenOpenTunnel(Future<SshTunnel> Function(Invocation) open) => when(
-    () => client.openTunnel(
-      any(),
-      remoteHost: any(named: 'remoteHost'),
-      remotePort: any(named: 'remotePort'),
-      localPort: any(named: 'localPort'),
-      abortTrigger: any(named: 'abortTrigger'),
-    ),
-  ).thenAnswer(open);
-
-  void whenOpenSocksProxy(Future<SshTunnel> Function(Invocation) open) => when(
-    () => client.openSocksProxy(
-      any(),
-      localPort: any(named: 'localPort'),
-      abortTrigger: any(named: 'abortTrigger'),
-    ),
-  ).thenAnswer(open);
-
-  Future<SshTunnel> abortable(Invocation invocation) async {
-    await (invocation.namedArguments[#abortTrigger]! as Future<void>);
-    throw const SshTunnelAbortedException();
-  }
 
   Future<TunnelManager> loaded() async {
     final manager = TunnelManager(store: store, client: client);
@@ -51,17 +51,19 @@ void main() {
     return manager;
   }
 
-  test('starts empty, with every tunnel stopped', () {
+  Future<TunnelManager> connecting(Future<SshTunnel> opened) async {
+    when(openAnyTunnel).thenAnswer((_) => opened);
+    final manager = await loaded();
+    unawaited(manager.toggle('a1'));
+    await pumpEventQueue();
+    return manager;
+  }
+
+  test('starts empty, then load reads the saved tunnels and says so', () async {
     final manager = TunnelManager(store: store, client: client);
     addTearDown(manager.close);
-
     expect(manager.snapshot, const TunnelsSnapshot());
     expect(manager.snapshot.statusOf('a1'), const Stopped());
-  });
-
-  test('load reads the saved tunnels and says so', () async {
-    final manager = TunnelManager(store: store, client: client);
-    addTearDown(manager.close);
     final changes = manager.changes.toList();
 
     await manager.load();
@@ -95,7 +97,6 @@ void main() {
 
   group('toggle', () {
     test('opens a local tunnel with its fields', () async {
-      whenOpenTunnel((_) async => FakeTunnel(15432));
       final manager = await loaded();
 
       await manager.toggle('a1');
@@ -113,21 +114,7 @@ void main() {
       ).called(1);
     });
 
-    test('says Connecting while ssh connects', () async {
-      final opened = Completer<SshTunnel>();
-      whenOpenTunnel((_) => opened.future);
-      final manager = await loaded();
-
-      unawaited(manager.toggle('a1'));
-      await pumpEventQueue();
-
-      expect(manager.snapshot.statusOf('a1'), const Connecting());
-      expect(manager.snapshot.statusOf('a1').isOn, isTrue);
-      opened.complete(FakeTunnel(15432));
-    });
-
     test('opens a SOCKS proxy on its port', () async {
-      whenOpenSocksProxy((_) async => FakeTunnel(1080));
       final manager = await loaded();
 
       await manager.toggle('b2');
@@ -142,9 +129,14 @@ void main() {
       ).called(1);
     });
 
+    test('says Connecting while ssh connects', () async {
+      final manager = await connecting(Completer<SshTunnel>().future);
+
+      expect(manager.snapshot.statusOf('a1'), const Connecting());
+      expect(manager.snapshot.statusOf('a1').isOn, isTrue);
+    });
+
     test('again closes an open tunnel', () async {
-      final tunnel = FakeTunnel(15432);
-      whenOpenTunnel((_) async => tunnel);
       final manager = await loaded();
       await manager.toggle('a1');
 
@@ -155,7 +147,7 @@ void main() {
     });
 
     test('again while connecting aborts it', () async {
-      whenOpenTunnel(abortable);
+      when(openAnyTunnel).thenAnswer(abortable);
       final manager = await loaded();
       final connecting = manager.toggle('a1');
       await pumpEventQueue();
@@ -168,43 +160,44 @@ void main() {
 
     test('closes a tunnel that opens after it was aborted', () async {
       final opened = Completer<SshTunnel>();
-      whenOpenTunnel((_) => opened.future);
-      final manager = await loaded();
-      final connecting = manager.toggle('a1');
-      await pumpEventQueue();
+      final manager = await connecting(opened.future);
       await manager.toggle('a1');
 
-      final late = FakeTunnel(15432);
-      opened.complete(late);
-      await connecting;
+      opened.complete(tunnel);
+      await pumpEventQueue();
 
       expect(manager.snapshot.statusOf('a1'), const Stopped());
-      expect(late.closeCount, 1);
+      expect(tunnel.closeCount, 1);
     });
 
-    test('says why ssh failed', () async {
-      whenOpenTunnel((_) => Future.error(const SshPortInUseException(15432)));
-      final manager = await loaded();
+    test('again after an abort ssh has not finished connects', () async {
+      final first = Completer<SshTunnel>();
+      final manager = await connecting(first.future);
+      await manager.toggle('a1');
+      when(openAnyTunnel).thenAnswer((_) async => tunnel);
 
       await manager.toggle('a1');
+      first.completeError(const SshTunnelAbortedException());
+      await pumpEventQueue();
 
-      expect(
-        manager.snapshot.statusOf('a1'),
-        const Failed('127.0.0.1:15432 is already in use'),
-      );
-      expect(manager.snapshot.statusOf('a1').isOn, isFalse);
+      expect(manager.snapshot.statusOf('a1'), const Connected());
     });
 
-    test('says which argument ssh rejected', () async {
-      whenOpenTunnel(
-        (_) => Future.error(ArgumentError.value('-x', 'server', 'bad host')),
-      );
-      final manager = await loaded();
+    for (final (error, message) in [
+      (const SshPortInUseException(15432), '127.0.0.1:15432 is already in use'),
+      (ArgumentError.value('-x', 'server', 'bad host'), 'bad host'),
+      (StateError('boom'), 'Bad state: boom'),
+    ]) {
+      test('says why ssh failed: $message', () async {
+        when(openAnyTunnel).thenAnswer((_) => Future.error(error));
+        final manager = await loaded();
 
-      await manager.toggle('a1');
+        await manager.toggle('a1');
 
-      expect(manager.snapshot.statusOf('a1'), const Failed('bad host'));
-    });
+        expect(manager.snapshot.statusOf('a1'), Failed(message));
+        expect(manager.snapshot.statusOf('a1').isOn, isFalse);
+      });
+    }
 
     test('fails a local tunnel without a remote host', () async {
       store = FakeStore([const Tunnel(id: 'c3', sshHost: 'web', localPort: 1)]);
@@ -218,32 +211,6 @@ void main() {
       );
     });
 
-    test('again after an abort ssh has not finished connects', () async {
-      final first = Completer<SshTunnel>();
-      final tunnel = FakeTunnel(15432);
-      final attempts = [first.future, Future<SshTunnel>.value(tunnel)];
-      whenOpenTunnel((_) => attempts.removeAt(0));
-      final manager = await loaded();
-      unawaited(manager.toggle('a1'));
-      await pumpEventQueue();
-      await manager.toggle('a1');
-
-      await manager.toggle('a1');
-      first.completeError(const SshTunnelAbortedException());
-      await pumpEventQueue();
-
-      expect(manager.snapshot.statusOf('a1'), const Connected());
-    });
-
-    test('says Failed for an error ssh does not document', () async {
-      whenOpenTunnel((_) => Future.error(StateError('boom')));
-      final manager = await loaded();
-
-      await manager.toggle('a1');
-
-      expect(manager.snapshot.statusOf('a1'), const Failed('Bad state: boom'));
-    });
-
     test('ignores an unknown id', () async {
       final manager = await loaded();
 
@@ -253,14 +220,13 @@ void main() {
     });
 
     test('can reconnect after a failure', () async {
-      var attempts = 0;
-      whenOpenTunnel((_) async {
-        if (attempts++ == 0) throw const SshTunnelException('Timed out');
-        return FakeTunnel(15432);
-      });
+      when(
+        openAnyTunnel,
+      ).thenAnswer((_) => Future.error(const SshTunnelException('Timed out')));
       final manager = await loaded();
       await manager.toggle('a1');
       expect(manager.snapshot.statusOf('a1'), const Failed('Timed out'));
+      when(openAnyTunnel).thenAnswer((_) async => tunnel);
 
       await manager.toggle('a1');
 
@@ -269,28 +235,16 @@ void main() {
   });
 
   test('connectAll opens every tunnel that is off', () async {
-    whenOpenTunnel((_) async => FakeTunnel(15432));
-    whenOpenSocksProxy((_) async => FakeTunnel(1080));
     final manager = await loaded();
     await manager.toggle('a1');
 
     await manager.connectAll();
 
     expect(manager.snapshot.connectedCount, 2);
-    verify(
-      () => client.openTunnel(
-        any(),
-        remoteHost: any(named: 'remoteHost'),
-        remotePort: any(named: 'remotePort'),
-        localPort: any(named: 'localPort'),
-        abortTrigger: any(named: 'abortTrigger'),
-      ),
-    ).called(1);
+    verify(openAnyTunnel).called(1);
   });
 
   test('disconnectAll stops every tunnel that is on', () async {
-    final tunnel = FakeTunnel(15432);
-    whenOpenTunnel((_) async => tunnel);
     final manager = await loaded();
     await manager.toggle('a1');
 
@@ -302,8 +256,6 @@ void main() {
   });
 
   test('a dropped tunnel says Disconnected', () async {
-    final tunnel = FakeTunnel(15432);
-    whenOpenTunnel((_) async => tunnel);
     final manager = await loaded();
     await manager.toggle('a1');
 
@@ -316,10 +268,7 @@ void main() {
 
   test('remove while connecting leaves no status behind', () async {
     final opened = Completer<SshTunnel>();
-    whenOpenTunnel((_) => opened.future);
-    final manager = await loaded();
-    unawaited(manager.toggle('a1'));
-    await pumpEventQueue();
+    final manager = await connecting(opened.future);
 
     await manager.remove('a1');
     opened.completeError(const SshTunnelAbortedException());
@@ -329,8 +278,6 @@ void main() {
   });
 
   test('remove closes the tunnel, forgets it and saves', () async {
-    final tunnel = FakeTunnel(15432);
-    whenOpenTunnel((_) async => tunnel);
     final manager = await loaded();
     await manager.toggle('a1');
 
@@ -343,9 +290,7 @@ void main() {
   });
 
   test('close stops every tunnel, ends changes, and is idempotent', () async {
-    final tunnel = FakeTunnel(15432);
-    whenOpenTunnel((_) async => tunnel);
-    whenOpenSocksProxy(abortable);
+    when(openAnySocksProxy).thenAnswer(abortable);
     final manager = await loaded();
     await manager.toggle('a1');
     final connecting = manager.toggle('b2');
@@ -366,14 +311,6 @@ void main() {
 
     await manager.toggle('a1');
 
-    verifyNever(
-      () => client.openTunnel(
-        any(),
-        remoteHost: any(named: 'remoteHost'),
-        remotePort: any(named: 'remotePort'),
-        localPort: any(named: 'localPort'),
-        abortTrigger: any(named: 'abortTrigger'),
-      ),
-    );
+    verifyNever(openAnyTunnel);
   });
 }

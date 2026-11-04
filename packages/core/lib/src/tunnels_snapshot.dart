@@ -63,7 +63,4 @@ sealed class const TunnelsSnapshot._() with _$TunnelsSnapshot {
   TunnelStatus statusOf(String id) => statuses[id] ?? const Stopped();
 
   int get connectedCount => statuses.values.whereType<Connected>().length;
-
-  TunnelsSnapshot withStatus(String id, TunnelStatus status) =>
-      copyWith(statuses: {...statuses, id: status});
 }
