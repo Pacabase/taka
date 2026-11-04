@@ -2,15 +2,6 @@
 
 A menu bar app for SSH tunnels and SOCKS proxies, built on [`system_ssh`](https://github.com/Pacabase/system_ssh). It runs your own `ssh`, so `~/.ssh/config`, `ProxyJump` and agents such as 1Password's work as in a terminal, and Taka stores no secrets.
 
-## How it runs
-
-Taka is one app with two processes:
-
-- **The agent** (`packages/taka_agent`) is a small background program, about 17 MB. It owns the tray icon, the saved tunnels and every `ssh`, and keeps running while the window is closed.
-- **The settings window** (this package), about 50 MB while open, starts the agent if it isn't running, talks to it over a Unix socket, and quits when it closes.
-
-`packages/taka_core` holds what both share: the tunnel model, the store, `TunnelManager` and the socket protocol. The agent ships inside the app, in `Taka.app/Contents/Helpers/agent`.
-
 ## Roadmap
 
 Ordered roughly by priority; each line is about one pull request.
