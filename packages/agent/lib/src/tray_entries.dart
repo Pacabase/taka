@@ -1,7 +1,6 @@
 import 'package:core/core.dart';
 
-/// One line of the tray menu, worked out from a snapshot so the menu can be
-/// tested without a tray. `toString` reads like the menu.
+/// `toString` reads like the menu, so tests can compare whole menus.
 sealed class const TrayEntry() {}
 
 class const TunnelEntry(
