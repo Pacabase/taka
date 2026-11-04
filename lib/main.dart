@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/agent/agent_launcher.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
@@ -18,7 +19,12 @@ Future<Widget> _home() async {
     final agent = await connectToAgent();
     final bloc = TunnelsBloc(agent: agent)..add(const TunnelsEvent.started());
     unawaited(
-      bloc.stream.firstWhere((state) => state is Closed).then((_) => exit(0)),
+      bloc.stream
+          .firstWhere((state) => state is Closed)
+          .then(
+            (_) =>
+                ServicesBinding.instance.exitApplication(AppExitType.required),
+          ),
     );
 
     return BlocProvider.value(value: bloc, child: const TunnelsPage());

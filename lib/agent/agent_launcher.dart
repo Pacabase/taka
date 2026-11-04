@@ -3,20 +3,12 @@ import 'dart:io';
 
 import 'package:core/core.dart';
 
-/// The agent ships inside the app (`Contents/Helpers/agent` on macOS, `agent`
-/// next to the executable on Linux); `TAKA_AGENT` points elsewhere while
-/// developing.
 Future<AgentClient> connectToAgent() async {
   final path = agentSocketPath();
   try {
     return await SocketAgentClient.connect(path);
   } on SocketException {
-    await Process.start(
-      _agentExecutable(),
-      [],
-      mode: ProcessStartMode.detached,
-      environment: {'TAKA_APP': _appPath()},
-    );
+    await _startAgent();
   }
 
   final deadline = DateTime.now().add(const Duration(seconds: 5));
@@ -30,15 +22,21 @@ Future<AgentClient> connectToAgent() async {
   }
 }
 
-String _agentExecutable() {
-  if (Platform.environment['TAKA_AGENT'] case final agent?) return agent;
-
+// Taka.app/Contents/MacOS/Taka on macOS, taka on Linux; the agent ships beside
+// it unless TAKA_AGENT points at another build.
+Future<Process> _startAgent() {
   final executable = File(Platform.resolvedExecutable);
-  return Platform.isMacOS
-      ? '${executable.parent.parent.path}/Helpers/agent/bin/taka_agent'
-      : '${executable.parent.path}/agent/bin/taka_agent';
-}
+  final (agent, app) = Platform.isMacOS
+      ? (
+          '${executable.parent.parent.path}/Helpers/agent/bin/taka_agent',
+          executable.parent.parent.parent.path,
+        )
+      : ('${executable.parent.path}/agent/bin/taka_agent', executable.path);
 
-String _appPath() => Platform.isMacOS
-    ? File(Platform.resolvedExecutable).parent.parent.parent.path
-    : Platform.resolvedExecutable;
+  return Process.start(
+    Platform.environment['TAKA_AGENT'] ?? agent,
+    [],
+    mode: ProcessStartMode.detached,
+    environment: {'TAKA_APP': app},
+  );
+}
