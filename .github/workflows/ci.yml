@@ -38,10 +38,37 @@ jobs:
       - run: dart analyze --fatal-infos
       - run: dart test --tags unit
 
+  agent:
+    name: agent (${{ matrix.os }})
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: packages/agent
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libx11-dev libxi-dev
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+        with:
+          # The Dart that ships with the Flutter in .fvmrc.
+          sdk: 3.13.7
+      - run: dart pub get --enforce-lockfile
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: dart analyze --fatal-infos
+      - run: dart test --tags unit
+      - run: dart build cli
+
   # The one required check, so jobs can be added without touching branch rules.
   ci:
     if: always()
-    needs: [core]
+    needs: [core, agent]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -1,0 +1,17 @@
+name: agent
+description: Taka's menu bar agent, which runs the tunnels while the app's window is closed.
+
+publish_to: 'none'
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  core:
+    path: ../core
+  nativeapi: 0.5.8
+  system_ssh: 0.3.0
+
+dev_dependencies:
+  lints: 6.1.0
+  test: 1.31.1
