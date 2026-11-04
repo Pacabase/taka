@@ -93,6 +93,40 @@ void main() {
       expect(manager.snapshot.tunnels, [renamed, proxy]);
       expect(store.tunnels, [renamed, proxy]);
     });
+
+    test(
+      'reconnects a tunnel that is on when its connection changes',
+      () async {
+        final manager = await loaded();
+        await manager.toggle('a1');
+        final moved = database.copyWith(localPort: 15433);
+
+        await manager.save(moved);
+
+        expect(tunnel.closeCount, 1);
+        verify(
+          () => client.openTunnel(
+            any(),
+            remoteHost: any(named: 'remoteHost'),
+            remotePort: any(named: 'remotePort'),
+            localPort: 15433,
+            abortTrigger: any(named: 'abortTrigger'),
+          ),
+        ).called(1);
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+      },
+    );
+
+    test('keeps a tunnel that is on connected when only renamed', () async {
+      final manager = await loaded();
+      await manager.toggle('a1');
+
+      await manager.save(database.copyWith(name: 'Staging database'));
+
+      expect(tunnel.closeCount, 0);
+      verify(openAnyTunnel).called(1);
+      expect(manager.snapshot.statusOf('a1'), const Connected());
+    });
   });
 
   group('toggle', () {
