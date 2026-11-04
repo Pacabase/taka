@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:core/src/agent_command.dart';
 import 'package:core/src/tunnel.dart';
 import 'package:core/src/tunnel_store.dart';
 import 'package:core/src/tunnels_snapshot.dart';
@@ -25,6 +26,12 @@ class TunnelManager({
     _tunnels = await store.load();
     _emit();
   }
+
+  Future<void> handle(AgentCommand command) => switch (command) {
+    SaveTunnel(:final tunnel) => save(tunnel),
+    RemoveTunnel(:final id) => remove(id),
+    ToggleTunnel(:final id) => toggle(id),
+  };
 
   Future<void> save(Tunnel tunnel) {
     _tunnels = [
