@@ -11,15 +11,12 @@ class AgentTray({
   required final void Function() onSettings,
   required final Future<void> Function() onQuit,
 }) {
-  TrayIcon? _icon;
   late final Image? _connectedImage = Image.fromFile(
     '$assetsPath/tray_icon_on.png',
   );
   late final Image? _idleImage = Image.fromFile(
     '$assetsPath/tray_icon_off.png',
   );
-  // nativeapi frees a menu or item, and its listener, once Dart collects it.
-  List<void Function()> _shown = [];
 
   void show() {
     final icon = TrayIcon.create();
@@ -36,18 +33,14 @@ class AgentTray({
         if (event is TrayIconClickedEvent && Platform.isWindows) onSettings();
       })
       ..setVisible(true);
-    _icon = icon;
 
-    manager.changes.listen(_rebuild);
-    _rebuild(manager.snapshot);
+    // Nothing else holds the icon: this subscription keeps it on screen.
+    manager.changes.listen((snapshot) => _rebuild(icon, snapshot));
+    _rebuild(icon, manager.snapshot);
   }
 
-  void _rebuild(TunnelsSnapshot snapshot) {
-    final icon = _icon;
-    if (icon == null) return;
-
-    final shown = <void Function()>[];
-    final menu = _menu(trayEntries(snapshot), shown);
+  void _rebuild(TrayIcon icon, TunnelsSnapshot snapshot) {
+    final menu = _menu(trayEntries(snapshot));
     if (menu == null) return;
 
     final count = snapshot.connectedCount;
@@ -57,62 +50,60 @@ class AgentTray({
       ..setContextMenu(menu)
       ..setTooltip(trayTooltip(snapshot));
     if (Platform.isMacOS) icon.setTitle(count == 0 ? null : '$count');
-
-    final previous = _shown;
-    _shown = shown;
-    Timer.run(() {
-      for (final dispose in previous) {
-        dispose();
-      }
-    });
   }
 
-  Menu? _menu(List<TrayEntry> entries, List<void Function()> shown) {
+  Menu? _menu(List<TrayEntry> entries) {
     final menu = Menu.create();
     if (menu == null) return null;
 
-    shown.add(menu.dispose);
     for (final entry in entries) {
-      menu.addItem(_item(entry, shown));
+      menu.addItem(_item(entry));
     }
     return menu;
   }
 
-  MenuItem? _item(TrayEntry entry, List<void Function()> shown) {
-    final (label, type) = switch (entry) {
-      TunnelEntry(:final label) => (label, MenuItemType.checkbox),
-      SubmenuEntry(:final label) => (label, MenuItemType.submenu),
-      InfoEntry(:final label) ||
-      CopyEntry(:final label) ||
-      ActionEntry(:final label) => (label, MenuItemType.normal),
-      SeparatorEntry() => ('', MenuItemType.separator),
-    };
+  MenuItem? _item(TrayEntry entry) => switch (entry) {
+    TunnelEntry(:final tunnel, :final label, :final isChecked) => _create(
+      label,
+      MenuItemType.checkbox,
+      onClick: () => _guard(manager.toggle(tunnel.id)),
+    )?..state = isChecked ? MenuItemState.checked : MenuItemState.unchecked,
+    CopyEntry(:final label, :final text) => _create(
+      label,
+      MenuItemType.normal,
+      onClick: () => Clipboard.instance.writeText(text),
+    ),
+    ActionEntry(
+      :final action,
+      :final label,
+      :final isEnabled,
+      :final shortcut,
+    ) =>
+      _create(
+        label,
+        MenuItemType.normal,
+        onClick: isEnabled ? () => _run(action) : null,
+      )?..accelerator = shortcut == null ? null : _shortcut(shortcut),
+    InfoEntry(:final label) => _create(label, MenuItemType.normal),
+    SeparatorEntry() => _create('', MenuItemType.separator),
+    SubmenuEntry(:final label, :final entries) =>
+      MenuItem.createWithLabelAndType(label, MenuItemType.submenu)
+        ?..submenu = _menu(entries),
+  };
+
+  MenuItem? _create(
+    String label,
+    MenuItemType type, {
+    void Function()? onClick,
+  }) {
     final item = MenuItem.createWithLabelAndType(label, type);
     if (item == null) return null;
 
-    shown.add(item.dispose);
-    final onClick = switch (entry) {
-      TunnelEntry(:final tunnel) => () => _guard(manager.toggle(tunnel.id)),
-      CopyEntry(:final text) => () => Clipboard.instance.writeText(text),
-      ActionEntry(:final action, isEnabled: true) => () => _run(action),
-      _ => null,
-    };
-    item.isEnabled = onClick != null || entry is SubmenuEntry;
+    item.isEnabled = onClick != null;
     if (onClick != null) {
       item.addListener((event) {
         if (event is MenuItemClickedEvent) onClick();
       });
-    }
-    switch (entry) {
-      case TunnelEntry(:final isChecked):
-        item.state = isChecked
-            ? MenuItemState.checked
-            : MenuItemState.unchecked;
-      case ActionEntry(:final shortcut?):
-        item.accelerator = _shortcut(shortcut);
-      case SubmenuEntry(:final entries):
-        item.submenu = _menu(entries, shown);
-      default:
     }
     return item;
   }

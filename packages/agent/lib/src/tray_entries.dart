@@ -67,7 +67,7 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
     ActionEntry(
       TrayAction.connectAll,
       'Connect All',
-      isEnabled: tunnels.any((tunnel) => !isOn(tunnel)),
+      isEnabled: !tunnels.every(isOn),
     ),
     ActionEntry(
       TrayAction.disconnectAll,

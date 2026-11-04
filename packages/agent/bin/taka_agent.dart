@@ -6,7 +6,6 @@ import 'package:core/core.dart';
 import 'package:nativeapi/nativeapi.dart';
 import 'package:system_ssh/system_ssh.dart';
 
-/// While developing, `TAKA_APP` is the app Settings… opens.
 void main() => runNativeApp(_run);
 
 void _run() => unawaited(_start());
@@ -18,6 +17,12 @@ Future<void> _start() async {
     store: LocalTunnelStore.inTakaDirectory(),
     client: const SystemSshClient(loginShell: true),
   );
+  try {
+    await manager.load();
+  } on Object catch (exception) {
+    stderr.writeln('Could not load the saved tunnels: $exception');
+  }
+
   final server = await AgentServer.bind(agentSocketPath(), manager);
   if (server == null) {
     stdout.writeln('Another Taka agent is running');
@@ -25,16 +30,19 @@ Future<void> _start() async {
     return;
   }
 
-  try {
-    await manager.load();
-  } on Object catch (exception) {
-    stderr.writeln('Could not load the saved tunnels: $exception');
-  }
+  // Taka.app/Contents/Helpers/agent/bin/taka_agent on macOS,
+  // agent/bin/taka_agent next to taka on Linux.
+  final agent = File(Platform.resolvedExecutable).parent.parent;
+  final app =
+      Platform.environment['TAKA_APP'] ??
+      (Platform.isMacOS
+          ? agent.parent.parent.parent.path
+          : '${agent.parent.path}/taka');
 
   AgentTray(
     manager: manager,
-    assetsPath: File(Platform.resolvedExecutable).parent.parent.path,
-    onSettings: _openSettings,
+    assetsPath: agent.path,
+    onSettings: () => unawaited(_open(app)),
     onQuit: () async {
       try {
         await server.close();
@@ -46,27 +54,13 @@ Future<void> _start() async {
   ).show();
 }
 
-void _openSettings() => unawaited(_open());
-
-Future<void> _open() async {
-  final app = Platform.environment['TAKA_APP'] ?? _bundledApp();
+Future<void> _open(String app) async {
+  final (executable, arguments) = Platform.isMacOS
+      ? ('open', [app])
+      : (app, <String>[]);
   try {
-    if (Platform.isMacOS) {
-      await Process.run('open', [app]);
-    } else {
-      await Process.start(app, [], mode: ProcessStartMode.detached);
-    }
+    await Process.start(executable, arguments, mode: ProcessStartMode.detached);
   } on ProcessException catch (exception) {
     stderr.writeln('Could not open Settings: $exception');
   }
-}
-
-/// The app this agent ships in: `Taka.app/Contents/Helpers/agent/bin` on
-/// macOS, `agent/bin` next to the executable on Linux.
-String _bundledApp() {
-  final agent = File(Platform.resolvedExecutable).parent.parent;
-
-  return Platform.isMacOS
-      ? agent.parent.parent.parent.path
-      : '${agent.parent.path}/taka';
 }
