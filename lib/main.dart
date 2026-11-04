@@ -1,13 +1,46 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:taka/agent/agent_launcher.dart';
+import 'package:taka/pages/tunnels/tunnels_bloc.dart';
+import 'package:taka/pages/tunnels/tunnels_page.dart';
 
-void main() => runApp(const TakaApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-class const TakaApp({super.key}) extends StatelessWidget {
+  runApp(TakaApp(home: await _home()));
+}
+
+Future<Widget> _home() async {
+  try {
+    final agent = await connectToAgent();
+    final bloc = TunnelsBloc(agent: agent)..add(const TunnelsEvent.started());
+    unawaited(
+      bloc.stream.firstWhere((state) => state is Closed).then((_) => exit(0)),
+    );
+
+    return BlocProvider.value(value: bloc, child: const TunnelsPage());
+  } on Exception catch (exception) {
+    return Scaffold(
+      body: Center(child: Text("Taka's agent didn't start: $exception")),
+    );
+  }
+}
+
+class const TakaApp({super.key, required final Widget home})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       title: 'Taka',
-      home: Scaffold(body: Center(child: Text('Taka'))),
+      theme: ThemeData(colorSchemeSeed: Colors.teal),
+      darkTheme: ThemeData(
+        colorSchemeSeed: Colors.teal,
+        brightness: Brightness.dark,
+      ),
+      home: home,
     );
   }
 }

@@ -74,8 +74,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/flutter
       - run: fvm flutter pub get --enforce-lockfile
-      - run: fvm dart format --output=none --set-exit-if-changed lib
+      - run: fvm dart format --output=none --set-exit-if-changed lib test
       - run: fvm flutter analyze
+      - run: fvm flutter test --tags unit
 
   # The one required check, so jobs can be added without touching branch rules.
   ci:
