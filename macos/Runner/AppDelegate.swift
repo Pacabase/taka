@@ -7,6 +7,10 @@ class AppDelegate: FlutterAppDelegate {
     return true
   }
 
+  @IBAction func showAbout(_ sender: Any?) {
+    MainFlutterWindow.menuChannel?.invokeMethod("about", arguments: nil)
+  }
+
   override func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
     return true
   }

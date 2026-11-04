@@ -14,7 +14,7 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Reconnect a dropped tunnel** with backoff and keepalive, and stop on a failure that won't heal (host key changed, port in use).
 - [ ] **Launch at login**, and reconnect the tunnels that were on.
 - [ ] **Look and feel** — themes, fonts, app and tray icons, a compact window with empty and error states.
-- [ ] **Releases** — a universal `.dmg` from CI on a version tag, a Homebrew tap, and signed auto-updates.
+- [ ] **Releases** — a universal `.dmg` from CI on a version tag, a Homebrew tap, and signed auto-updates. The agent's packages (`nativeapi` and its C++ library, `platform`, `process`) must be in the app's licences first: a Dart command-line build collects none.
 
 ### Daily driver (0.2, Linux)
 

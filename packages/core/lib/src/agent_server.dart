@@ -6,9 +6,11 @@ import 'package:core/src/agent_command.dart';
 import 'package:core/src/tunnel_manager.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 
-/// One JSON object per line each way: snapshots out, commands in.
+/// One JSON object per line each way: snapshots and About requests out,
+/// commands in.
 class AgentServer(final ServerSocket _server, final TunnelManager _manager) {
   final Set<Socket> _clients = {};
+  var _isAboutPending = false;
   late final StreamSubscription<TunnelsSnapshot> _changes;
 
   this {
@@ -41,10 +43,22 @@ class AgentServer(final ServerSocket _server, final TunnelManager _manager) {
     }
   }
 
+  /// Asks every open window to show About, or the next one to connect when
+  /// none is open; returns whether one was open.
+  bool showAbout() {
+    _isAboutPending = _clients.isEmpty;
+    _clients.forEach(_sendAbout);
+    return !_isAboutPending;
+  }
+
   void _accept(Socket client) {
     _clients.add(client);
     client.done.ignore();
     _send(client, _manager.snapshot);
+    if (_isAboutPending) {
+      _isAboutPending = false;
+      _sendAbout(client);
+    }
 
     utf8.decoder
         .bind(client)
@@ -67,6 +81,10 @@ class AgentServer(final ServerSocket _server, final TunnelManager _manager) {
 
   void _send(Socket client, TunnelsSnapshot snapshot) =>
       client.writeln(jsonEncode(snapshot.toJson()));
+
+  void _sendAbout(Socket client) => client.writeln(jsonEncode(_about));
+
+  static const _about = {'show': 'about'};
 
   void _drop(Socket client) {
     _clients.remove(client);

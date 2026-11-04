@@ -8,14 +8,31 @@ import 'package:core/src/tunnels_snapshot.dart';
 abstract interface class AgentClient {
   Stream<TunnelsSnapshot> get snapshots;
 
+  Stream<void> get aboutRequests;
+
   void send(AgentCommand command);
 
   Future<void> close();
 }
 
 class SocketAgentClient(final Socket _socket) implements AgentClient {
+  final _snapshots = StreamController<TunnelsSnapshot>();
+  final _aboutRequests = StreamController<void>();
+
   this {
     _socket.done.ignore();
+    // A socket error is always followed by done.
+    utf8.decoder
+        .bind(_socket)
+        .transform(const LineSplitter())
+        .listen(
+          _receive,
+          onError: (Object exception) => stderr.writeln('Ignoring $exception'),
+          onDone: () {
+            unawaited(_snapshots.close());
+            unawaited(_aboutRequests.close());
+          },
+        );
   }
 
   static Future<SocketAgentClient> connect(String path) async =>
@@ -26,13 +43,11 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
         ),
       );
 
-  // A socket error is always followed by done, so this only skips bad lines.
   @override
-  late final Stream<TunnelsSnapshot> snapshots = utf8.decoder
-      .bind(_socket)
-      .transform(const LineSplitter())
-      .map((line) => TunnelsSnapshot.fromJson(jsonDecode(line)))
-      .handleError((Object exception) => stderr.writeln('Ignoring $exception'));
+  Stream<TunnelsSnapshot> get snapshots => _snapshots.stream;
+
+  @override
+  Stream<void> get aboutRequests => _aboutRequests.stream;
 
   @override
   void send(AgentCommand command) =>
@@ -40,4 +55,17 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
 
   @override
   Future<void> close() async => _socket.destroy();
+
+  void _receive(String line) {
+    try {
+      switch (jsonDecode(line)) {
+        case {'show': 'about'}:
+          _aboutRequests.add(null);
+        case final json:
+          _snapshots.add(TunnelsSnapshot.fromJson(json));
+      }
+    } on FormatException catch (exception) {
+      stderr.writeln('Ignoring $exception');
+    }
+  }
 }

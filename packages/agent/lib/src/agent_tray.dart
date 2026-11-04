@@ -8,6 +8,7 @@ import 'package:nativeapi/nativeapi.dart';
 class AgentTray({
   required final TunnelManager manager,
   required final String assetsPath,
+  required final void Function() onAbout,
   required final void Function() onSettings,
   required final Future<void> Function() onQuit,
 }) {
@@ -111,6 +112,7 @@ class AgentTray({
   void _run(TrayAction action) => switch (action) {
     TrayAction.connectAll => _guard(manager.connectAll()),
     TrayAction.disconnectAll => _guard(manager.disconnectAll()),
+    TrayAction.about => onAbout(),
     TrayAction.settings => onSettings(),
     TrayAction.quit => _guard(onQuit()),
   };

@@ -16,6 +16,9 @@ class FakeAgent implements AgentClient {
   Stream<TunnelsSnapshot> get snapshots => controller.stream;
 
   @override
+  Stream<void> get aboutRequests => const Stream.empty();
+
+  @override
   void send(AgentCommand command) => sent.add(command);
 
   @override
