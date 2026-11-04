@@ -10,7 +10,7 @@ updates:
       github-actions:
         patterns: ['*']
   - package-ecosystem: 'pub'
-    directories: ['/packages/core', '/packages/agent']
+    directories: ['/', '/packages/core', '/packages/agent']
     schedule:
       interval: 'weekly'
     cooldown:

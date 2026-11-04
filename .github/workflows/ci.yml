@@ -65,10 +65,22 @@ jobs:
       - run: dart test --tags unit
       - run: dart build cli
 
+  app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/flutter
+      - run: fvm flutter pub get --enforce-lockfile
+      - run: fvm dart format --output=none --set-exit-if-changed lib
+      - run: fvm flutter analyze
+
   # The one required check, so jobs can be added without touching branch rules.
   ci:
     if: always()
-    needs: [core, agent]
+    needs: [core, agent, app]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
