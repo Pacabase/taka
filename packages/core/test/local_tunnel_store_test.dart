@@ -81,4 +81,54 @@ void main() {
 
     expect(store().load(), throwsFormatException);
   });
+
+  for (final (name, contents) in [
+    ('not JSON', '{"version": 1, "tunn'),
+    ('a list', '[]'),
+    ('missing tunnels', '{"version": 1}'),
+    ('a tunnel without an id', '{"version": 1, "tunnels": [{"localPort": 1}]}'),
+    ('a tunnel that is not an object', '{"version": 1, "tunnels": [3]}'),
+  ]) {
+    test('load rejects $name with a FormatException', () async {
+      await file.create(recursive: true);
+      await file.writeAsString(contents);
+
+      expect(store().load(), throwsFormatException);
+    });
+  }
+
+  test('save refuses to overwrite a file it could not read', () async {
+    await file.create(recursive: true);
+    await file.writeAsString(
+      jsonEncode({'version': 2, 'tunnels': <Object?>[]}),
+    );
+    final saving = store();
+    await expectLater(saving.load(), throwsFormatException);
+
+    await expectLater(
+      saving.save([proxy]),
+      throwsA(isA<FileSystemException>()),
+    );
+    expect(jsonDecode(await file.readAsString()), containsPair('version', 2));
+  });
+
+  test('a failed save does not stop the next one', () async {
+    final saving = store();
+    await Directory(file.path).create(recursive: true);
+
+    await expectLater(
+      saving.save([proxy]),
+      throwsA(isA<FileSystemException>()),
+    );
+    await Directory(file.path).delete();
+    await saving.save([database]);
+
+    expect(await store().load(), [database]);
+  });
+
+  test('save leaves no temporary file behind', () async {
+    await store().save([proxy]);
+
+    expect(file.parent.listSync().map((entry) => entry.path), [file.path]);
+  });
 }

@@ -18,15 +18,28 @@ sealed class const Tunnel._() with _$Tunnel {
     int? remotePort,
   }) = _Tunnel;
 
-  static Tunnel fromJson(Map<String, Object?> json) => Tunnel(
-    id: json['id']! as String,
-    name: json['name'] as String? ?? '',
-    kind: TunnelKind.values.asNameMap()[json['kind']] ?? TunnelKind.local,
-    sshHost: json['sshHost'] as String? ?? '',
-    localPort: json['localPort']! as int,
-    remoteHost: json['remoteHost'] as String?,
-    remotePort: json['remotePort'] as int?,
-  );
+  static Tunnel fromJson(Object? json) {
+    if (json
+        case {'id': final String id, 'localPort': final int localPort} &&
+            final Map<Object?, Object?> fields) {
+      T? field<T>(String key) => switch (fields[key]) {
+        final T value => value,
+        _ => null,
+      };
+
+      return Tunnel(
+        id: id,
+        name: field<String>('name') ?? '',
+        kind: TunnelKind.values.asNameMap()[fields['kind']] ?? TunnelKind.local,
+        sshHost: field<String>('sshHost') ?? '',
+        localPort: localPort,
+        remoteHost: field<String>('remoteHost'),
+        remotePort: field<int>('remotePort'),
+      );
+    }
+
+    throw FormatException('Not a tunnel: $json');
+  }
 
   Map<String, Object?> toJson() => {
     'id': id,

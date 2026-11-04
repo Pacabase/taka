@@ -10,7 +10,10 @@ Directory takaDirectory({Map<String, String>? environment}) {
     return Directory('$home/Library/Application Support/$_appId');
   }
   if (Platform.isLinux) {
-    final data = variables['XDG_DATA_HOME'] ?? '$home/.local/share';
+    final data = switch (variables['XDG_DATA_HOME']) {
+      final String data when data.isNotEmpty => data,
+      _ => '$home/.local/share',
+    };
     return Directory('$data/$_appId');
   }
   throw UnsupportedError('Taka runs on macOS and Linux so far');
