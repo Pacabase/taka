@@ -73,7 +73,6 @@ class AgentServer(final ServerSocket _server, final TunnelManager _manager) {
     client.destroy();
   }
 
-  /// Closing the server socket also deletes its file.
   Future<void> close() async {
     await _changes.cancel();
     await _server.close();

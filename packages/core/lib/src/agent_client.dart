@@ -6,7 +6,6 @@ import 'package:core/src/agent_command.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 
 abstract interface class AgentClient {
-  /// Done when the agent goes away.
   Stream<TunnelsSnapshot> get snapshots;
 
   void send(AgentCommand command);
