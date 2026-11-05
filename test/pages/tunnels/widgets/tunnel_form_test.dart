@@ -12,7 +12,11 @@ void main() {
   late List<Tunnel> saved;
   late int cancels;
 
-  Future<void> pumpForm(WidgetTester tester, {Tunnel? initial}) async {
+  Future<void> pumpForm(
+    WidgetTester tester, {
+    Tunnel? initial,
+    List<String> hosts = const [],
+  }) async {
     saved = [];
     cancels = 0;
     await tester.pumpWidget(
@@ -21,6 +25,7 @@ void main() {
         home: Scaffold(
           body: TunnelForm(
             initial: initial,
+            hosts: hosts,
             onSave: saved.add,
             onCancel: () => cancels++,
           ),
@@ -126,6 +131,79 @@ void main() {
     await pumpForm(tester, initial: tunnel);
     await tester.tap(find.text('Save'));
     expect(saved.single, tunnel);
+  });
+
+  group('the SSH host', () {
+    const hosts = ['dev', 'staging', 'prod'];
+
+    testWidgets('suggests the hosts from ~/.ssh/config that match', (
+      tester,
+    ) async {
+      await pumpForm(tester, hosts: hosts);
+
+      await tester.enterText(field(1), 'a');
+      await tester.pump();
+
+      expect(find.text('staging'), findsOneWidget);
+      expect(find.text('dev'), findsNothing);
+      expect(find.text('prod'), findsNothing);
+    });
+
+    // On Android, the default, the text selection handle covers the suggestion.
+    testWidgets(
+      'takes a suggestion that is clicked',
+      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+      (tester) async {
+        await pumpForm(tester, hosts: hosts);
+        await tester.enterText(field(1), 'pr');
+        await tester.pump();
+
+        await tester.tap(find.text('prod'));
+        await tester.pump();
+
+        expect(tester.widget<TextField>(field(1)).controller!.text, 'prod');
+      },
+    );
+
+    testWidgets('Enter picks the suggestion instead of adding', (tester) async {
+      await pumpForm(tester, hosts: hosts);
+      await fillLocal(tester);
+      await tester.enterText(field(1), 'de');
+      await tester.pump();
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(tester.widget<TextField>(field(1)).controller!.text, 'dev');
+      expect(saved, isEmpty);
+    });
+
+    testWidgets('Enter adds a host typed in full instead of a longer one', (
+      tester,
+    ) async {
+      await pumpForm(tester, hosts: ['db', 'db-prod']);
+      await fillLocal(tester);
+      await tester.enterText(field(1), 'db');
+      await tester.pump();
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+
+      expect(saved.single.sshHost, 'db');
+    });
+
+    testWidgets('Esc closes the suggestions before the form', (tester) async {
+      await pumpForm(tester, hosts: hosts);
+      await tester.enterText(field(1), 'a');
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(find.text('staging'), findsNothing);
+      expect(cancels, 0);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      expect(cancels, 1);
+    });
   });
 }
 

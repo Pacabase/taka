@@ -25,16 +25,20 @@ class _TunnelTileState extends State<TunnelTile> {
   Widget build(BuildContext context) {
     final colors = TakaColors.of(context);
     final TunnelTile(:tunnel, :status) = widget;
+    Text orange(String text) => Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(fontSize: 12, color: colors.orange),
+    );
     final caption = switch (status) {
       Failed(:final message) => Text(
         message,
         style: TextStyle(fontSize: 12, color: colors.red),
       ),
-      Connecting() => Text(
-        'Connecting…',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: 12, color: colors.orange),
+      Connecting() => orange('Connecting…'),
+      Connected(:final warning) when warning.isNotEmpty => orange(
+        "Can't reach $warning",
       ),
       Stopped() || Connected() when tunnel.name.isEmpty => null,
       Stopped() || Connected() => Text(

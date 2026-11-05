@@ -19,6 +19,7 @@ class const TunnelsPage({super.key}) extends StatefulWidget {
 class _TunnelsPageState extends State<TunnelsPage> {
   var _isFormOpen = false;
   Tunnel? _editing;
+  var _hosts = const <String>[];
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +57,7 @@ class _TunnelsPageState extends State<TunnelsPage> {
                     ? TunnelForm(
                         key: ValueKey(_editing?.id ?? 'new'),
                         initial: _editing,
+                        hosts: _hosts,
                         onSave: (tunnel) {
                           context.read<TunnelsBloc>().add(
                             TunnelsEvent.send(AgentCommand.save(tunnel)),
@@ -76,10 +78,18 @@ class _TunnelsPageState extends State<TunnelsPage> {
     );
   }
 
-  void _openForm([Tunnel? tunnel]) => setState(() {
-    _isFormOpen = true;
-    _editing = tunnel;
-  });
+  // Read on every open, so edits to ~/.ssh/config show up.
+  void _openForm([Tunnel? tunnel]) {
+    setState(() {
+      _isFormOpen = true;
+      _editing = tunnel;
+    });
+    unawaited(
+      configuredSshHosts().then((hosts) {
+        if (mounted) setState(() => _hosts = hosts);
+      }),
+    );
+  }
 
   void _closeForm() => setState(() => _isFormOpen = false);
 }

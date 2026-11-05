@@ -16,6 +16,7 @@ void main() {
       Stopped(),
       Connecting(),
       Connected(),
+      Connected(warning: 'db.internal:5432: Connection refused'),
       Failed('127.0.0.1:5432 is already in use'),
     ]) {
       test('$status round-trips', () {

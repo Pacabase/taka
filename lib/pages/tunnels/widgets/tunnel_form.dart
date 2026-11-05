@@ -9,6 +9,7 @@ import 'package:taka/theme/taka_theme.dart';
 class const TunnelForm({
   super.key,
   final Tunnel? initial,
+  final List<String> hosts = const [],
   required final void Function(Tunnel tunnel) onSave,
   required final void Function() onCancel,
 }) extends StatefulWidget {
@@ -53,107 +54,117 @@ class _TunnelFormState extends State<TunnelForm> {
     final colors = TakaColors.of(context);
     const mono = TextStyle(fontFamily: monoFont, fontSize: 13);
 
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.escape): widget.onCancel,
+    // As DismissIntent, Esc first closes the host suggestions.
+    return Shortcuts(
+      shortcuts: const {
+        SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
       },
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 12,
-          children: [
-            _KindTabs(
-              kind: _kind,
-              onPick: (kind) => setState(() => _kind = kind),
-            ),
-            _RouteStep(
-              label: 'From',
-              hasNext: true,
-              child: Row(
-                spacing: 6,
-                children: [
-                  Expanded(
-                    child: Opacity(
-                      opacity: 0.5,
-                      child: _FieldBox(
-                        child: Text(
-                          '127.0.0.1',
-                          style: mono.copyWith(color: colors.textSecondary),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const _Colon(),
-                  SizedBox(
-                    width: 72,
-                    child: _input(
-                      _localPort,
-                      hint: _isLocal ? '5432' : '1080',
-                      style: mono,
-                      autofocus: true,
-                    ),
-                  ),
-                ],
+      child: Actions(
+        actions: {
+          DismissIntent: CallbackAction<DismissIntent>(
+            onInvoke: (_) => widget.onCancel(),
+          ),
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 12,
+            children: [
+              _KindTabs(
+                kind: _kind,
+                onPick: (kind) => setState(() => _kind = kind),
               ),
-            ),
-            _RouteStep(
-              label: 'SSH host',
-              hasNext: _isLocal,
-              child: _input(
-                _sshHost,
-                hint: 'Host from ~/.ssh/config, or user@host',
-                style: mono,
-              ),
-            ),
-            if (_isLocal)
               _RouteStep(
-                label: 'To',
-                hasNext: false,
+                label: 'From',
+                hasNext: true,
                 child: Row(
                   spacing: 6,
                   children: [
                     Expanded(
-                      child: _input(
-                        _remoteHost,
-                        hint: 'localhost',
-                        style: mono,
+                      child: Opacity(
+                        opacity: 0.5,
+                        child: _FieldBox(
+                          child: Text(
+                            '127.0.0.1',
+                            style: mono.copyWith(color: colors.textSecondary),
+                          ),
+                        ),
                       ),
                     ),
                     const _Colon(),
                     SizedBox(
                       width: 72,
-                      child: _input(_remotePort, hint: '5432', style: mono),
+                      child: _input(
+                        _localPort,
+                        hint: _isLocal ? '5432' : '1080',
+                        style: mono,
+                        autofocus: true,
+                      ),
                     ),
                   ],
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.only(left: _RouteStep.indent),
-              child: _Labelled(
-                label: 'Name',
-                child: _input(_name, hint: 'Optional'),
-              ),
-            ),
-            const Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              spacing: 8,
-              children: [
-                TextButton(
-                  onPressed: widget.onCancel,
-                  child: const Text('Cancel'),
+              _RouteStep(
+                label: 'SSH host',
+                hasNext: _isLocal,
+                child: _HostInput(
+                  controller: _sshHost,
+                  hosts: widget.hosts,
+                  hint: 'Host from ~/.ssh/config, or user@host',
+                  style: mono,
+                  onSubmitted: _save,
                 ),
-                ListenableBuilder(
-                  listenable: Listenable.merge(_fields),
-                  builder: (context, _) => FilledButton(
-                    onPressed: _isValid ? _save : null,
-                    child: Text(widget.initial == null ? 'Add' : 'Save'),
+              ),
+              if (_isLocal)
+                _RouteStep(
+                  label: 'To',
+                  hasNext: false,
+                  child: Row(
+                    spacing: 6,
+                    children: [
+                      Expanded(
+                        child: _input(
+                          _remoteHost,
+                          hint: 'localhost',
+                          style: mono,
+                        ),
+                      ),
+                      const _Colon(),
+                      SizedBox(
+                        width: 72,
+                        child: _input(_remotePort, hint: '5432', style: mono),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.only(left: _RouteStep.indent),
+                child: _Labelled(
+                  label: 'Name',
+                  child: _input(_name, hint: 'Optional'),
+                ),
+              ),
+              const Spacer(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: widget.onCancel,
+                    child: const Text('Cancel'),
+                  ),
+                  ListenableBuilder(
+                    listenable: Listenable.merge(_fields),
+                    builder: (context, _) => FilledButton(
+                      onPressed: _isValid ? _save : null,
+                      child: Text(widget.initial == null ? 'Add' : 'Save'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -315,9 +326,10 @@ class const _FieldBox({
 
 class const _Input({
   required final TextEditingController controller,
+  final FocusNode? focusNode,
   required final String hint,
   required final TextStyle style,
-  required final bool autofocus,
+  final bool autofocus = false,
   required final void Function() onSubmitted,
 }) extends StatefulWidget {
   @override
@@ -325,19 +337,22 @@ class const _Input({
 }
 
 class _InputState extends State<_Input> {
-  final _focus = FocusNode();
+  late final _focus = widget.focusNode ?? FocusNode();
 
   @override
   void initState() {
     super.initState();
-    _focus.addListener(() => setState(() {}));
+    _focus.addListener(_rebuild);
   }
 
   @override
   void dispose() {
-    _focus.dispose();
+    _focus.removeListener(_rebuild);
+    if (widget.focusNode == null) _focus.dispose();
     super.dispose();
   }
+
+  void _rebuild() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -355,6 +370,120 @@ class _InputState extends State<_Input> {
           ),
         ),
         onSubmitted: (_) => widget.onSubmitted(),
+      ),
+    );
+  }
+}
+
+class const _HostInput({
+  required final TextEditingController controller,
+  required final List<String> hosts,
+  required final String hint,
+  required final TextStyle style,
+  required final void Function() onSubmitted,
+}) extends StatefulWidget {
+  @override
+  State<_HostInput> createState() => _HostInputState();
+}
+
+class _HostInputState extends State<_HostInput> {
+  final _focus = FocusNode();
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = TakaColors.of(context);
+
+    return RawAutocomplete<String>(
+      textEditingController: widget.controller,
+      focusNode: _focus,
+      optionsBuilder: (value) {
+        final typed = value.text.trim().toLowerCase();
+        return widget.hosts.where(
+          (host) => host.toLowerCase().contains(typed) && host != value.text,
+        );
+      },
+      fieldViewBuilder: (context, controller, focus, onFieldSubmitted) =>
+          _Input(
+            controller: controller,
+            focusNode: focus,
+            hint: widget.hint,
+            style: widget.style,
+            onSubmitted: () {
+              final typed = controller.text;
+              if (!widget.hosts.contains(typed.trim())) onFieldSubmitted();
+              if (controller.text == typed) widget.onSubmitted();
+            },
+          ),
+      optionsViewBuilder: (context, onSelected, options) => Align(
+        alignment: Alignment.topLeft,
+        child: TextFieldTapRegion(
+          child: Container(
+            margin: const EdgeInsets.only(top: 4),
+            constraints: const BoxConstraints(maxHeight: 160, maxWidth: 320),
+            decoration: BoxDecoration(
+              color: colors.selection,
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              shrinkWrap: true,
+              children: [
+                for (final (index, host) in options.indexed)
+                  _Suggestion(
+                    host: host,
+                    style: widget.style,
+                    isHighlighted:
+                        AutocompleteHighlightedOption.of(context) == index,
+                    onTap: () => onSelected(host),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class const _Suggestion({
+  required final String host,
+  required final TextStyle style,
+  required final bool isHighlighted,
+  required final void Function() onTap,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    if (isHighlighted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) Scrollable.ensureVisible(context, alignment: 0.5);
+      });
+    }
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 24,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          alignment: Alignment.centerLeft,
+          color: isHighlighted
+              ? TakaColors.of(context).surface
+              : Colors.transparent,
+          child: Text(host, style: style),
+        ),
       ),
     );
   }

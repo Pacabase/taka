@@ -126,12 +126,12 @@ return failed(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  stopped,TResult Function()?  connecting,TResult Function()?  connected,TResult Function( String message)?  failed,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  stopped,TResult Function()?  connecting,TResult Function( String warning)?  connected,TResult Function( String message)?  failed,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped();case Connecting() when connecting != null:
 return connecting();case Connected() when connected != null:
-return connected();case Failed() when failed != null:
+return connected(_that.warning);case Failed() when failed != null:
 return failed(_that.message);case _:
   return orElse();
 
@@ -150,12 +150,12 @@ return failed(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  stopped,required TResult Function()  connecting,required TResult Function()  connected,required TResult Function( String message)  failed,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  stopped,required TResult Function()  connecting,required TResult Function( String warning)  connected,required TResult Function( String message)  failed,}) {final _that = this;
 switch (_that) {
 case Stopped():
 return stopped();case Connecting():
 return connecting();case Connected():
-return connected();case Failed():
+return connected(_that.warning);case Failed():
 return failed(_that.message);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -170,12 +170,12 @@ return failed(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  stopped,TResult? Function()?  connecting,TResult? Function()?  connected,TResult? Function( String message)?  failed,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  stopped,TResult? Function()?  connecting,TResult? Function( String warning)?  connected,TResult? Function( String message)?  failed,}) {final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped();case Connecting() when connecting != null:
 return connecting();case Connected() when connected != null:
-return connected();case Failed() when failed != null:
+return connected(_that.warning);case Failed() when failed != null:
 return failed(_that.message);case _:
   return null;
 
@@ -252,33 +252,69 @@ String toString() {
 
 
 class Connected extends TunnelStatus {
-  const Connected(): super._();
+  const Connected({this.warning = ''}): super._();
   
 
+@JsonKey() final  String warning;
 
-
+/// Create a copy of TunnelStatus
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ConnectedCopyWith<Connected> get copyWith => _$ConnectedCopyWithImpl<Connected>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Connected);
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Connected&&(identical(other.warning, warning) || other.warning == warning));
 }
 
 
 @override
-int get hashCode => runtimeType.hashCode;
+int get hashCode {
+    return Object.hash(runtimeType,warning);
+}
 
 @override
 String toString() {
-    return 'TunnelStatus.connected()';
+    return 'TunnelStatus.connected(warning: $warning)';
 }
 
 
 }
 
+/// @nodoc
+abstract mixin class $ConnectedCopyWith<$Res> implements $TunnelStatusCopyWith<$Res> {
+  factory $ConnectedCopyWith(Connected value, $Res Function(Connected) _then) = _$ConnectedCopyWithImpl;
+@useResult
+$Res call({
+ String warning
+});
 
 
+
+
+}
+/// @nodoc
+class _$ConnectedCopyWithImpl<$Res>
+    implements $ConnectedCopyWith<$Res> {
+  _$ConnectedCopyWithImpl(this._self, this._then);
+
+  final Connected _self;
+  final $Res Function(Connected) _then;
+
+/// Create a copy of TunnelStatus
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? warning = null,}) {
+  return _then(Connected(
+warning: null == warning ? _self.warning : warning // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
 
 /// @nodoc
 
