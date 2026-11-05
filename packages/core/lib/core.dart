@@ -1,5 +1,6 @@
 export 'src/agent_client.dart';
 export 'src/agent_command.dart';
+export 'src/agent_message.dart';
 export 'src/agent_server.dart';
 export 'src/local_tunnel_store.dart';
 export 'src/logging/debug_logging.dart';
