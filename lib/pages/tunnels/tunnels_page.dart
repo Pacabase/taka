@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
+import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_form.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
@@ -111,30 +112,38 @@ class const _TunnelList({
             style: TextStyle(color: colors.textSecondary),
           ),
         ),
-        Ready(:final snapshot) => ListView.separated(
-          itemCount: snapshot.tunnels.length,
-          separatorBuilder: (context, _) => Divider(
-            height: 1,
-            indent: 6,
-            endIndent: 6,
-            color: colors.background,
-          ),
-          itemBuilder: (context, index) {
-            final tunnel = snapshot.tunnels[index];
-            void send(AgentCommand command) =>
-                context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
-
-            return TunnelTile(
-              key: ValueKey(tunnel.id),
-              tunnel: tunnel,
-              status: snapshot.statusOf(tunnel.id),
-              onToggle: () => send(AgentCommand.toggle(tunnel.id)),
-              onEdit: () => onEdit(tunnel),
-              onDelete: () => send(AgentCommand.remove(tunnel.id)),
-            );
-          },
+        Ready(:final snapshot) => ReorderableRows(
+          onReorder: (from, to) =>
+              _send(context, AgentCommand.move(snapshot.tunnels[from].id, to)),
+          children: [
+            for (final (index, tunnel) in snapshot.tunnels.indexed)
+              Column(
+                key: ValueKey(tunnel.id),
+                children: [
+                  TunnelTile(
+                    tunnel: tunnel,
+                    status: snapshot.statusOf(tunnel.id),
+                    onToggle: () =>
+                        _send(context, AgentCommand.toggle(tunnel.id)),
+                    onEdit: () => onEdit(tunnel),
+                    onDelete: () =>
+                        _send(context, AgentCommand.remove(tunnel.id)),
+                  ),
+                  if (index < snapshot.tunnels.length - 1)
+                    Divider(
+                      height: 1,
+                      indent: 6,
+                      endIndent: 6,
+                      color: colors.background,
+                    ),
+                ],
+              ),
+          ],
         ),
       },
     );
   }
+
+  void _send(BuildContext context, AgentCommand command) =>
+      context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }

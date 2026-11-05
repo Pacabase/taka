@@ -14,6 +14,7 @@ void main() {
       AgentCommand.save(database),
       AgentCommand.remove('a1'),
       AgentCommand.toggle('b2'),
+      AgentCommand.move('b2', 0),
       AgentCommand.quit(),
     ]) {
       test('$command round-trips', () {
@@ -28,6 +29,7 @@ void main() {
       {'command': 'reboot'},
       {'command': 'remove'},
       {'command': 'toggle', 'id': 3},
+      {'command': 'move', 'id': 'b2'},
       {
         'command': 'save',
         'tunnel': {'id': 'a1'},

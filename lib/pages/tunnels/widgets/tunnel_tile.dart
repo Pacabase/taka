@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
+import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
@@ -25,6 +26,7 @@ class _TunnelTileState extends State<TunnelTile> {
   Widget build(BuildContext context) {
     final colors = TakaColors.of(context);
     final TunnelTile(:tunnel, :status) = widget;
+    final isHovered = _hovered || ReorderableRows.isLifted(context);
     Text orange(String text) => Text(
       text,
       maxLines: 1,
@@ -63,7 +65,7 @@ class _TunnelTileState extends State<TunnelTile> {
         child: Container(
           constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          color: _hovered ? colors.selection : Colors.transparent,
+          color: isHovered ? colors.selection : Colors.transparent,
           child: Row(
             spacing: 8,
             children: [
@@ -82,7 +84,7 @@ class _TunnelTileState extends State<TunnelTile> {
                   ],
                 ),
               ),
-              if (_hovered || _focused) ...[
+              if (isHovered || _focused) ...[
                 IconButton(
                   tooltip: 'Edit',
                   onPressed: widget.onEdit,

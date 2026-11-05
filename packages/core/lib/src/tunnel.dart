@@ -75,3 +75,15 @@ sealed class const Tunnel._() with _$Tunnel {
   @override
   String toString() => 'Tunnel($id, $title)';
 }
+
+extension TunnelOrder on List<Tunnel> {
+  /// Puts tunnel [id] at [index] among the others.
+  List<Tunnel> moved(String id, int index) {
+    final from = indexWhere((tunnel) => tunnel.id == id);
+    final to = index.clamp(0, length - 1);
+    if (from < 0 || from == to) return this;
+
+    final tunnels = [...this];
+    return tunnels..insert(to, tunnels.removeAt(from));
+  }
+}

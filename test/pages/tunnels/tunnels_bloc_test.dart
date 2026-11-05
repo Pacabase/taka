@@ -1,32 +1,12 @@
 @Tags(['unit'])
 library;
 
-import 'dart:async';
-
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 
-class FakeAgent implements AgentClient {
-  final controller = StreamController<TunnelsSnapshot>();
-  final sent = <AgentCommand>[];
-
-  @override
-  Stream<TunnelsSnapshot> get snapshots => controller.stream;
-
-  @override
-  Stream<void> get aboutRequests => const Stream.empty();
-
-  @override
-  Future<String> get identity => Future.value('');
-
-  @override
-  void send(AgentCommand command) => sent.add(command);
-
-  @override
-  Future<void> close() => controller.close();
-}
+import 'fake_agent.dart';
 
 void main() {
   const database = Tunnel(
@@ -35,6 +15,12 @@ void main() {
     localPort: 15432,
     remoteHost: 'db.internal',
     remotePort: 5432,
+  );
+  const proxy = Tunnel(
+    id: 'b2',
+    kind: TunnelKind.socks,
+    sshHost: 'bastion',
+    localPort: 1080,
   );
   const connected = TunnelsSnapshot(
     tunnels: [database],
@@ -92,6 +78,27 @@ void main() {
       AgentCommand.toggle('a1'),
       AgentCommand.remove('a1'),
     ]),
+  );
+
+  blocTest<TunnelsBloc, TunnelsState>(
+    'shows a moved tunnel in its new place before the agent replies',
+    build: () => TunnelsBloc(agent: agent),
+    seed: () => const Ready(TunnelsSnapshot(tunnels: [database, proxy])),
+    act: (bloc) =>
+        bloc.add(const TunnelsEvent.send(AgentCommand.move('b2', 0))),
+    expect: () => const [
+      Ready(TunnelsSnapshot(tunnels: [proxy, database])),
+    ],
+    verify: (_) => expect(agent.sent, const [AgentCommand.move('b2', 0)]),
+  );
+
+  blocTest<TunnelsBloc, TunnelsState>(
+    'only sends a move while it has no snapshot yet',
+    build: () => TunnelsBloc(agent: agent),
+    act: (bloc) =>
+        bloc.add(const TunnelsEvent.send(AgentCommand.move('b2', 0))),
+    expect: () => const <TunnelsState>[],
+    verify: (_) => expect(agent.sent, const [AgentCommand.move('b2', 0)]),
   );
 
   blocTest<TunnelsBloc, TunnelsState>(
