@@ -9,12 +9,6 @@ import 'package:system_ssh/system_ssh.dart';
 final _log = FimberLog('Tunnels');
 final _sshLog = FimberLog('ssh');
 
-// "channel 2: open failed: connect failed: Connection refused", or
-// "channel 3: open failed: administratively prohibited: open failed".
-final _openFailed = RegExp(
-  r'open failed: (?:connect failed: )?(.+?)(?:: open failed)?$',
-);
-
 class TunnelSession({
   required final Tunnel tunnel,
   required final SshClient client,
@@ -67,9 +61,9 @@ class TunnelSession({
   Future<SshTunnel> _open() {
     final abortTrigger = _abort.future;
     // ssh's lines, named since tunnels connect at once.
-    void onLog(String line) {
-      _sshLog.d('${tunnel.title}: $line');
-      if (_openFailed.firstMatch(line)?[1] case final reason?) _warn(reason);
+    void onLog(SshLog log) {
+      _sshLog.d('${tunnel.title}: ${log.line}');
+      if (log case SshForwardFailed(:final reason)) _warn(reason);
     }
 
     return switch (tunnel) {
