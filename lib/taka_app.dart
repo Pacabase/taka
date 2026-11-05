@@ -88,9 +88,13 @@ class _TakaAppState extends State<TakaApp> {
   void _showSettings() {
     if (widget.settings == null) return;
 
-    _navigator.currentState!
-      ..popUntil((route) => route.isFirst)
-      ..pushNamed(TakaApp.settingsRoute);
+    final navigator = _navigator.currentState!;
+    var isShown = false;
+    navigator.popUntil((route) {
+      isShown = route.settings.name == TakaApp.settingsRoute;
+      return isShown || route.isFirst;
+    });
+    if (!isShown) unawaited(navigator.pushNamed(TakaApp.settingsRoute));
   }
 
   void _showAbout() => _navigator.currentState!

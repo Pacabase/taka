@@ -5,7 +5,6 @@ import 'package:core/core.dart';
 import 'package:fimber/fimber.dart';
 import 'package:nativeapi/nativeapi.dart';
 
-/// The agent's settings, which both its tray and the window change.
 class LocalPreferences({
   required final DebugLogging debugLogging,
   final LaunchAtLogin? launchAtLogin,
@@ -25,7 +24,7 @@ class LocalPreferences({
   @override
   void setLaunchAtLogin({required bool on}) {
     final login = launchAtLogin;
-    if (login == null || login.isEnabled == on) return;
+    if (login == null) return;
 
     on ? login.enable() : login.disable();
     if (login.isEnabled != on) {
@@ -34,7 +33,11 @@ class LocalPreferences({
         unawaited(
           Process.run('open', [
             'x-apple.systempreferences:com.apple.LoginItems-Settings.extension',
-          ]).then((_) {}, onError: (Object _) {}),
+          ]).then(
+            (_) {},
+            onError: (Object exception) =>
+                Fimber.w('Could not open Login Items', ex: exception),
+          ),
         );
       }
     }

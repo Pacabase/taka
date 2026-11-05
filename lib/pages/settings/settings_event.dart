@@ -4,5 +4,5 @@ part of 'settings_bloc.dart';
 sealed class SettingsEvent with _$SettingsEvent {
   const factory started() = SettingsStarted;
 
-  const factory change(AgentCommand command) = ChangeSetting;
+  const factory send(AgentCommand command) = SendSetting;
 }

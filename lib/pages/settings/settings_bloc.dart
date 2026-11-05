@@ -16,6 +16,6 @@ class SettingsBloc({required AgentClient agent})
       (event, emit) => emit.forEach(agent.settings, onData: SettingsReady.new),
     );
 
-    on<ChangeSetting>((event, emit) => agent.send(event.command));
+    on<SendSetting>((event, emit) => agent.send(event.command));
   }
 }

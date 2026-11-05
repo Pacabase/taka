@@ -56,12 +56,12 @@ extension SettingsEventPatterns on SettingsEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SettingsStarted value)?  started,TResult Function( ChangeSetting value)?  change,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SettingsStarted value)?  started,TResult Function( SendSetting value)?  send,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case SettingsStarted() when started != null:
-return started(_that);case ChangeSetting() when change != null:
-return change(_that);case _:
+return started(_that);case SendSetting() when send != null:
+return send(_that);case _:
   return orElse();
 
 }
@@ -79,12 +79,12 @@ return change(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SettingsStarted value)  started,required TResult Function( ChangeSetting value)  change,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SettingsStarted value)  started,required TResult Function( SendSetting value)  send,}){
 final _that = this;
 switch (_that) {
 case SettingsStarted():
-return started(_that);case ChangeSetting():
-return change(_that);}
+return started(_that);case SendSetting():
+return send(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -98,12 +98,12 @@ return change(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SettingsStarted value)?  started,TResult? Function( ChangeSetting value)?  change,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SettingsStarted value)?  started,TResult? Function( SendSetting value)?  send,}){
 final _that = this;
 switch (_that) {
 case SettingsStarted() when started != null:
-return started(_that);case ChangeSetting() when change != null:
-return change(_that);case _:
+return started(_that);case SendSetting() when send != null:
+return send(_that);case _:
   return null;
 
 }
@@ -120,11 +120,11 @@ return change(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function( AgentCommand command)?  change,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function( AgentCommand command)?  send,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SettingsStarted() when started != null:
-return started();case ChangeSetting() when change != null:
-return change(_that.command);case _:
+return started();case SendSetting() when send != null:
+return send(_that.command);case _:
   return orElse();
 
 }
@@ -142,11 +142,11 @@ return change(_that.command);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function( AgentCommand command)  change,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function( AgentCommand command)  send,}) {final _that = this;
 switch (_that) {
 case SettingsStarted():
-return started();case ChangeSetting():
-return change(_that.command);}
+return started();case SendSetting():
+return send(_that.command);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -160,11 +160,11 @@ return change(_that.command);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function( AgentCommand command)?  change,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function( AgentCommand command)?  send,}) {final _that = this;
 switch (_that) {
 case SettingsStarted() when started != null:
-return started();case ChangeSetting() when change != null:
-return change(_that.command);case _:
+return started();case SendSetting() when send != null:
+return send(_that.command);case _:
   return null;
 
 }
@@ -207,8 +207,8 @@ String toString() {
 /// @nodoc
 
 
-class ChangeSetting implements SettingsEvent {
-  const ChangeSetting(this.command);
+class SendSetting implements SettingsEvent {
+  const SendSetting(this.command);
   
 
  final  AgentCommand command;
@@ -217,13 +217,13 @@ class ChangeSetting implements SettingsEvent {
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$ChangeSettingCopyWith<ChangeSetting> get copyWith => _$ChangeSettingCopyWithImpl<ChangeSetting>(this, _$identity);
+$SendSettingCopyWith<SendSetting> get copyWith => _$SendSettingCopyWithImpl<SendSetting>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is ChangeSetting&&(identical(other.command, command) || other.command == command));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is SendSetting&&(identical(other.command, command) || other.command == command));
 }
 
 
@@ -234,15 +234,15 @@ int get hashCode {
 
 @override
 String toString() {
-    return 'SettingsEvent.change(command: $command)';
+    return 'SettingsEvent.send(command: $command)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class $ChangeSettingCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
-  factory $ChangeSettingCopyWith(ChangeSetting value, $Res Function(ChangeSetting) _then) = _$ChangeSettingCopyWithImpl;
+abstract mixin class $SendSettingCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
+  factory $SendSettingCopyWith(SendSetting value, $Res Function(SendSetting) _then) = _$SendSettingCopyWithImpl;
 @useResult
 $Res call({
  AgentCommand command
@@ -253,17 +253,17 @@ $AgentCommandCopyWith<$Res> get command;
 
 }
 /// @nodoc
-class _$ChangeSettingCopyWithImpl<$Res>
-    implements $ChangeSettingCopyWith<$Res> {
-  _$ChangeSettingCopyWithImpl(this._self, this._then);
+class _$SendSettingCopyWithImpl<$Res>
+    implements $SendSettingCopyWith<$Res> {
+  _$SendSettingCopyWithImpl(this._self, this._then);
 
-  final ChangeSetting _self;
-  final $Res Function(ChangeSetting) _then;
+  final SendSetting _self;
+  final $Res Function(SendSetting) _then;
 
 /// Create a copy of SettingsEvent
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? command = null,}) {
-  return _then(ChangeSetting(
+  return _then(SendSetting(
 null == command ? _self.command : command // ignore: cast_nullable_to_non_nullable
 as AgentCommand,
   ));

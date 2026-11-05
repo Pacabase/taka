@@ -2,7 +2,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'agent_settings.freezed.dart';
 
-/// The agent's own settings, which the window shows and changes.
 @freezed
 sealed class const AgentSettings._() with _$AgentSettings {
   /// [launchesAtLogin] is null where the agent can't launch at login, such
@@ -29,7 +28,6 @@ sealed class const AgentSettings._() with _$AgentSettings {
   };
 }
 
-/// Where the agent keeps its settings and acts on the window's changes.
 abstract interface class AgentPreferences {
   AgentSettings get settings;
 

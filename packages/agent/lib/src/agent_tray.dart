@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:agent/src/local_preferences.dart';
 import 'package:agent/src/tray_entries.dart';
 import 'package:core/core.dart';
 import 'package:fimber/fimber.dart';
@@ -9,7 +8,7 @@ import 'package:nativeapi/nativeapi.dart';
 
 class AgentTray({
   required final TunnelManager manager,
-  required final LocalPreferences preferences,
+  required final AgentPreferences preferences,
   required final String assetsPath,
   required final void Function() onAbout,
   required final void Function() onSettings,

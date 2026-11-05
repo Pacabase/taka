@@ -40,7 +40,7 @@ void main() {
     'hands a change to the agent',
     build: () => SettingsBloc(agent: agent),
     act: (bloc) => bloc.add(
-      const SettingsEvent.change(AgentCommand.setDebugLogging(on: true)),
+      const SettingsEvent.send(AgentCommand.setDebugLogging(on: true)),
     ),
     expect: () => const <SettingsState>[],
     verify: (_) =>
