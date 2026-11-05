@@ -8,8 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/about/about_page.dart';
+import 'package:taka/pages/settings/settings_bloc.dart';
+import 'package:taka/pages/settings/settings_page.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/taka_app.dart';
+
+import 'pages/tunnels/fake_agent.dart';
 
 void main() {
   testWidgets('an About request opens About, once however often it comes', (
@@ -37,6 +41,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AboutPage), findsNothing);
+    expect(find.text('Tunnels'), findsOneWidget);
+  });
+
+  testWidgets('Settings in the menu opens Settings, and leaves it open', (
+    tester,
+  ) async {
+    final settings = SettingsBloc(agent: FakeAgent());
+    addTearDown(settings.close);
+    await tester.pumpWidget(
+      TakaApp(
+        version: '1.2.3',
+        settings: settings,
+        home: const Text('Tunnels'),
+      ),
+    );
+
+    await _menuCall(tester, 'settings');
+    await tester.pumpAndSettle();
+    final page = tester.element(find.byType(SettingsPage));
+    await _menuCall(tester, 'settings');
+    await tester.pumpAndSettle();
+
+    expect(tester.element(find.byType(SettingsPage)), same(page));
+
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tunnels'), findsOneWidget);
+  });
+
+  testWidgets('Settings in the menu does nothing without settings', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const TakaApp(version: '1.2.3', home: Text('Tunnels')),
+    );
+
+    await _menuCall(tester, 'settings');
+    await tester.pumpAndSettle();
+
     expect(find.text('Tunnels'), findsOneWidget);
   });
 
@@ -124,3 +168,10 @@ void main() {
     expect(toggles, 1);
   });
 }
+
+Future<void> _menuCall(WidgetTester tester, String method) =>
+    tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+      'taka/menu',
+      const StandardMethodCodec().encodeMethodCall(MethodCall(method)),
+      (_) {},
+    );

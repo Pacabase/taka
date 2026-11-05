@@ -16,6 +16,12 @@ sealed class const AgentCommand._() with _$AgentCommand {
 
   const factory quit() = QuitAgent;
 
+  const factory setLaunchAtLogin({required bool on}) = SetLaunchAtLogin;
+
+  const factory setDebugLogging({required bool on}) = SetDebugLogging;
+
+  const factory showLogs() = ShowLogs;
+
   static AgentCommand fromJson(Object? json) => switch (json) {
     {'command': 'save', 'tunnel': final tunnel} => SaveTunnel(
       Tunnel.fromJson(tunnel),
@@ -25,6 +31,11 @@ sealed class const AgentCommand._() with _$AgentCommand {
     {'command': 'move', 'id': final String id, 'index': final int index} =>
       MoveTunnel(id, index),
     {'command': 'quit'} => const QuitAgent(),
+    {'command': 'launchAtLogin', 'on': final bool on} => SetLaunchAtLogin(
+      on: on,
+    ),
+    {'command': 'debugLogging', 'on': final bool on} => SetDebugLogging(on: on),
+    {'command': 'showLogs'} => const ShowLogs(),
     _ => throw FormatException('Not a command: $json'),
   };
 
@@ -38,5 +49,8 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'index': index,
     },
     QuitAgent() => {'command': 'quit'},
+    SetLaunchAtLogin(:final on) => {'command': 'launchAtLogin', 'on': on},
+    SetDebugLogging(:final on) => {'command': 'debugLogging', 'on': on},
+    ShowLogs() => {'command': 'showLogs'},
   };
 }

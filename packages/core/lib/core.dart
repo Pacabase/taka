@@ -2,6 +2,7 @@ export 'src/agent_client.dart';
 export 'src/agent_command.dart';
 export 'src/agent_message.dart';
 export 'src/agent_server.dart';
+export 'src/agent_settings.dart';
 export 'src/local_tunnel_store.dart';
 export 'src/logging/debug_logging.dart';
 export 'src/paths.dart';

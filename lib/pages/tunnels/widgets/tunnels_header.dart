@@ -7,6 +7,7 @@ class const TunnelsHeader({
   required final String title,
   required final bool isFormOpen,
   required final void Function() onPressed,
+  required final void Function() onSettings,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -24,6 +25,12 @@ class const TunnelsHeader({
               style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
+          if (!isFormOpen)
+            IconButton(
+              tooltip: 'Settings',
+              onPressed: onSettings,
+              icon: AppIcon(AppIcons.settings, color: colors.textSecondary),
+            ),
           IconButton(
             tooltip: isFormOpen ? 'Cancel' : 'Add tunnel',
             onPressed: onPressed,

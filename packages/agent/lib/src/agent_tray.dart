@@ -8,11 +8,9 @@ import 'package:nativeapi/nativeapi.dart';
 
 class AgentTray({
   required final TunnelManager manager,
-  required final DebugLogging debugLogging,
-  final LaunchAtLogin? launchAtLogin,
   required final String assetsPath,
-  required final void Function() onAbout,
-  required final void Function() onSettings,
+  required final void Function() onManageTunnels,
+  required final void Function(String? id) onOpenTunnel,
   required final Future<void> Function() onQuit,
 }) {
   late final Image? _connectedImage = Image.fromFile(
@@ -38,7 +36,7 @@ class AgentTray({
       ..addListener((event) {
         switch (event) {
           case TrayIconClickedEvent() when Platform.isWindows:
-            onSettings();
+            onManageTunnels();
           case TrayIconRightClickedEvent() when !Platform.isWindows:
             icon.openContextMenu();
           case _:
@@ -53,13 +51,7 @@ class AgentTray({
 
   void _rebuild(TunnelsSnapshot snapshot) {
     final icon = _icon;
-    final menu = _menu(
-      trayEntries(
-        snapshot,
-        isLogging: debugLogging.isOn,
-        launchesAtLogin: launchAtLogin?.isEnabled,
-      ),
-    );
+    final menu = _menu(trayEntries(snapshot));
     if (icon == null || menu == null) return;
 
     final count = snapshot.connectedCount;
@@ -92,22 +84,19 @@ class AgentTray({
       MenuItemType.normal,
       onClick: () => Clipboard.instance.writeText(text),
     ),
-    ActionEntry(
-      :final action,
-      :final label,
-      :final isEnabled,
-      :final isChecked,
-      :final shortcut,
-    ) =>
-      _create(
-          label,
-          isChecked == null ? MenuItemType.normal : MenuItemType.checkbox,
-          onClick: isEnabled ? () => _run(action) : null,
-        )
-        ?..accelerator = shortcut == null ? null : _shortcut(shortcut)
-        ..state = isChecked == true
-            ? MenuItemState.checked
-            : MenuItemState.unchecked,
+    ActionEntry(:final action, :final label, :final shortcut) => _create(
+      label,
+      MenuItemType.normal,
+      onClick: () => _run(action),
+    )?..accelerator = shortcut == null ? null : _shortcut(shortcut),
+    TunnelActionEntry(:final tunnel, :final action, :final label) => _create(
+      label,
+      MenuItemType.normal,
+      onClick: () => switch (action) {
+        TunnelAction.edit => onOpenTunnel(tunnel.id),
+        TunnelAction.tryAgain => _tryAgain(tunnel.id),
+      },
+    ),
     InfoEntry(:final label) => _create(label, MenuItemType.normal),
     SeparatorEntry() => _create('', MenuItemType.separator),
     SubmenuEntry(:final label, :final entries) =>
@@ -132,40 +121,18 @@ class AgentTray({
     return item;
   }
 
+  // The menu can be stale: don't stop a tunnel that has come back since.
+  void _tryAgain(String id) {
+    if (!manager.snapshot.statusOf(id).isOn) _guard(manager.toggle(id));
+  }
+
   void _run(TrayAction action) => switch (action) {
     TrayAction.connectAll => _guard(manager.connectAll()),
     TrayAction.disconnectAll => _guard(manager.disconnectAll()),
-    TrayAction.about => onAbout(),
-    TrayAction.launchAtLogin => _toggleLaunchAtLogin(),
-    TrayAction.debugLogging => _toggleDebugLogging(),
-    TrayAction.showLogs => _guard(debugLogging.reveal()),
-    TrayAction.settings => onSettings(),
+    TrayAction.addTunnel => onOpenTunnel(null),
+    TrayAction.manageTunnels => onManageTunnels(),
     TrayAction.quit => _guard(onQuit()),
   };
-
-  // macOS may want the login item approved in System Settings first.
-  void _toggleLaunchAtLogin() {
-    if (launchAtLogin case final login?) {
-      final isEnabling = !login.isEnabled;
-      isEnabling ? login.enable() : login.disable();
-      if (login.isEnabled != isEnabling) {
-        Fimber.w('Could not turn launch at login ${isEnabling ? 'on' : 'off'}');
-        if (isEnabling && Platform.isMacOS) {
-          _guard(
-            Process.run('open', [
-              'x-apple.systempreferences:com.apple.LoginItems-Settings.extension',
-            ]),
-          );
-        }
-      }
-      _rebuild(manager.snapshot);
-    }
-  }
-
-  void _toggleDebugLogging() {
-    debugLogging.turn(on: !debugLogging.isOn);
-    _rebuild(manager.snapshot);
-  }
 
   // An uncaught error would end the agent, and every tunnel with it.
   void _guard(Future<void> work) => unawaited(

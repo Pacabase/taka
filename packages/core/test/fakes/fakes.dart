@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:core/core.dart';
 import 'package:mocktail/mocktail.dart';
@@ -59,3 +60,31 @@ const proxy = Tunnel(
   sshHost: 'bastion',
   localPort: 1080,
 );
+
+class FakePreferences implements AgentPreferences {
+  final _changes = StreamController<AgentSettings>.broadcast();
+  final _calls = StreamController<String>();
+  bool logsFail = false;
+
+  Stream<String> get calls => _calls.stream;
+
+  @override
+  AgentSettings settings = const AgentSettings(launchesAtLogin: false);
+
+  @override
+  Stream<AgentSettings> get changes => _changes.stream;
+
+  void change(AgentSettings changed) => _changes.add(settings = changed);
+
+  @override
+  void setLaunchAtLogin({required bool on}) => _calls.add('launchAtLogin $on');
+
+  @override
+  void setDebugLogging({required bool on}) => _calls.add('debugLogging $on');
+
+  @override
+  Future<void> showLogs() async {
+    _calls.add('showLogs');
+    if (logsFail) throw const FileSystemException('No logs');
+  }
+}

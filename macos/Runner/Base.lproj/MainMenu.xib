@@ -33,6 +33,12 @@
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="VOq-y0-SEH"/>
+                            <menuItem title="Settings…" keyEquivalent="," id="Stg-Mn-k01">
+                                <connections>
+                                    <action selector="showSettings:" target="Voe-Tx-rLC" id="Stg-Ac-k02"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="Stg-Sp-k03"/>
                             <menuItem title="Services" id="NMo-om-nkz">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <menu key="submenu" title="Services" systemMenu="services" id="hz9-B4-Xy5"/>

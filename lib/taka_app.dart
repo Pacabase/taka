@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/pages/about/about_page.dart';
+import 'package:taka/pages/settings/settings_bloc.dart';
+import 'package:taka/pages/settings/settings_page.dart';
 import 'package:taka/theme/taka_theme.dart';
 
 class const TakaApp({
@@ -10,7 +13,10 @@ class const TakaApp({
   required final String version,
   required final Widget home,
   final Stream<void> aboutRequests = const Stream.empty(),
+  final SettingsBloc? settings,
 }) extends StatefulWidget {
+  static const settingsRoute = '/settings';
+
   @override
   State<TakaApp> createState() => _TakaAppState();
 }
@@ -26,7 +32,12 @@ class _TakaAppState extends State<TakaApp> {
     super.initState();
     _aboutRequests = widget.aboutRequests.listen((_) => _showAbout());
     _menu.setMethodCallHandler((call) async {
-      if (call.method == 'about') _showAbout();
+      switch (call.method) {
+        case 'about':
+          _showAbout();
+        case 'settings':
+          _showSettings();
+      }
     });
   }
 
@@ -39,7 +50,7 @@ class _TakaAppState extends State<TakaApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    final app = MaterialApp(
       navigatorKey: _navigator,
       title: 'Taka',
       theme: takaTheme(Brightness.light),
@@ -54,7 +65,16 @@ class _TakaAppState extends State<TakaApp> {
         ),
       ),
       home: widget.home,
+      routes: {
+        if (widget.settings != null)
+          TakaApp.settingsRoute: (_) => SettingsPage(version: widget.version),
+      },
     );
+
+    return switch (widget.settings) {
+      final settings? => BlocProvider.value(value: settings, child: app),
+      null => app,
+    };
   }
 
   // Unfocusing a scope moves focus out of the navigator, where Tab finds nothing.
@@ -63,6 +83,18 @@ class _TakaAppState extends State<TakaApp> {
         when focus is! FocusScopeNode) {
       focus.unfocus();
     }
+  }
+
+  void _showSettings() {
+    if (widget.settings == null) return;
+
+    final navigator = _navigator.currentState!;
+    var isShown = false;
+    navigator.popUntil((route) {
+      isShown = route.settings.name == TakaApp.settingsRoute;
+      return isShown || route.isFirst;
+    });
+    if (!isShown) unawaited(navigator.pushNamed(TakaApp.settingsRoute));
   }
 
   void _showAbout() => _navigator.currentState!

@@ -21,6 +21,10 @@ void main() {
       AgentMessage.snapshot(snapshot),
       AgentMessage.snapshot(TunnelsSnapshot()),
       AgentMessage.showAbout(),
+      AgentMessage.openTunnel('a1'),
+      AgentMessage.openTunnel(),
+      AgentMessage.settings(AgentSettings(launchesAtLogin: true)),
+      AgentMessage.settings(AgentSettings(isLogging: true)),
     ]) {
       test('$message round-trips', () {
         expect(
@@ -38,6 +42,38 @@ void main() {
 
     test('a snapshot is sent untagged', () {
       expect(const AgentMessage.snapshot(snapshot).toJson(), snapshot.toJson());
+    });
+
+    test('settings say whether launch at login is offered and on', () {
+      expect(
+        const AgentMessage.settings(
+          AgentSettings(launchesAtLogin: true, isLogging: true),
+        ).toJson(),
+        {
+          'settings': {'launchAtLogin': true, 'debugLogging': true},
+        },
+      );
+      expect(const AgentMessage.settings(AgentSettings()).toJson(), {
+        'settings': {'launchAtLogin': null, 'debugLogging': false},
+      });
+    });
+
+    test('openTunnel names the tunnel, or none for a new one', () {
+      expect(const AgentMessage.openTunnel('a1').toJson(), {
+        'show': 'tunnel',
+        'id': 'a1',
+      });
+      expect(const AgentMessage.openTunnel().toJson(), {
+        'show': 'tunnel',
+        'id': null,
+      });
+    });
+
+    test('openTunnel with a malformed id is not read as a new tunnel', () {
+      expect(
+        () => AgentMessage.fromJson({'show': 'tunnel', 'id': 5}),
+        throwsFormatException,
+      );
     });
 
     test('showAbout is show about', () {

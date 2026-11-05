@@ -1,6 +1,8 @@
 @Tags(['unit'])
 library;
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
 import 'package:flutter/gestures.dart';
@@ -31,24 +33,32 @@ void main() {
     localPort: 1080,
   );
 
+  Future<_MockTunnelsBloc> pumpPage(
+    WidgetTester tester, {
+    TunnelsState initialState = const Ready(
+      TunnelsSnapshot(tunnels: [database, proxy]),
+    ),
+    Stream<TunnelsState> states = const Stream.empty(),
+    Stream<OpenTunnel> tunnelRequests = const Stream.empty(),
+  }) async {
+    final bloc = _MockTunnelsBloc();
+    whenListen(bloc, states, initialState: initialState);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: takaTheme(Brightness.light),
+        home: BlocProvider<TunnelsBloc>.value(
+          value: bloc,
+          child: TunnelsPage(tunnelRequests: tunnelRequests),
+        ),
+      ),
+    );
+    return bloc;
+  }
+
   testWidgets(
     'lists the tunnels from the top, and dragging one moves it, shown as hovered',
     (tester) async {
-      final bloc = _MockTunnelsBloc();
-      whenListen(
-        bloc,
-        const Stream<TunnelsState>.empty(),
-        initialState: const Ready(TunnelsSnapshot(tunnels: [database, proxy])),
-      );
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: takaTheme(Brightness.light),
-          home: BlocProvider<TunnelsBloc>.value(
-            value: bloc,
-            child: const TunnelsPage(),
-          ),
-        ),
-      );
+      final bloc = await pumpPage(tester);
 
       expect(
         tester.getBottomLeft(find.byType(TunnelsHeader)).dy,
@@ -72,6 +82,72 @@ void main() {
       ).called(1);
     },
   );
+
+  testWidgets(
+    "the tray asks for a tunnel's form, or a new one, over a dialog",
+    (tester) async {
+      final requests = StreamController<OpenTunnel>();
+      addTearDown(requests.close);
+      await pumpPage(tester, tunnelRequests: requests.stream);
+      unawaited(
+        showDialog<void>(
+          context: tester.element(find.byType(TunnelsPage)),
+          builder: (_) => const Text('A dialog'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      requests.add(const OpenTunnel('b2'));
+      await tester.pumpAndSettle();
+      expect(find.text('A dialog'), findsNothing);
+      expect(find.text('Edit tunnel'), findsOneWidget);
+      expect(find.text('bastion'), findsOneWidget);
+
+      requests.add(const OpenTunnel());
+      await tester.pumpAndSettle();
+      expect(find.text('New tunnel'), findsOneWidget);
+    },
+  );
+
+  testWidgets('a request that comes while loading opens once the tunnels do', (
+    tester,
+  ) async {
+    final states = StreamController<TunnelsState>();
+    addTearDown(states.close);
+    await pumpPage(
+      tester,
+      initialState: const Loading(),
+      states: states.stream,
+      tunnelRequests: Stream.value(const OpenTunnel('b2')),
+    );
+    await tester.pump();
+
+    states.add(const Ready(TunnelsSnapshot(tunnels: [database, proxy])));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit tunnel'), findsOneWidget);
+  });
+
+  testWidgets('a request for a tunnel that is gone leaves the screen alone', (
+    tester,
+  ) async {
+    final requests = StreamController<OpenTunnel>();
+    addTearDown(requests.close);
+    await pumpPage(tester, tunnelRequests: requests.stream);
+    unawaited(
+      showDialog<void>(
+        context: tester.element(find.byType(TunnelsPage)),
+        builder: (_) => const Text('A dialog'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    requests.add(const OpenTunnel('gone'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('A dialog'), findsOneWidget);
+    expect(find.text('Tunnels'), findsOneWidget);
+  });
 }
 
 class _MockTunnelsBloc extends MockBloc<TunnelsEvent, TunnelsState>

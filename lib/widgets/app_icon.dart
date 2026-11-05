@@ -9,9 +9,11 @@ class const AppIconData._(final String name) {}
 abstract final class AppIcons {
   static const check = AppIconData._('check');
   static const chevronLeft = AppIconData._('chevron-left');
+  static const chevronRight = AppIconData._('chevron-right');
   static const copy = AppIconData._('copy');
   static const pencil = AppIconData._('pencil');
   static const plus = AppIconData._('plus');
+  static const settings = AppIconData._('settings');
   static const trash = AppIconData._('trash-2');
   static const triangleAlert = AppIconData._('triangle-alert');
 }

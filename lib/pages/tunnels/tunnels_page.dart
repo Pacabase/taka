@@ -10,9 +10,13 @@ import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_form.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
+import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_colors.dart';
 
-class const TunnelsPage({super.key}) extends StatefulWidget {
+class const TunnelsPage({
+  super.key,
+  final Stream<OpenTunnel> tunnelRequests = const Stream.empty(),
+}) extends StatefulWidget {
   @override
   State<TunnelsPage> createState() => _TunnelsPageState();
 }
@@ -21,6 +25,40 @@ class _TunnelsPageState extends State<TunnelsPage> {
   var _isFormOpen = false;
   Tunnel? _editing;
   var _hosts = const <String>[];
+  late final StreamSubscription<OpenTunnel> _tunnelRequests;
+
+  @override
+  void initState() {
+    super.initState();
+    _tunnelRequests = widget.tunnelRequests.listen(
+      (request) => unawaited(_openRequested(request)),
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_tunnelRequests.cancel());
+    super.dispose();
+  }
+
+  Future<void> _openRequested(OpenTunnel request) async {
+    final bloc = context.read<TunnelsBloc>();
+    // A window opened from the tray gets the request before its first snapshot.
+    final state = bloc.state is Loading
+        ? await bloc.stream.firstWhere(
+            (state) => state is! Loading,
+            orElse: () => const Loading(),
+          )
+        : bloc.state;
+    if (!mounted || state is! Ready) return;
+    final tunnel = state.snapshot.tunnels
+        .where((tunnel) => tunnel.id == request.id)
+        .firstOrNull;
+    if (request.id != null && tunnel == null) return;
+
+    Navigator.popUntil(context, (route) => route.isFirst);
+    _openForm(tunnel);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +78,8 @@ class _TunnelsPageState extends State<TunnelsPage> {
               },
               isFormOpen: _isFormOpen,
               onPressed: _isFormOpen ? _closeForm : _openForm,
+              onSettings: () =>
+                  Navigator.pushNamed(context, TakaApp.settingsRoute),
             ),
             Expanded(
               child: AnimatedSwitcher(

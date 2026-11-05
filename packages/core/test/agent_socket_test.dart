@@ -14,6 +14,7 @@ void main() {
   late Directory directory;
   late String path;
   late TunnelManager manager;
+  late FakePreferences preferences;
 
   setUp(() async {
     directory = await Directory.systemTemp.createTemp('taka_socket');
@@ -23,6 +24,7 @@ void main() {
       client: MockSshClient(),
     );
     await manager.load();
+    preferences = FakePreferences();
   });
 
   tearDown(() async {
@@ -31,7 +33,7 @@ void main() {
   });
 
   Future<AgentServer> serve() async {
-    final server = (await AgentServer.bind(path, manager))!;
+    final server = (await AgentServer.bind(path, manager, preferences))!;
     addTearDown(server.close);
     return server;
   }
@@ -63,6 +65,76 @@ void main() {
 
     expect((await mine.next).tunnels, [database, added]);
     expect((await theirs.next).tunnels, [database, added]);
+  });
+
+  test('each command reaches the manager', () async {
+    await serve();
+    final agent = await connect();
+    final snapshots = StreamQueue(agent.snapshots);
+    await snapshots.next;
+    const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
+
+    agent
+      ..send(const AgentCommand.save(added))
+      ..send(const AgentCommand.move('c3', 0))
+      ..send(const AgentCommand.remove('a1'));
+
+    await snapshots.next;
+    await snapshots.next;
+    expect((await snapshots.next).tunnels, [added]);
+
+    agent.send(const AgentCommand.toggle('c3'));
+    expect((await snapshots.next).statusOf('c3'), isNot(const Stopped()));
+  });
+
+  test(
+    'a client gets the settings when it connects, and each change',
+    () async {
+      await serve();
+      preferences.change(const AgentSettings(isLogging: true));
+      final agent = await connect();
+      final settings = StreamQueue(agent.settings);
+
+      expect(await settings.next, const AgentSettings(isLogging: true));
+
+      preferences.change(
+        const AgentSettings(launchesAtLogin: true, isLogging: true),
+      );
+      expect(
+        await settings.next,
+        const AgentSettings(launchesAtLogin: true, isLogging: true),
+      );
+    },
+  );
+
+  test('settings commands reach the preferences', () async {
+    await serve();
+    final agent = await connect();
+    await StreamQueue(agent.settings).next;
+
+    agent
+      ..send(const AgentCommand.setLaunchAtLogin(on: true))
+      ..send(const AgentCommand.setDebugLogging(on: true))
+      ..send(const AgentCommand.showLogs());
+
+    expect(await preferences.calls.take(3).toList(), [
+      'launchAtLogin true',
+      'debugLogging true',
+      'showLogs',
+    ]);
+  });
+
+  test('logs that cannot be shown leave the agent listening', () async {
+    await serve();
+    final agent = await connect();
+    final calls = StreamQueue(preferences.calls);
+    preferences.logsFail = true;
+
+    agent.send(const AgentCommand.showLogs());
+    expect(await calls.next, 'showLogs');
+    agent.send(const AgentCommand.setDebugLogging(on: true));
+
+    expect(await calls.next, 'debugLogging true');
   });
 
   test('a bad line is ignored and the client stays connected', () async {
@@ -108,7 +180,7 @@ void main() {
       StreamQueue(theirs.snapshots).next,
     ).wait;
 
-    expect(server.showAbout(), isTrue);
+    expect(server.show(const AgentMessage.showAbout()), isTrue);
 
     await Future.wait(requests.map((queue) => queue.next));
   });
@@ -116,7 +188,7 @@ void main() {
   test('showAbout with no window open asks the next one, once', () async {
     final server = await serve();
 
-    expect(server.showAbout(), isFalse);
+    expect(server.show(const AgentMessage.showAbout()), isFalse);
 
     final first = await connect();
     final second = await connect();
@@ -136,7 +208,7 @@ void main() {
     final agent = await connect();
     final snapshots = StreamQueue(agent.snapshots);
     await snapshots.next;
-    server.showAbout();
+    server.show(const AgentMessage.showAbout());
     await manager.save(proxy);
     await snapshots.next;
     await agent.close();
@@ -144,11 +216,43 @@ void main() {
     expect(await agent.aboutRequests.length, 1);
   });
 
+  test('a tunnel request reaches an open window', () async {
+    final server = await serve();
+    final agent = await connect();
+    await agent.snapshots.first;
+
+    expect(server.show(const AgentMessage.openTunnel('a1')), isTrue);
+
+    expect(await agent.tunnelRequests.first, const OpenTunnel('a1'));
+  });
+
+  test(
+    'with no window open, the next one gets the latest request, once',
+    () async {
+      final server = await serve();
+
+      expect(server.show(const AgentMessage.openTunnel('a1')), isFalse);
+      expect(server.show(const AgentMessage.openTunnel()), isFalse);
+
+      final first = await connect();
+      final second = await connect();
+      final snapshots = StreamQueue(second.snapshots);
+      await snapshots.next;
+      await manager.save(proxy);
+      await snapshots.next;
+      await first.close();
+      await second.close();
+
+      expect(await first.tunnelRequests.toList(), [const OpenTunnel()]);
+      expect(await second.tunnelRequests.toList(), isEmpty);
+    },
+  );
+
   test('showAbout with a window open leaves none pending', () async {
     final server = await serve();
     final open = await connect();
     await StreamQueue(open.snapshots).next;
-    server.showAbout();
+    server.show(const AgentMessage.showAbout());
     await open.close();
 
     final next = await connect();
@@ -187,6 +291,7 @@ void main() {
     final server = (await AgentServer.bind(
       path,
       manager,
+      preferences,
       identity: '/Taka@1',
     ))!;
     addTearDown(server.close);
@@ -239,7 +344,7 @@ void main() {
   test('a second agent finds the first one running', () async {
     await serve();
 
-    expect(await AgentServer.bind(path, manager), isNull);
+    expect(await AgentServer.bind(path, manager, preferences), isNull);
   });
 
   test('a socket left behind by a dead agent is replaced', () async {

@@ -846,19 +846,6 @@ void main() {
     expect(store.saveCount, 0);
   });
 
-  test('handle runs each command', () async {
-    final manager = await loaded();
-    const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
-
-    await manager.handle(const AgentCommand.save(added));
-    await manager.handle(const AgentCommand.toggle('a1'));
-    await manager.handle(const AgentCommand.remove('b2'));
-    await manager.handle(const AgentCommand.move('c3', 0));
-
-    expect(manager.snapshot.tunnels, [added, database]);
-    expect(manager.snapshot.statusOf('a1'), const Connected());
-  });
-
   test(
     'close from a listener of changes waits for the tunnels to stop',
     () async {
@@ -885,17 +872,6 @@ void main() {
       expect(listenerClosed, isTrue);
     },
   );
-
-  test('handle quit stops every tunnel and ends changes', () async {
-    final manager = await loaded();
-    await manager.toggle('a1');
-    final changes = manager.changes.toList();
-
-    await manager.handle(const AgentCommand.quit());
-
-    await changes;
-    expect(tunnel.closeCount, 1);
-  });
 
   test('close stops every tunnel, ends changes, and is idempotent', () async {
     when(openAnySocksProxy).thenAnswer(abortable);
