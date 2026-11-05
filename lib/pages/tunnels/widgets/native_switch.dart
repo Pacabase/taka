@@ -16,7 +16,14 @@ class const NativeSwitch({
 class _NativeSwitchState extends State<NativeSwitch> {
   static const _duration = Duration(milliseconds: 150);
 
+  final _focus = FocusNode();
   var _showsFocus = false;
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +92,7 @@ class _NativeSwitchState extends State<NativeSwitch> {
       label: label,
       onTap: onToggle,
       child: FocusableActionDetector(
+        focusNode: _focus,
         mouseCursor: SystemMouseCursors.click,
         onShowFocusHighlight: (shows) => setState(() => _showsFocus = shows),
         actions: {
@@ -94,7 +102,10 @@ class _NativeSwitchState extends State<NativeSwitch> {
         },
         child: GestureDetector(
           excludeFromSemantics: true,
-          onTap: onToggle,
+          onTap: () {
+            _focus.unfocus();
+            onToggle();
+          },
           child: AnimatedContainer(
             duration: _duration,
             width: width,

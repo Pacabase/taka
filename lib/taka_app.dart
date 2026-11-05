@@ -45,8 +45,24 @@ class _TakaAppState extends State<TakaApp> {
       theme: takaTheme(Brightness.light),
       darkTheme: takaTheme(Brightness.dark),
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => CallbackShortcuts(
+        bindings: {const SingleActivator(LogicalKeyboardKey.escape): _unfocus},
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _unfocus,
+          child: child,
+        ),
+      ),
       home: widget.home,
     );
+  }
+
+  // Unfocusing a scope moves focus out of the navigator, where Tab finds nothing.
+  void _unfocus() {
+    if (FocusManager.instance.primaryFocus case final focus?
+        when focus is! FocusScopeNode) {
+      focus.unfocus();
+    }
   }
 
   void _showAbout() => _navigator.currentState!
