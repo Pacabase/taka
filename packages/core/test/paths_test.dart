@@ -84,7 +84,7 @@ void main() {
 
   group('TakaInstall', () {
     const bundle = '/Applications/Taka.app';
-    const agentBundle = '$bundle/Contents/Library/LoginItems/TakaAgent.app';
+    const agentBundle = '$bundle/Contents/Library/LoginItems/Taka.app';
     const installed = TakaInstall(
       app: bundle,
       agent: '$agentBundle/Contents/MacOS/Taka',
