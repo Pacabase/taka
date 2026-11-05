@@ -1,6 +1,7 @@
 @Tags(['unit'])
 library;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
@@ -19,7 +20,18 @@ void main() {
             onReorder: (from, to) => moves.add((from, to)),
             children: [
               for (final name in ['one', 'two', 'three'])
-                SizedBox(key: ValueKey(name), height: 40, child: Text(name)),
+                SizedBox(
+                  key: ValueKey(name),
+                  height: 40,
+                  child: Builder(
+                    builder: (context) => Text(
+                      name,
+                      semanticsLabel: ReorderableRows.isLifted(context)
+                          ? 'lifted'
+                          : null,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -66,5 +78,23 @@ void main() {
 
     expect(moves, isEmpty);
     expect(tester.getTopLeft(find.text('two')).dy, 40);
+  });
+
+  testWidgets('the dropped row shows as lifted until the pointer moves', (
+    tester,
+  ) async {
+    await pumpRows(tester);
+    bool isLifted(String name) =>
+        tester.widget<Text>(find.text(name)).semanticsLabel == 'lifted';
+
+    await drag(tester, 'one', 100);
+    expect(isLifted('one'), isTrue);
+    expect(isLifted('two'), isFalse);
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(find.text('two')));
+    await mouse.moveBy(const Offset(0, 1));
+    await tester.pump();
+    expect(isLifted('one'), isFalse);
   });
 }

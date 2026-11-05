@@ -31,7 +31,7 @@ void main() {
   );
 
   testWidgets(
-    'lists the tunnels from the top, and dragging one moves it, shown as hovered',
+    'lists the tunnels from the top, and a dragged one moves, hovered until the pointer moves',
     (tester) async {
       final bloc = _MockTunnelsBloc();
       whenListen(
@@ -64,7 +64,11 @@ void main() {
       expect(find.byTooltip('Edit'), findsOneWidget);
       await drag.up();
       await tester.pumpAndSettle();
-      expect(find.byTooltip('Edit'), findsNothing);
+      expect(find.byTooltip('Edit'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Proxy')).dy,
+        lessThan(tester.getTopLeft(find.text('Database')).dy),
+      );
 
       verify(
         () => bloc.add(const TunnelsEvent.send(AgentCommand.move('a1', 1))),

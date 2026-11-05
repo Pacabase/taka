@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:taka/theme/taka_colors.dart';
 
@@ -12,7 +13,7 @@ class const ReorderableRows({
 }) extends StatefulWidget {
   /// Whether [context] is in the row being dragged, which shows as hovered.
   static bool isLifted(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_Lifted>() != null;
+      context.dependOnInheritedWidgetOfExactType<_Lifted>()?.isLifted ?? false;
 
   @override
   State<ReorderableRows> createState() => _ReorderableRowsState();
@@ -23,11 +24,22 @@ class _ReorderableRowsState extends State<ReorderableRows> {
 
   final _rowKeys = <Key, GlobalKey>{};
   _Drag? _drag;
+  // Shown until the moved order arrives, so the row doesn't jump back.
+  List<Widget>? _moved;
+  // Stays hovered until the pointer moves, as its own hover starts a frame late.
+  Key? _dropped;
+
+  List<Widget> get _children => _moved ?? widget.children;
 
   @override
   void didUpdateWidget(ReorderableRows oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final keys = {for (final child in widget.children) child.key};
+    final keys = [for (final child in widget.children) child.key];
+    if (!listEquals(keys, [
+      for (final child in oldWidget.children) child.key,
+    ])) {
+      _moved = null;
+    }
     _rowKeys.removeWhere((key, _) => !keys.contains(key));
   }
 
@@ -35,60 +47,74 @@ class _ReorderableRowsState extends State<ReorderableRows> {
   Widget build(BuildContext context) {
     final drag = _drag;
 
-    return SizedBox.expand(
-      child: SingleChildScrollView(
-        child: Stack(
-          children: [
-            IgnorePointer(
-              ignoring: drag != null,
-              child: Column(
-                children: [
-                  for (final (index, child) in widget.children.indexed)
-                    KeyedSubtree(
-                      key: _rowKeys.putIfAbsent(child.key!, GlobalKey.new),
-                      child: GestureDetector(
-                        onVerticalDragStart: (_) => _start(index),
-                        onVerticalDragUpdate: _update,
-                        onVerticalDragEnd: (_) => _end(),
-                        onVerticalDragCancel: _end,
-                        child: TweenAnimationBuilder(
-                          tween: Tween(end: drag?.shiftOf(index) ?? 0),
-                          duration: drag == null ? Duration.zero : _duration,
-                          curve: Curves.easeOut,
-                          builder: (context, dy, child) => Transform.translate(
-                            offset: Offset(0, dy),
-                            child: child,
-                          ),
-                          child: Visibility.maintain(
-                            visible: drag?.from != index,
-                            child: child,
+    return Listener(
+      onPointerHover: (_) {
+        if (_dropped != null) setState(() => _dropped = null);
+      },
+      child: SizedBox.expand(
+        child: SingleChildScrollView(
+          child: Stack(
+            children: [
+              IgnorePointer(
+                ignoring: drag != null,
+                child: Column(
+                  children: [
+                    for (final (index, child) in _children.indexed)
+                      KeyedSubtree(
+                        key: _rowKeys.putIfAbsent(child.key!, GlobalKey.new),
+                        child: GestureDetector(
+                          onVerticalDragStart: (_) => _start(index),
+                          onVerticalDragUpdate: _update,
+                          onVerticalDragEnd: (_) => _end(),
+                          onVerticalDragCancel: _end,
+                          child: TweenAnimationBuilder(
+                            tween: Tween(end: drag?.shiftOf(index) ?? 0),
+                            duration: drag == null ? Duration.zero : _duration,
+                            curve: Curves.easeOut,
+                            builder: (context, dy, child) =>
+                                Transform.translate(
+                                  offset: Offset(0, dy),
+                                  child: child,
+                                ),
+                            child: Visibility.maintain(
+                              visible: drag?.from != index,
+                              child: _Lifted(
+                                isLifted: child.key == _dropped,
+                                child: child,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ),
-            if (drag != null)
-              Positioned(
-                top: drag.tops[drag.from],
-                left: 0,
-                right: 0,
-                child: TweenAnimationBuilder(
-                  tween: Tween(end: drag.isDropping ? drag.slot : drag.dy),
-                  duration: drag.isDropping ? _duration : Duration.zero,
-                  curve: Curves.easeOut,
-                  onEnd: () {
-                    if (drag.isDropping) _dropped();
-                  },
-                  builder: (context, dy, child) =>
-                      Transform.translate(offset: Offset(0, dy), child: child),
-                  child: IgnorePointer(
-                    child: _Lifted(child: _lifted(widget.children[drag.from])),
-                  ),
+                  ],
                 ),
               ),
-          ],
+              if (drag != null)
+                Positioned(
+                  top: drag.tops[drag.from],
+                  left: 0,
+                  right: 0,
+                  child: TweenAnimationBuilder(
+                    tween: Tween(end: drag.isDropping ? drag.slot : drag.dy),
+                    duration: drag.isDropping ? _duration : Duration.zero,
+                    curve: Curves.easeOut,
+                    onEnd: () {
+                      if (drag.isDropping) _drop();
+                    },
+                    builder: (context, dy, child) => Transform.translate(
+                      offset: Offset(0, dy),
+                      child: child,
+                    ),
+                    child: IgnorePointer(
+                      child: _Lifted(
+                        isLifted: true,
+                        child: _lifted(_children[drag.from]),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -105,8 +131,10 @@ class _ReorderableRowsState extends State<ReorderableRows> {
   );
 
   void _start(int index) {
+    if (_moved != null) return;
+
     final heights = [
-      for (final child in widget.children)
+      for (final child in _children)
         _rowKeys[child.key]!.currentContext!.size!.height,
     ];
     final tops = List.generate(
@@ -124,15 +152,23 @@ class _ReorderableRowsState extends State<ReorderableRows> {
 
   void _end() {
     if (_drag case final drag? when !drag.isDropping) {
-      if (drag.dy == drag.slot) return _dropped();
+      if (drag.dy == drag.slot) return _drop();
       setState(() => drag.isDropping = true);
     }
   }
 
-  void _dropped() {
-    if (_drag case final drag?) {
-      setState(() => _drag = null);
-      if (drag.to != drag.from) widget.onReorder(drag.from, drag.to);
+  void _drop() {
+    if (_drag case _Drag(:final from, :final to)) {
+      setState(() {
+        _drag = null;
+        _dropped = _children[from].key;
+        if (to != from) {
+          _moved = [..._children]
+            ..removeAt(from)
+            ..insert(to, _children[from]);
+        }
+      });
+      if (to != from) widget.onReorder(from, to);
     }
   }
 }
@@ -176,7 +212,8 @@ class _Drag(
   int _placeOf(int index) => index < from ? index : index - 1;
 }
 
-class const _Lifted({required super.child}) extends InheritedWidget {
+class const _Lifted({required final bool isLifted, required super.child})
+    extends InheritedWidget {
   @override
-  bool updateShouldNotify(_Lifted oldWidget) => false;
+  bool updateShouldNotify(_Lifted oldWidget) => isLifted != oldWidget.isLifted;
 }
