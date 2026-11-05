@@ -88,7 +88,12 @@ class TunnelManager({
     session.status = const Connected();
     _emit();
     _log.i('Connected ${tunnel.title}');
-    unawaited(opened.done.then((_) => _fail(session, 'Disconnected')));
+    unawaited(
+      opened.done.then(
+        (_) => _fail(session, 'Disconnected'),
+        onError: (Object exception) => _fail(session, _messageOf(exception)),
+      ),
+    );
   }
 
   Future<void> connectAll() => Future.wait(

@@ -24,7 +24,6 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### First preview (0.1, macOS)
 
-- [ ] **Say why a tunnel dropped** — today it says "Disconnected"; needs `system_ssh` to report ssh's last lines.
 - [ ] **Reconnect a dropped tunnel** with backoff and keepalive, and stop on a failure that won't heal (host key changed, port in use).
 - [ ] **Launch at login**, and reconnect the tunnels that were on.
 - [ ] **Name the agent in 1Password's prompt** — it reads `dart:Taka`, a name that comes from how Dart starts `ssh`; look at it with `system_ssh`.

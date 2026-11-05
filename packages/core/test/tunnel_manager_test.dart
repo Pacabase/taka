@@ -325,6 +325,21 @@ void main() {
     expect(manager.snapshot.connectedCount, 0);
   });
 
+  test('a dropped tunnel says why ssh stopped', () async {
+    final manager = await loaded();
+    await manager.toggle('a1');
+
+    tunnel.dropWith(
+      const SshTunnelException('Connection to bastion closed by remote host.'),
+    );
+    await pumpEventQueue();
+
+    expect(
+      manager.snapshot.statusOf('a1'),
+      const Failed('Connection to bastion closed by remote host.'),
+    );
+  });
+
   group('logs', () {
     const connecting =
         'I/Tunnels: Connecting Production database: '
