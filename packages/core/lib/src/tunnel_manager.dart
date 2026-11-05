@@ -30,6 +30,8 @@ class TunnelManager({
   final Map<String, TunnelSession> _sessions = {};
   final _closed = Completer<void>();
   List<Tunnel> _tunnels = const [];
+  Set<String> _savedOn = const {};
+  Set<String> _wasOn = const {};
 
   TunnelsSnapshot get snapshot => TunnelsSnapshot(
     tunnels: _tunnels,
@@ -39,8 +41,24 @@ class TunnelManager({
   Stream<TunnelsSnapshot> get changes => _changes.stream;
 
   Future<void> load() async {
-    _tunnels = await store.load();
+    final (:tunnels, :on) = await store.load();
+    _tunnels = tunnels;
+    _wasOn = on;
     _emit();
+  }
+
+  /// Turns back on the tunnels that were on when Taka last stopped. Unlike a
+  /// tunnel the user just turned on, one that fails to connect tries again:
+  /// at login, the network may not be up yet.
+  Future<void> restore() {
+    final wasOn = _wasOn;
+    _wasOn = const {};
+
+    return Future.wait([
+      for (final tunnel in _tunnels)
+        if (wasOn.contains(tunnel.id) && !_isOn(tunnel.id))
+          _start(tunnel, isRestored: true),
+    ]);
   }
 
   Future<void> handle(AgentCommand command) => switch (command) {
@@ -62,8 +80,10 @@ class TunnelManager({
     await _persist();
 
     if (_isOn(tunnel.id) && previous?.copyWith(name: tunnel.name) != tunnel) {
-      await toggle(tunnel.id);
-      await toggle(tunnel.id);
+      final running = _sessions.remove(tunnel.id)!;
+      _log.i('Stopping ${running.tunnel.title}');
+      await running.stop();
+      await _start(tunnel);
     }
   }
 
@@ -89,21 +109,10 @@ class TunnelManager({
       return running.stop();
     }
 
-    final tunnel = _tunnels.firstWhereOrNull((tunnel) => tunnel.id == id);
-    if (_changes.isClosed || tunnel == null) return;
-
-    final session = _sessions[id] = TunnelSession(
-      tunnel: tunnel,
-      client: client,
-      onChange: _emit,
-      beforeConnect: beforeConnect,
-      warningLifetime: warningLifetime,
-      retryDelays: retryDelays,
-      stableAfter: stableAfter,
-    );
-    _emit();
-    _log.i('Connecting ${tunnel.title}: ${tunnel.summary}');
-    return session.connect();
+    if (_tunnels.firstWhereOrNull((tunnel) => tunnel.id == id)
+        case final tunnel?) {
+      return _start(tunnel);
+    }
   }
 
   Future<void> connectAll() => Future.wait(
@@ -125,14 +134,53 @@ class TunnelManager({
     return _closed.future;
   }
 
-  bool _isOn(String id) => _sessions[id]?.status.isOn ?? false;
+  Future<void> _start(Tunnel tunnel, {bool isRestored = false}) {
+    if (_changes.isClosed) return Future.value();
 
-  Future<void> _persist() {
+    final session = _sessions[tunnel.id] = TunnelSession(
+      tunnel: tunnel,
+      client: client,
+      onChange: _emit,
+      beforeConnect: beforeConnect,
+      warningLifetime: warningLifetime,
+      retryDelays: retryDelays,
+      stableAfter: stableAfter,
+      isRestored: isRestored,
+    );
     _emit();
-    return store.save(_tunnels);
+    _log.i('Connecting ${tunnel.title}: ${tunnel.summary}');
+    return session.connect();
   }
 
+  bool _isOn(String id) => _sessions[id]?.status.isOn ?? false;
+
+  Set<String> get _on => {
+    for (final MapEntry(key: id, value: session) in _sessions.entries)
+      if (session.status.isOn) id,
+  };
+
+  Future<void> _persist() {
+    _savedOn = _on;
+    _emit();
+    return store.save(_tunnels, on: _savedOn);
+  }
+
+  // Which tunnels are on is saved when it changes, so a crash restores them too.
   void _emit() {
-    if (!_changes.isClosed) _changes.add(snapshot);
+    if (_changes.isClosed) return;
+
+    _changes.add(snapshot);
+    if (_on case final on
+        when !const SetEquality<String>().equals(on, _savedOn)) {
+      _savedOn = on;
+      unawaited(
+        store
+            .save(_tunnels, on: _savedOn)
+            .catchError(
+              (Object exception) =>
+                  _log.w('Could not save which tunnels are on', ex: exception),
+            ),
+      );
+    }
   }
 }

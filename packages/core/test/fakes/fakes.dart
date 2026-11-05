@@ -6,15 +6,22 @@ import 'package:system_ssh/system_ssh.dart';
 
 class MockSshClient extends Mock implements SshClient {}
 
-class FakeStore([var List<Tunnel> tunnels = const []]) implements TunnelStore {
+class FakeStore([
+  var List<Tunnel> tunnels = const [],
+  var Set<String> on = const {},
+]) implements TunnelStore {
   int saveCount = 0;
+  Exception? saveError;
 
   @override
-  Future<List<Tunnel>> load() async => tunnels;
+  Future<({List<Tunnel> tunnels, Set<String> on})> load() async =>
+      (tunnels: tunnels, on: on);
 
   @override
-  Future<void> save(List<Tunnel> tunnels) async {
+  Future<void> save(List<Tunnel> tunnels, {required Set<String> on}) async {
+    if (saveError case final error?) throw error;
     this.tunnels = tunnels;
+    this.on = on;
     saveCount++;
   }
 }

@@ -23,6 +23,7 @@ class TunnelSession({
   required final Duration warningLifetime,
   required final List<Duration> retryDelays,
   required final Duration stableAfter,
+  final bool isRestored = false,
 }) {
   final _abort = Completer<void>();
   TunnelStatus _status = const Connecting();
@@ -30,7 +31,7 @@ class TunnelSession({
   Timer? _clearWarning;
   Timer? _retry;
   Timer? _stable;
-  bool _hasConnected = false;
+  late bool _retries = isRestored;
   int _attempts = 0;
 
   TunnelStatus get status => _status;
@@ -48,7 +49,7 @@ class TunnelSession({
     if (isStopped) return opened.close();
 
     _status = const Connected();
-    _hasConnected = true;
+    _retries = true;
     _stable = Timer(stableAfter, () => _attempts = 0);
     onChange();
     _log.i('Connected ${tunnel.title}');
@@ -90,8 +91,8 @@ class TunnelSession({
     };
   }
 
-  // Only a tunnel that has connected comes back; a first try that fails stays
-  // failed, as the user is watching.
+  // A tunnel that has connected, or was restored, retries; a first try the
+  // user is watching that fails stays failed.
   void _drop(Object? exception) {
     if (isStopped) return;
 
@@ -102,7 +103,7 @@ class TunnelSession({
       null => false,
       _ => true,
     };
-    if (!_hasConnected || isPermanent) return _fail(message);
+    if (!_retries || isPermanent) return _fail(message);
 
     final delay = retryDelays[min(_attempts++, retryDelays.length - 1)];
     _log.w(

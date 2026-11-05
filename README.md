@@ -24,7 +24,7 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### First preview (0.1, macOS)
 
-- [ ] **Launch at login**, and reconnect the tunnels that were on.
+- [ ] **Launch at login.**
 - [ ] **Empty and error states** — a first run that explains what a tunnel is, and a proper screen when the agent can't start.
 - [ ] **Releases** — a universal `.dmg` from CI on a version tag, a Homebrew tap, and signed auto-updates. The agent's packages (`nativeapi` and its C++ library, `platform`, `process`) must be in the app's licences first: a Dart command-line build collects none.
 
