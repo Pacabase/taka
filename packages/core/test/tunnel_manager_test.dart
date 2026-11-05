@@ -469,17 +469,19 @@ void main() {
   });
 
   group('a warning from ssh', () {
-    const refused =
-        'channel 2: open failed: connect failed: Connection refused';
+    const refused = SshForwardFailed(
+      'channel 2: open failed: connect failed: Connection refused',
+      reason: 'Connection refused',
+    );
     const lifetime = Duration(seconds: 30);
-    late void Function(String line) sshSays;
+    late void Function(SshLog log) sshSays;
 
     void warned(
       Tunnel added,
       void Function(TunnelManager manager, FakeAsync time) body,
     ) => fakeAsync((time) {
       void capture(Invocation invocation) => sshSays =
-          invocation.namedArguments[#onLog]! as void Function(String line);
+          invocation.namedArguments[#onLog]! as void Function(SshLog log);
       when(openAnyTunnel).thenAnswer((invocation) async {
         capture(invocation);
         return tunnel;
@@ -523,7 +525,10 @@ void main() {
     test('says when the SSH host forbids forwarding', () {
       warned(database, (manager, _) {
         sshSays(
-          'channel 3: open failed: administratively prohibited: open failed',
+          const SshForwardFailed(
+            'channel 3: open failed: administratively prohibited: open failed',
+            reason: 'administratively prohibited',
+          ),
         );
 
         expect(
@@ -578,7 +583,7 @@ void main() {
 
     test('ignores lines that are not open failures', () {
       warned(database, (manager, _) {
-        sshSays('debug1: channel 3: new direct-tcpip');
+        sshSays(const SshProgress('debug1: channel 3: new direct-tcpip'));
 
         expect(manager.snapshot.statusOf('a1'), const Connected());
       });
@@ -779,9 +784,9 @@ void main() {
 
     test("ssh's lines while it connects, then why it failed", () async {
       when(openAnyTunnel).thenAnswer((invocation) async {
-        (invocation.namedArguments[#onLog]! as void Function(String))
-          ..call('debug1: Connecting to bastion port 22.')
-          ..call(denied);
+        (invocation.namedArguments[#onLog]! as void Function(SshLog))
+          ..call(const SshProgress('debug1: Connecting to bastion port 22.'))
+          ..call(const SshMessage(denied));
         throw const SshTunnelException(denied);
       });
       final manager = await loaded();
