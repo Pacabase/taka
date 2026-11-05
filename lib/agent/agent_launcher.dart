@@ -22,13 +22,13 @@ Future<AgentClient> connectToAgent() async {
   }
 }
 
-// Taka.app/Contents/MacOS/Taka on macOS, taka on Linux; the agent ships beside
-// it unless TAKA_AGENT points at another build.
+// Taka.app/Contents/MacOS/Taka on macOS, taka on Linux; the agent ships inside
+// or beside it unless TAKA_AGENT points at another build.
 Future<Process> _startAgent() {
   final executable = File(Platform.resolvedExecutable);
   final (agent, app) = Platform.isMacOS
       ? (
-          '${executable.parent.parent.path}/Helpers/agent/bin/taka_agent',
+          '${executable.parent.parent.path}/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka',
           executable.parent.parent.parent.path,
         )
       : ('${executable.parent.path}/agent/bin/taka_agent', executable.path);

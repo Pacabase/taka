@@ -26,12 +26,18 @@ class AgentTray({
     icon
       ..isIconTemplate = true
       ..setContextMenuTrigger(
-        Platform.isMacOS
-            ? ContextMenuTrigger.clicked
-            : ContextMenuTrigger.rightClicked,
+        Platform.isWindows
+            ? ContextMenuTrigger.rightClicked
+            : ContextMenuTrigger.clicked,
       )
       ..addListener((event) {
-        if (event is TrayIconClickedEvent && Platform.isWindows) onSettings();
+        switch (event) {
+          case TrayIconClickedEvent() when Platform.isWindows:
+            onSettings();
+          case TrayIconRightClickedEvent() when !Platform.isWindows:
+            icon.openContextMenu();
+          case _:
+        }
       })
       ..setVisible(true);
 
