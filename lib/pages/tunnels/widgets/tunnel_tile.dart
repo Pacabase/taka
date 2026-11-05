@@ -4,7 +4,6 @@ import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
-import 'package:taka/widgets/input_kind.dart';
 
 class const TunnelTile({
   super.key,
@@ -21,20 +20,6 @@ class const TunnelTile({
 class _TunnelTileState extends State<TunnelTile> {
   var _hovered = false;
   var _focused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    FocusManager.instance.addHighlightModeListener(_rebuild);
-  }
-
-  @override
-  void dispose() {
-    FocusManager.instance.removeHighlightModeListener(_rebuild);
-    super.dispose();
-  }
-
-  void _rebuild(FocusHighlightMode _) => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +59,7 @@ class _TunnelTileState extends State<TunnelTile> {
         child: Container(
           constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          color: _hovered ? colors.selection : null,
+          color: _hovered ? colors.selection : Colors.transparent,
           child: Row(
             spacing: 8,
             children: [
@@ -93,7 +78,7 @@ class _TunnelTileState extends State<TunnelTile> {
                   ],
                 ),
               ),
-              if (_hovered || _focused && showsFocus) ...[
+              if (_hovered || _focused) ...[
                 IconButton(
                   tooltip: 'Edit',
                   onPressed: widget.onEdit,

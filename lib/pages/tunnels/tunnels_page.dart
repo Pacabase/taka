@@ -52,10 +52,6 @@ class _TunnelsPageState extends State<TunnelsPage> {
                     child: child,
                   ),
                 ),
-                layoutBuilder: (current, previous) => Stack(
-                  fit: StackFit.expand,
-                  children: [...previous, ?current],
-                ),
                 child: _isFormOpen
                     ? TunnelForm(
                         key: ValueKey(_editing?.id ?? 'new'),
@@ -107,9 +103,10 @@ class const _TunnelList({
         ),
         Ready(:final snapshot) => ListView.separated(
           itemCount: snapshot.tunnels.length,
-          separatorBuilder: (context, _) => Container(
+          separatorBuilder: (context, _) => Divider(
             height: 1,
-            margin: const EdgeInsets.symmetric(horizontal: 6),
+            indent: 6,
+            endIndent: 6,
             color: colors.background,
           ),
           itemBuilder: (context, index) {

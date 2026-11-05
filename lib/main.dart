@@ -7,12 +7,10 @@ import 'package:taka/pages/about/about_page.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_page.dart';
 import 'package:taka/taka_app.dart';
-import 'package:taka/widgets/input_kind.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   LicenseRegistry.addLicense(bundledLicenses);
-  watchInputKind();
   final version = (await PackageInfo.fromPlatform()).version;
 
   try {

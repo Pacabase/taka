@@ -8,12 +8,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
+import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_theme.dart';
-import 'package:taka/widgets/input_kind.dart';
 
 void main() {
-  setUp(watchInputKind);
-
   const unnamed = Tunnel(
     id: 'a',
     sshHost: 'db',
@@ -92,8 +90,8 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        theme: takaTheme(Brightness.light),
+      TakaApp(
+        version: '1.2.3',
         home: Scaffold(
           body: Column(
             children: [
@@ -121,5 +119,21 @@ void main() {
 
     expect(find.byTooltip('Edit'), findsNothing);
     expect(find.byTooltip('Delete'), findsNothing);
+  });
+
+  testWidgets('hovering a row keeps the keyboard focus on its switch', (
+    tester,
+  ) async {
+    await pumpTile(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    final focused = FocusManager.instance.primaryFocus;
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(find.byType(TunnelTile)));
+    await tester.pump();
+
+    expect(FocusManager.instance.primaryFocus, same(focused));
+    expect(focused?.hasPrimaryFocus, isTrue);
   });
 }
