@@ -12,8 +12,8 @@ class const SettingsPage({super.key, required final String version})
   @override
   Widget build(BuildContext context) {
     final colors = TakaColors.of(context);
-    void change(AgentCommand command) =>
-        context.read<SettingsBloc>().add(SettingsEvent.change(command));
+    void send(AgentCommand command) =>
+        context.read<SettingsBloc>().add(SettingsEvent.send(command));
 
     return Scaffold(
       body: Column(
@@ -60,7 +60,7 @@ class const SettingsPage({super.key, required final String version})
                           value: launchesAtLogin,
                           color: colors.green,
                           label: 'Launch at Login',
-                          onToggle: () => change(
+                          onToggle: () => send(
                             AgentCommand.setLaunchAtLogin(on: !launchesAtLogin),
                           ),
                         ),
@@ -75,14 +75,14 @@ class const SettingsPage({super.key, required final String version})
                           if (isLogging)
                             TextButton(
                               onPressed: () =>
-                                  change(const AgentCommand.showLogs()),
+                                  send(const AgentCommand.showLogs()),
                               child: const Text('Show Logs'),
                             ),
                           NativeSwitch(
                             value: isLogging,
                             color: colors.green,
                             label: 'Debug Logging',
-                            onToggle: () => change(
+                            onToggle: () => send(
                               AgentCommand.setDebugLogging(on: !isLogging),
                             ),
                           ),

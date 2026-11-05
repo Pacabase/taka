@@ -35,7 +35,7 @@ void main() {
   }
 
   void sends(AgentCommand command) =>
-      verify(() => bloc.add(SettingsEvent.change(command))).called(1);
+      verify(() => bloc.add(SettingsEvent.send(command))).called(1);
 
   testWidgets('switching Launch at Login and Debug Logging asks the agent', (
     tester,
@@ -47,6 +47,21 @@ void main() {
 
     sends(const AgentCommand.setLaunchAtLogin(on: true));
     sends(const AgentCommand.setDebugLogging(on: true));
+  });
+
+  testWidgets('switching them off asks the agent to turn them off', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      const AgentSettings(launchesAtLogin: true, isLogging: true),
+    );
+
+    await tester.tap(find.byType(NativeSwitch).first);
+    await tester.tap(find.byType(NativeSwitch).last);
+
+    sends(const AgentCommand.setLaunchAtLogin(on: false));
+    sends(const AgentCommand.setDebugLogging(on: false));
   });
 
   testWidgets('Launch at Login is left out where the agent cannot', (

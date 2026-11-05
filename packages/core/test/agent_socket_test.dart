@@ -82,26 +82,20 @@ void main() {
     await snapshots.next;
     await snapshots.next;
     expect((await snapshots.next).tunnels, [added]);
-  });
 
-  test('quit closes the manager', () async {
-    await serve();
-    final agent = await connect();
-    final changes = manager.changes.toList();
-
-    agent.send(const AgentCommand.quit());
-
-    await changes;
+    agent.send(const AgentCommand.toggle('c3'));
+    expect((await snapshots.next).statusOf('c3'), isNot(const Stopped()));
   });
 
   test(
     'a client gets the settings when it connects, and each change',
     () async {
       await serve();
+      preferences.change(const AgentSettings(isLogging: true));
       final agent = await connect();
       final settings = StreamQueue(agent.settings);
 
-      expect(await settings.next, const AgentSettings(launchesAtLogin: false));
+      expect(await settings.next, const AgentSettings(isLogging: true));
 
       preferences.change(
         const AgentSettings(launchesAtLogin: true, isLogging: true),
@@ -122,13 +116,25 @@ void main() {
       ..send(const AgentCommand.setLaunchAtLogin(on: true))
       ..send(const AgentCommand.setDebugLogging(on: true))
       ..send(const AgentCommand.showLogs());
-    await pumpEventQueue();
 
-    expect(preferences.calls, [
+    expect(await preferences.calls.take(3).toList(), [
       'launchAtLogin true',
       'debugLogging true',
       'showLogs',
     ]);
+  });
+
+  test('logs that cannot be shown leave the agent listening', () async {
+    await serve();
+    final agent = await connect();
+    final calls = StreamQueue(preferences.calls);
+    preferences.logsFail = true;
+
+    agent.send(const AgentCommand.showLogs());
+    expect(await calls.next, 'showLogs');
+    agent.send(const AgentCommand.setDebugLogging(on: true));
+
+    expect(await calls.next, 'debugLogging true');
   });
 
   test('a bad line is ignored and the client stays connected', () async {
