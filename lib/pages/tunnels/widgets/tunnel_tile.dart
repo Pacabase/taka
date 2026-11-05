@@ -27,12 +27,8 @@ class _TunnelTileState extends State<TunnelTile> {
     final colors = TakaColors.of(context);
     final TunnelTile(:tunnel, :status) = widget;
     final isHovered = _hovered || ReorderableRows.isLifted(context);
-    Text orange(String text) => Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: 12, color: colors.orange),
-    );
+    Text orange(String text) =>
+        Text(text, style: TextStyle(fontSize: 12, color: colors.orange));
     final caption = switch (status) {
       Failed(:final message) => Text(
         message,
