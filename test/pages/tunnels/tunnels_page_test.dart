@@ -30,43 +30,47 @@ void main() {
     localPort: 1080,
   );
 
-  testWidgets('lists the tunnels from the top, and dragging one moves it', (
-    tester,
-  ) async {
-    final bloc = _MockTunnelsBloc();
-    whenListen(
-      bloc,
-      const Stream<TunnelsState>.empty(),
-      initialState: const Ready(TunnelsSnapshot(tunnels: [database, proxy])),
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: takaTheme(Brightness.light),
-        home: BlocProvider<TunnelsBloc>.value(
-          value: bloc,
-          child: const TunnelsPage(),
+  testWidgets(
+    'lists the tunnels from the top, and dragging one moves it, shown as hovered',
+    (tester) async {
+      final bloc = _MockTunnelsBloc();
+      whenListen(
+        bloc,
+        const Stream<TunnelsState>.empty(),
+        initialState: const Ready(TunnelsSnapshot(tunnels: [database, proxy])),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: takaTheme(Brightness.light),
+          home: BlocProvider<TunnelsBloc>.value(
+            value: bloc,
+            child: const TunnelsPage(),
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(
-      tester.getBottomLeft(find.byType(TunnelsHeader)).dy,
-      tester.getTopLeft(find.byType(TunnelTile).first).dy,
-    );
+      expect(
+        tester.getBottomLeft(find.byType(TunnelsHeader)).dy,
+        tester.getTopLeft(find.byType(TunnelTile).first).dy,
+      );
 
-    final drag = await tester.startGesture(
-      tester.getCenter(find.text('Database')),
-    );
-    for (var step = 0; step < 12; step++) {
-      await drag.moveBy(const Offset(0, 10));
-      await tester.pump();
-    }
-    await drag.up();
-    await tester.pumpAndSettle();
+      final drag = await tester.startGesture(
+        tester.getCenter(find.text('Database')),
+      );
+      for (var step = 0; step < 12; step++) {
+        await drag.moveBy(const Offset(0, 10));
+        await tester.pump();
+      }
+      expect(find.byTooltip('Edit'), findsOneWidget);
+      await drag.up();
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Edit'), findsNothing);
 
-    verify(() => bloc.add(const TunnelsEvent.send(AgentCommand.move('a1', 1))))
-        .called(1);
-  });
+      verify(
+        () => bloc.add(const TunnelsEvent.send(AgentCommand.move('a1', 1))),
+      ).called(1);
+    },
+  );
 }
 
 class _MockTunnelsBloc extends MockBloc<TunnelsEvent, TunnelsState>
