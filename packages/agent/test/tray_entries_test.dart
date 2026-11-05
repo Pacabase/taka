@@ -34,6 +34,7 @@ void main() {
       'Connect All (off)',
       'Disconnect All (off)',
       '---',
+      'About Taka',
       'Settings… ⌘,',
       'Quit Taka ⌘q',
     ]);
@@ -59,6 +60,7 @@ void main() {
       'Connect All',
       'Disconnect All',
       '---',
+      'About Taka',
       'Settings… ⌘,',
       'Quit Taka ⌘q',
     ]);

@@ -33,7 +33,7 @@ class const SubmenuEntry(final String label, final List<TrayEntry> entries)
   String toString() => '$label ▸ ${entries.join(' | ')}';
 }
 
-enum TrayAction { connectAll, disconnectAll, settings, quit }
+enum TrayAction { connectAll, disconnectAll, about, settings, quit }
 
 class const ActionEntry(
   final TrayAction action,
@@ -74,6 +74,7 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
       isEnabled: tunnels.any(isOn),
     ),
     const SeparatorEntry(),
+    const ActionEntry(TrayAction.about, 'About Taka'),
     const ActionEntry(TrayAction.settings, 'Settings…', shortcut: ','),
     const ActionEntry(TrayAction.quit, 'Quit Taka', shortcut: 'q'),
   ];

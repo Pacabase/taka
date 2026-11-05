@@ -42,6 +42,10 @@ Future<void> _start() async {
   AgentTray(
     manager: manager,
     assetsPath: agent.path,
+    onAbout: () {
+      // On macOS, open also brings an open window to the front.
+      if (!server.showAbout() || Platform.isMacOS) unawaited(_open(app));
+    },
     onSettings: () => unawaited(_open(app)),
     onQuit: () async {
       try {

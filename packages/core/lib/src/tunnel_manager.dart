@@ -33,12 +33,20 @@ class TunnelManager({
     ToggleTunnel(:final id) => toggle(id),
   };
 
-  Future<void> save(Tunnel tunnel) {
+  Future<void> save(Tunnel tunnel) async {
+    final previous = _tunnels.firstWhereOrNull(
+      (saved) => saved.id == tunnel.id,
+    );
     _tunnels = [
       for (final saved in _tunnels) saved.id == tunnel.id ? tunnel : saved,
-      if (_tunnels.none((saved) => saved.id == tunnel.id)) tunnel,
+      if (previous == null) tunnel,
     ];
-    return _persist();
+    await _persist();
+
+    if (_isOn(tunnel.id) && previous?.copyWith(name: tunnel.name) != tunnel) {
+      await toggle(tunnel.id);
+      await toggle(tunnel.id);
+    }
   }
 
   Future<void> remove(String id) async {

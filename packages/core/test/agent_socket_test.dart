@@ -1,6 +1,7 @@
 @Tags(['unit'])
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:async/async.dart';
@@ -92,6 +93,94 @@ void main() {
 
     expect(await snapshots.hasNext, isFalse);
     expect(File(path).existsSync(), isFalse);
+  });
+
+  test('showAbout asks every open window', () async {
+    final server = await serve();
+    final mine = await connect();
+    final theirs = await connect();
+    final requests = [
+      StreamQueue(mine.aboutRequests),
+      StreamQueue(theirs.aboutRequests),
+    ];
+    await (
+      StreamQueue(mine.snapshots).next,
+      StreamQueue(theirs.snapshots).next,
+    ).wait;
+
+    expect(server.showAbout(), isTrue);
+
+    await Future.wait(requests.map((queue) => queue.next));
+  });
+
+  test('showAbout with no window open asks the next one, once', () async {
+    final server = await serve();
+
+    expect(server.showAbout(), isFalse);
+
+    final first = await connect();
+    final second = await connect();
+    final snapshots = StreamQueue(second.snapshots);
+    await snapshots.next;
+    await manager.save(proxy);
+    await snapshots.next;
+    await first.close();
+    await second.close();
+
+    expect(await first.aboutRequests.length, 1);
+    expect(await second.aboutRequests.length, 0);
+  });
+
+  test('a window can listen for About after its first snapshot', () async {
+    final server = await serve();
+    final agent = await connect();
+    final snapshots = StreamQueue(agent.snapshots);
+    await snapshots.next;
+    server.showAbout();
+    await manager.save(proxy);
+    await snapshots.next;
+    await agent.close();
+
+    expect(await agent.aboutRequests.length, 1);
+  });
+
+  test('showAbout with a window open leaves none pending', () async {
+    final server = await serve();
+    final open = await connect();
+    await StreamQueue(open.snapshots).next;
+    server.showAbout();
+    await open.close();
+
+    final next = await connect();
+    final snapshots = StreamQueue(next.snapshots);
+    await snapshots.next;
+    await manager.save(proxy);
+    await snapshots.next;
+    await next.close();
+
+    expect(await next.aboutRequests.length, 0);
+  });
+
+  test('the client ignores bad lines and stays connected', () async {
+    final server = await ServerSocket.bind(
+      InternetAddress(path, type: InternetAddressType.unix),
+      0,
+    );
+    addTearDown(server.close);
+    server.listen(
+      (socket) => socket
+        ..writeln('not json')
+        ..writeln('[]')
+        ..writeln('{}')
+        ..writeln('{"show": "settings"}')
+        ..writeln('{"tunnels": [1], "statuses": {}}')
+        ..writeln(jsonEncode(manager.snapshot.toJson()))
+        ..destroy(),
+    );
+    final agent = await connect();
+
+    expect(await agent.snapshots.toList(), [manager.snapshot]);
+    expect(await agent.aboutRequests.length, 0);
   });
 
   test('a second agent finds the first one running', () async {
