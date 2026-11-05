@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:agent/src/agent_tray.dart';
-import 'package:agent/src/in_front_ssh_client.dart';
 import 'package:core/core.dart';
 import 'package:nativeapi/nativeapi.dart';
 import 'package:system_ssh/system_ssh.dart';
@@ -17,11 +16,12 @@ Future<void> _start() async {
   final bundle = File(Platform.resolvedExecutable).parent.parent.parent;
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
-    client: InFrontSshClient(const SystemSshClient(loginShell: true), () async {
-      if (bundle.path.endsWith('.app')) {
-        await Process.run('open', [bundle.path]);
-      }
-    }),
+    client: const SystemSshClient(loginShell: true),
+    // 1Password shows its approval prompt only while the app asking is in
+    // front, and open brings the running agent there.
+    beforeConnect: bundle.path.endsWith('.app')
+        ? () => Process.run('open', [bundle.path])
+        : null,
   );
   try {
     await manager.load();
