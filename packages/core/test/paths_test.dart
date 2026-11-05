@@ -82,91 +82,68 @@ void main() {
     });
   });
 
-  group('windowLayout', () {
-    test('finds the agent among the macOS bundle\'s login items', () {
+  group('TakaInstall', () {
+    const bundle = '/Applications/Taka.app';
+    const agentBundle = '$bundle/Contents/Library/LoginItems/TakaAgent.app';
+    const installed = TakaInstall(
+      app: bundle,
+      agent: '$agentBundle/Contents/MacOS/Taka',
+      agentBundle: agentBundle,
+      agentAssets: '$agentBundle/Contents/Resources',
+    );
+    const onLinux = TakaInstall(
+      app: '/opt/taka/taka',
+      agent: '/opt/taka/agent/bin/taka_agent',
+      agentAssets: '/opt/taka/agent',
+    );
+    const development = TakaInstall(
+      app: '/src/taka/build/macos/Build/Products/Debug/Taka.app',
+      agent: '/src/taka/packages/agent/build/cli/macos_arm64/bundle/bin/taka_agent',
+      agentAssets: '/src/taka/packages/agent/build/cli/macos_arm64/bundle',
+    );
+
+    test('is the same macOS bundle from the window and from the agent', () {
       expect(
-        windowLayout(
-          '/Applications/Taka.app/Contents/MacOS/Taka',
+        TakaInstall.fromWindow(
+          '$bundle/Contents/MacOS/Taka',
           environment: {},
           operatingSystem: 'macos',
         ),
-        (
-          agent: '/Applications/Taka.app/Contents/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka',
-          app: '/Applications/Taka.app',
-          agentBundle: '/Applications/Taka.app/Contents/Library/LoginItems/TakaAgent.app',
-        ),
+        installed,
+      );
+      expect(
+        TakaInstall.fromAgent(installed.agent, environment: {}),
+        installed,
       );
     });
 
-    test('finds the agent beside taka on Linux', () {
+    test('is the same Linux install from the window and from the agent', () {
       expect(
-        windowLayout(
+        TakaInstall.fromWindow(
           '/opt/taka/taka',
           environment: {},
           operatingSystem: 'linux',
         ),
-        (
-          agent: '/opt/taka/agent/bin/taka_agent',
-          app: '/opt/taka/taka',
-          agentBundle: null,
-        ),
+        onLinux,
       );
+      expect(TakaInstall.fromAgent(onLinux.agent, environment: {}), onLinux);
     });
 
-    test('TAKA_AGENT points at a development build', () {
+    test('follows TAKA_AGENT and TAKA_APP to development builds', () {
       expect(
-        windowLayout(
-          '/src/taka/build/macos/Build/Products/Debug/Taka.app/Contents/MacOS/Taka',
-          environment: {
-            'TAKA_AGENT': '/src/taka/packages/agent/build/cli/macos_arm64/bundle/bin/taka_agent',
-          },
+        TakaInstall.fromWindow(
+          '${development.app}/Contents/MacOS/Taka',
+          environment: {'TAKA_AGENT': development.agent},
           operatingSystem: 'macos',
         ),
-        (
-          agent: '/src/taka/packages/agent/build/cli/macos_arm64/bundle/bin/taka_agent',
-          app: '/src/taka/build/macos/Build/Products/Debug/Taka.app',
-          agentBundle: null,
-        ),
+        development,
       );
-    });
-  });
-
-  group('agentLayout', () {
-    test('finds the app and its resources in the macOS bundle', () {
       expect(
-        agentLayout(
-          '/Applications/Taka.app/Contents/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka',
-          environment: {},
+        TakaInstall.fromAgent(
+          development.agent,
+          environment: {'TAKA_APP': development.app},
         ),
-        (
-          app: '/Applications/Taka.app',
-          bundle: '/Applications/Taka.app/Contents/Library/LoginItems/TakaAgent.app',
-          assets: '/Applications/Taka.app/Contents/Library/LoginItems/TakaAgent.app/Contents/Resources',
-        ),
-      );
-    });
-
-    test('finds taka beside the agent on Linux', () {
-      expect(agentLayout('/opt/taka/agent/bin/taka_agent', environment: {}), (
-        app: '/opt/taka/taka',
-        bundle: null,
-        assets: '/opt/taka/agent',
-      ));
-    });
-
-    test('TAKA_APP points a development build at its window', () {
-      expect(
-        agentLayout(
-          '/src/taka/packages/agent/build/cli/macos_arm64/bundle/bin/taka_agent',
-          environment: {
-            'TAKA_APP': '/src/taka/build/macos/Build/Products/Debug/Taka.app',
-          },
-        ),
-        (
-          app: '/src/taka/build/macos/Build/Products/Debug/Taka.app',
-          bundle: null,
-          assets: '/src/taka/packages/agent/build/cli/macos_arm64/bundle',
-        ),
+        development,
       );
     });
   });

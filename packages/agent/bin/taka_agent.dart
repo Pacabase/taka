@@ -17,9 +17,11 @@ void _run() => runZonedGuarded(() => unawaited(_start()), (error, stack) {
 Future<void> _start() async {
   Application.instance.setDockIconVisible(false);
 
-  final (:app, :bundle, :assets) = agentLayout(Platform.resolvedExecutable);
+  final TakaInstall(:app, :agentBundle, :agentAssets) = TakaInstall.fromAgent(
+    Platform.resolvedExecutable,
+  );
 
-  if (bundle == null) Fimber.plantTree(DebugTree());
+  if (agentBundle == null) Fimber.plantTree(DebugTree());
   final debugLogging = DebugLogging('agent')..start();
   final identity = agentIdentity(Platform.resolvedExecutable);
   Fimber.i('Agent $identity on ${Platform.operatingSystemVersion}');
@@ -29,7 +31,9 @@ Future<void> _start() async {
     client: const SystemSshClient(loginShell: true),
     // 1Password shows its approval prompt only while the app asking is in
     // front, and open brings the running agent there.
-    beforeConnect: bundle == null ? null : () => Process.run('open', [bundle]),
+    beforeConnect: agentBundle == null
+        ? null
+        : () => Process.run('open', [agentBundle]),
   );
   try {
     await manager.load();
@@ -67,7 +71,7 @@ Future<void> _start() async {
   AgentTray(
     manager: manager,
     debugLogging: debugLogging,
-    assetsPath: assets,
+    assetsPath: agentAssets,
     onAbout: () {
       // On macOS, open also brings an open window to the front.
       if (!server.showAbout() || Platform.isMacOS) unawaited(_open(app));

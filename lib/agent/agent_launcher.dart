@@ -6,7 +6,7 @@ import 'package:fimber/fimber.dart';
 
 Future<AgentClient> connectToAgent() async {
   final path = agentSocketPath();
-  final (:agent, :app, :agentBundle) = windowLayout(
+  final TakaInstall(:agent, :app, :agentBundle) = TakaInstall.fromWindow(
     Platform.resolvedExecutable,
   );
   if (await _connect(path) case final running?) {
