@@ -17,7 +17,6 @@ void _run() => runZonedGuarded(() => unawaited(_start()), (error, stack) {
 
 Future<void> _start() async {
   Application.instance.setDockIconVisible(false);
-  if (Platform.isMacOS) restoreProcessName('Taka');
 
   final TakaInstall(:app, :agentBundle, :agentAssets) = TakaInstall.fromAgent(
     Platform.resolvedExecutable,
@@ -25,6 +24,7 @@ Future<void> _start() async {
 
   if (agentBundle == null) Fimber.plantTree(DebugTree());
   final debugLogging = DebugLogging('agent')..start();
+  if (Platform.isMacOS) restoreProcessName('Taka');
   final identity = agentIdentity(Platform.resolvedExecutable);
   Fimber.i('Agent $identity on ${Platform.operatingSystemVersion}');
 
