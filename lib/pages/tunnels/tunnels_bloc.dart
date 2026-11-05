@@ -17,6 +17,17 @@ class TunnelsBloc({required AgentClient agent})
       emit(const Closed());
     });
 
-    on<Send>((event, emit) => agent.send(event.command));
+    // A dropped row stays put instead of jumping back until the agent replies.
+    on<Send>((event, emit) {
+      if ((state, event.command) case (
+        Ready(:final snapshot),
+        MoveTunnel(:final id, :final index),
+      )) {
+        emit(
+          Ready(snapshot.copyWith(tunnels: snapshot.tunnels.moved(id, index))),
+        );
+      }
+      agent.send(event.command);
+    });
   }
 }

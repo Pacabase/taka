@@ -98,4 +98,24 @@ void main() {
       expect('$database', 'Tunnel(a1, Production database)');
     });
   });
+
+  group('moved', () {
+    const web = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
+    const tunnels = [database, proxy, web];
+
+    test('puts a tunnel at the index among the others', () {
+      expect(tunnels.moved('a1', 2), [proxy, web, database]);
+      expect(tunnels.moved('c3', 0), [web, database, proxy]);
+      expect(tunnels.moved('b2', 1), tunnels);
+    });
+
+    test('keeps an index past either end in the list', () {
+      expect(tunnels.moved('b2', 9), [database, web, proxy]);
+      expect(tunnels.moved('b2', -1), [proxy, database, web]);
+    });
+
+    test('leaves the list as it is for a tunnel it does not have', () {
+      expect(tunnels.moved('zz', 0), tunnels);
+    });
+  });
 }

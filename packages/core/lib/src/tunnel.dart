@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:system_ssh/system_ssh.dart';
 
@@ -74,4 +75,18 @@ sealed class const Tunnel._() with _$Tunnel {
 
   @override
   String toString() => 'Tunnel($id, $title)';
+}
+
+extension TunnelOrder on List<Tunnel> {
+  /// Puts tunnel [id] at [index] among the others.
+  List<Tunnel> moved(String id, int index) {
+    final moving = firstWhereOrNull((tunnel) => tunnel.id == id);
+    if (moving == null) return this;
+
+    final others = [
+      for (final tunnel in this)
+        if (tunnel.id != id) tunnel,
+    ];
+    return others..insert(index.clamp(0, others.length), moving);
+  }
 }

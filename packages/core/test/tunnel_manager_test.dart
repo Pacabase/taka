@@ -533,6 +533,15 @@ void main() {
     expect(store.tunnels, [proxy]);
   });
 
+  test('move reorders the tunnels and saves', () async {
+    final manager = await loaded();
+
+    await manager.move('b2', 0);
+
+    expect(manager.snapshot.tunnels, [proxy, database]);
+    expect(store.tunnels, [proxy, database]);
+  });
+
   test('handle runs each command', () async {
     final manager = await loaded();
     const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
@@ -540,8 +549,9 @@ void main() {
     await manager.handle(const AgentCommand.save(added));
     await manager.handle(const AgentCommand.toggle('a1'));
     await manager.handle(const AgentCommand.remove('b2'));
+    await manager.handle(const AgentCommand.move('c3', 0));
 
-    expect(manager.snapshot.tunnels, [database, added]);
+    expect(manager.snapshot.tunnels, [added, database]);
     expect(manager.snapshot.statusOf('a1'), const Connected());
   });
 

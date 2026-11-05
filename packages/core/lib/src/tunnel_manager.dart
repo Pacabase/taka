@@ -44,6 +44,7 @@ class TunnelManager({
     SaveTunnel(:final tunnel) => save(tunnel),
     RemoveTunnel(:final id) => remove(id),
     ToggleTunnel(:final id) => toggle(id),
+    MoveTunnel(:final id, :final index) => move(id, index),
     QuitAgent() => close(),
   };
 
@@ -67,6 +68,11 @@ class TunnelManager({
     await _sessions.remove(id)?.stop();
     _tunnels = _tunnels.where((tunnel) => tunnel.id != id).toList();
     await _persist();
+  }
+
+  Future<void> move(String id, int index) {
+    _tunnels = _tunnels.moved(id, index);
+    return _persist();
   }
 
   Future<void> toggle(String id) async {
