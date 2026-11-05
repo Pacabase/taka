@@ -104,8 +104,10 @@ List<TrayEntry> _tunnelEntries(Tunnel tunnel, TunnelStatus status) => [
     Connecting() => '${tunnel.title} — connecting…',
     Connected() => '${tunnel.title} — ${tunnel.address}',
     Failed() => '${tunnel.title} — failed',
+    Reconnecting() => '${tunnel.title} — reconnecting…',
   }, isChecked: status.isOn),
-  if (status case Failed(:final message)) InfoEntry('    $message'),
+  if (status case Failed(message: final reason) || Reconnecting(:final reason))
+    InfoEntry('    $reason'),
 ];
 
 String trayTooltip(TunnelsSnapshot snapshot) =>

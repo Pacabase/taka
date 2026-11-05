@@ -27,18 +27,15 @@ class _TunnelTileState extends State<TunnelTile> {
     final colors = TakaColors.of(context);
     final TunnelTile(:tunnel, :status) = widget;
     final isHovered = _hovered || ReorderableRows.isLifted(context);
-    Text orange(String text) => Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: 12, color: colors.orange),
-    );
+    Text orange(String text) =>
+        Text(text, style: TextStyle(fontSize: 12, color: colors.orange));
     final caption = switch (status) {
       Failed(:final message) => Text(
         message,
         style: TextStyle(fontSize: 12, color: colors.red),
       ),
       Connecting() => orange('Connecting…'),
+      Reconnecting(:final reason) => orange('Reconnecting — $reason'),
       Connected(:final warning) when warning.isNotEmpty => orange(
         "Can't reach $warning",
       ),
@@ -96,7 +93,7 @@ class _TunnelTileState extends State<TunnelTile> {
                   icon: AppIcon(AppIcons.trash, color: colors.textSecondary),
                 ),
               ],
-              if (status is Connecting)
+              if (status is Connecting || status is Reconnecting)
                 SizedBox.square(
                   dimension: 14,
                   child: CircularProgressIndicator(
@@ -108,7 +105,9 @@ class _TunnelTileState extends State<TunnelTile> {
                 AppIcon(AppIcons.triangleAlert, color: colors.red),
               NativeSwitch(
                 value: status.isOn,
-                color: status is Connecting ? colors.orange : colors.green,
+                color: status is Connecting || status is Reconnecting
+                    ? colors.orange
+                    : colors.green,
                 label: tunnel.title,
                 onToggle: widget.onToggle,
               ),

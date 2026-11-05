@@ -11,7 +11,7 @@ dependencies:
     path: ../core
   fimber: 0.7.0
   nativeapi: 0.5.8
-  system_ssh: 0.5.0
+  system_ssh: 0.6.0
 
 dev_dependencies:
   lints: 6.1.0

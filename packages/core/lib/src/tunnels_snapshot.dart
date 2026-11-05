@@ -15,6 +15,9 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
 
   const factory failed(String message) = Failed;
 
+  /// The tunnel dropped for [reason], and Taka is bringing it back.
+  const factory reconnecting(String reason) = Reconnecting;
+
   static TunnelStatus fromJson(Object? json) => switch (json) {
     {'status': 'connecting'} => const Connecting(),
     {'status': 'connected', 'warning': final String warning} => Connected(
@@ -23,6 +26,9 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
     {'status': 'connected'} => const Connected(),
     {'status': 'failed', 'message': final String message} => Failed(message),
     {'status': 'failed'} => const Failed(''),
+    {'status': 'reconnecting', 'reason': final String reason} => Reconnecting(
+      reason,
+    ),
     _ => const Stopped(),
   };
 
@@ -34,10 +40,11 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
       if (warning.isNotEmpty) 'warning': warning,
     },
     Failed(:final message) => {'status': 'failed', 'message': message},
+    Reconnecting(:final reason) => {'status': 'reconnecting', 'reason': reason},
   };
 
   bool get isOn => switch (this) {
-    Connecting() || Connected() => true,
+    Connecting() || Connected() || Reconnecting() => true,
     Stopped() || Failed() => false,
   };
 }

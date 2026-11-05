@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:core/src/agent_command.dart';
@@ -22,6 +23,15 @@ class TunnelManager({
   required final SshClient client,
   final Future<void> Function()? beforeConnect,
   final Duration warningLifetime = const Duration(seconds: 30),
+  final List<Duration> retryDelays = const [
+    Duration(seconds: 1),
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+    Duration(seconds: 8),
+    Duration(seconds: 15),
+    Duration(seconds: 30),
+  ],
+  final Duration stableAfter = const Duration(minutes: 1),
 }) {
   final _changes = StreamController<TunnelsSnapshot>.broadcast(sync: true);
   final Map<String, _Session> _sessions = {};
@@ -92,24 +102,7 @@ class TunnelManager({
     final session = _sessions[id] = _Session(tunnel.title);
     _emit();
     _log.i('Connecting ${tunnel.title}: ${tunnel.summary}');
-    final SshTunnel opened;
-    try {
-      await beforeConnect?.call();
-      opened = session.tunnel = await _open(tunnel, session);
-    } on Object catch (exception) {
-      return _fail(session, _messageOf(exception));
-    }
-    if (session.isStopped) return opened.close();
-
-    session.status = const Connected();
-    _emit();
-    _log.i('Connected ${tunnel.title}');
-    unawaited(
-      opened.done.then(
-        (_) => _fail(session, 'Disconnected'),
-        onError: (Object exception) => _fail(session, _messageOf(exception)),
-      ),
-    );
+    return _connect(tunnel, session);
   }
 
   Future<void> connectAll() => Future.wait(
@@ -160,6 +153,54 @@ class TunnelManager({
       ),
       _ => throw ArgumentError('A local tunnel needs a remote host and port'),
     };
+  }
+
+  Future<void> _connect(Tunnel tunnel, _Session session) async {
+    final SshTunnel opened;
+    try {
+      await beforeConnect?.call();
+      opened = session.tunnel = await _open(tunnel, session);
+    } on Object catch (exception) {
+      return _drop(tunnel, session, exception);
+    }
+    if (session.isStopped) return opened.close();
+
+    session
+      ..status = const Connected()
+      ..hasConnected = true
+      ..stable = Timer(stableAfter, () => session.attempts = 0);
+    _emit();
+    _log.i('Connected ${tunnel.title}');
+    unawaited(
+      opened.done.then(
+        (_) => _drop(tunnel, session, null),
+        onError: (Object exception) => _drop(tunnel, session, exception),
+      ),
+    );
+  }
+
+  // Only a tunnel that has connected comes back; a first try that fails stays
+  // failed, as the user is watching.
+  void _drop(Tunnel tunnel, _Session session, Object? exception) {
+    if (session.isStopped) return;
+
+    session.stable?.cancel();
+    final message = exception == null ? 'Disconnected' : _messageOf(exception);
+    final isPermanent = switch (exception) {
+      SshException(:final isPermanent) => isPermanent,
+      null => false,
+      _ => true,
+    };
+    if (!session.hasConnected || isPermanent) return _fail(session, message);
+
+    final delay = retryDelays[min(session.attempts++, retryDelays.length - 1)];
+    _log.w(
+      '${tunnel.title} dropped: $message; reconnecting in ${delay.inSeconds}s',
+    );
+    session
+      ..status = Reconnecting(message)
+      ..retry = Timer(delay, () => unawaited(_connect(tunnel, session)));
+    _emit();
   }
 
   String _messageOf(Object exception) => switch (exception) {
@@ -215,11 +256,17 @@ class _Session(final String title) {
   TunnelStatus status = const Connecting();
   SshTunnel? tunnel;
   Timer? clearWarning;
+  Timer? retry;
+  Timer? stable;
+  bool hasConnected = false;
+  int attempts = 0;
 
   bool get isStopped => abort.isCompleted;
 
   Future<void> stop() async {
     clearWarning?.cancel();
+    retry?.cancel();
+    stable?.cancel();
     if (!isStopped) abort.complete();
     await tunnel?.close();
   }

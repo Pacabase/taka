@@ -4,6 +4,7 @@ library;
 import 'package:core/core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
@@ -149,5 +150,38 @@ void main() {
       find.text("Can't reach db.internal:5432: Connection refused"),
       findsOneWidget,
     );
+  });
+
+  testWidgets('a reconnecting tunnel says why it dropped and stays on', (
+    tester,
+  ) async {
+    await pumpTile(
+      tester,
+      status: const Reconnecting(
+        'Connection to bastion closed by remote host.',
+      ),
+    );
+
+    expect(
+      find.text('Reconnecting — Connection to bastion closed by remote host.'),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets('a long reason for reconnecting is shown in full', (
+    tester,
+  ) async {
+    const reason =
+        'ssh: connect to host bastion.example.com port 22: Operation timed out';
+    await tester.binding.setSurfaceSize(const Size(320, 400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpTile(tester, status: const Reconnecting(reason));
+
+    final caption = tester.renderObject<RenderParagraph>(
+      find.text('Reconnecting — $reason'),
+    );
+    expect(caption.didExceedMaxLines, isFalse);
+    expect(caption.size.height, greaterThan(20));
   });
 }
