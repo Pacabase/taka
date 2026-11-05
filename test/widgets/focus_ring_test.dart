@@ -9,7 +9,7 @@ import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/widgets/focus_ring.dart';
 
 void main() {
-  setUpAll(watchInputKind);
+  setUp(watchInputKind);
 
   bool ringShows(WidgetTester tester) => tester
       .widgetList<DecoratedBox>(

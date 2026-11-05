@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,8 @@ import 'package:taka/theme/taka_colors.dart';
 // On desktop Flutter's focus highlight mode can't tell a click from a Tab, so
 // whether the last input was a key is tracked here instead.
 final _lastInputWasKey = ValueNotifier(false);
+
+ValueListenable<bool> get lastInputWasKey => _lastInputWasKey;
 
 void watchInputKind() {
   HardwareKeyboard.instance.addHandler((event) {

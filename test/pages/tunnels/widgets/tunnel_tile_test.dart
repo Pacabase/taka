@@ -2,14 +2,18 @@
 library;
 
 import 'package:core/core.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/widgets/focus_ring.dart';
 
 void main() {
+  setUp(watchInputKind);
+
   const unnamed = Tunnel(
     id: 'a',
     sshHost: 'db',
@@ -82,5 +86,40 @@ void main() {
     expect(toggles, 1);
     expect(find.byTooltip('Edit'), findsOneWidget);
     expect(find.byTooltip('Delete'), findsOneWidget);
+  });
+
+  testWidgets('Edit and Delete shown by Tab go after a click elsewhere', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: takaTheme(Brightness.light),
+        home: Scaffold(
+          body: Column(
+            children: [
+              TunnelTile(
+                tunnel: unnamed,
+                status: const Stopped(),
+                onToggle: () {},
+                onEdit: () {},
+                onDelete: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(find.byTooltip('Edit'), findsOneWidget);
+
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.down(const Offset(400, 500));
+    await mouse.up();
+    await mouse.removePointer();
+    await tester.pump();
+
+    expect(find.byTooltip('Edit'), findsNothing);
+    expect(find.byTooltip('Delete'), findsNothing);
   });
 }

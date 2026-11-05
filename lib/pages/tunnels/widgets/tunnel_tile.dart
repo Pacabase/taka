@@ -4,6 +4,7 @@ import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
+import 'package:taka/widgets/focus_ring.dart';
 
 class const TunnelTile({
   super.key,
@@ -20,6 +21,20 @@ class const TunnelTile({
 class _TunnelTileState extends State<TunnelTile> {
   var _hovered = false;
   var _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    lastInputWasKey.addListener(_rebuild);
+  }
+
+  @override
+  void dispose() {
+    lastInputWasKey.removeListener(_rebuild);
+    super.dispose();
+  }
+
+  void _rebuild() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +93,7 @@ class _TunnelTileState extends State<TunnelTile> {
                   ],
                 ),
               ),
-              if (_hovered || _focused) ...[
+              if (_hovered || _focused && lastInputWasKey.value) ...[
                 IconButton(
                   tooltip: 'Edit',
                   onPressed: widget.onEdit,
