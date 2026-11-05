@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/widgets/focus_ring.dart';
 
 class const NativeSwitch({
   super.key,
@@ -95,33 +95,31 @@ class _NativeSwitchState extends State<NativeSwitch> {
         child: GestureDetector(
           excludeFromSemantics: true,
           onTap: onToggle,
-          child: AnimatedContainer(
-            duration: _duration,
-            width: width,
-            height: height,
-            padding: EdgeInsets.all(padding),
-            decoration: BoxDecoration(
-              color: track,
-              border: border,
-              borderRadius: BorderRadius.circular(height / 2),
-            ),
-            foregroundDecoration: _showsFocus
-                ? BoxDecoration(
-                    border: Border.all(color: TakaColors.of(context).accent),
-                    borderRadius: BorderRadius.circular(height / 2),
-                  )
-                : null,
-            child: AnimatedAlign(
+          child: FocusRing(
+            isFocused: _showsFocus,
+            borderRadius: BorderRadius.circular(height / 2),
+            child: AnimatedContainer(
               duration: _duration,
-              curve: Curves.easeOut,
-              alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                width: knob,
-                height: knob,
-                decoration: BoxDecoration(
-                  color: knobColor,
-                  shape: BoxShape.circle,
-                  boxShadow: shadow,
+              width: width,
+              height: height,
+              padding: EdgeInsets.all(padding),
+              decoration: BoxDecoration(
+                color: track,
+                border: border,
+                borderRadius: BorderRadius.circular(height / 2),
+              ),
+              child: AnimatedAlign(
+                duration: _duration,
+                curve: Curves.easeOut,
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: knob,
+                  height: knob,
+                  decoration: BoxDecoration(
+                    color: knobColor,
+                    shape: BoxShape.circle,
+                    boxShadow: shadow,
+                  ),
                 ),
               ),
             ),
