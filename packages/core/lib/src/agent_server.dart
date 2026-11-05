@@ -88,10 +88,18 @@ class AgentServer(
   }
 
   Future<void> _handle(String line) async {
+    final AgentCommand command;
     try {
-      await _manager.handle(AgentCommand.fromJson(jsonDecode(line)));
-    } on Object catch (exception) {
+      command = AgentCommand.fromJson(jsonDecode(line));
+    } on FormatException catch (exception) {
       _log.w('Ignoring $line', ex: exception);
+      return;
+    }
+
+    try {
+      await _manager.handle(command);
+    } on Object catch (exception) {
+      _log.e('Could not run $line', ex: exception);
     }
   }
 

@@ -45,14 +45,15 @@ class AgentTray({
       })
       ..setVisible(true);
 
-    // Nothing else holds the icon: this subscription keeps it on screen.
-    manager.changes.listen((snapshot) => _rebuild(icon, snapshot));
-    _rebuild(icon, manager.snapshot);
+    // Nothing else holds the tray: this subscription keeps its icon on screen.
+    manager.changes.listen(_rebuild);
+    _rebuild(manager.snapshot);
   }
 
-  void _rebuild(TrayIcon icon, TunnelsSnapshot snapshot) {
+  void _rebuild(TunnelsSnapshot snapshot) {
+    final icon = _icon;
     final menu = _menu(trayEntries(snapshot, isLogging: debugLogging.isOn));
-    if (menu == null) return;
+    if (icon == null || menu == null) return;
 
     final count = snapshot.connectedCount;
     final image = count == 0 ? _idleImage : _connectedImage;
@@ -88,13 +89,18 @@ class AgentTray({
       :final action,
       :final label,
       :final isEnabled,
+      :final isChecked,
       :final shortcut,
     ) =>
       _create(
-        label,
-        MenuItemType.normal,
-        onClick: isEnabled ? () => _run(action) : null,
-      )?..accelerator = shortcut == null ? null : _shortcut(shortcut),
+          label,
+          isChecked == null ? MenuItemType.normal : MenuItemType.checkbox,
+          onClick: isEnabled ? () => _run(action) : null,
+        )
+        ?..accelerator = shortcut == null ? null : _shortcut(shortcut)
+        ..state = isChecked == true
+            ? MenuItemState.checked
+            : MenuItemState.unchecked,
     InfoEntry(:final label) => _create(label, MenuItemType.normal),
     SeparatorEntry() => _create('', MenuItemType.separator),
     SubmenuEntry(:final label, :final entries) =>
@@ -131,7 +137,7 @@ class AgentTray({
 
   void _toggleDebugLogging() {
     debugLogging.turn(on: !debugLogging.isOn);
-    if (_icon case final icon?) _rebuild(icon, manager.snapshot);
+    _rebuild(manager.snapshot);
   }
 
   // An uncaught error would end the agent, and every tunnel with it.

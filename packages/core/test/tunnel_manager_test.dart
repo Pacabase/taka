@@ -4,6 +4,7 @@ library;
 import 'dart:async';
 
 import 'package:core/core.dart';
+import 'package:fimber/fimber.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:system_ssh/system_ssh.dart';
 import 'package:test/test.dart';
@@ -20,12 +21,14 @@ void main() {
     remoteHost: any(named: 'remoteHost'),
     remotePort: any(named: 'remotePort'),
     localPort: any(named: 'localPort'),
+    onLog: any(named: 'onLog'),
     abortTrigger: any(named: 'abortTrigger'),
   );
 
   Future<SshTunnel> openAnySocksProxy() => client.openSocksProxy(
     any(),
     localPort: any(named: 'localPort'),
+    onLog: any(named: 'onLog'),
     abortTrigger: any(named: 'abortTrigger'),
   );
 
@@ -110,6 +113,7 @@ void main() {
             remoteHost: any(named: 'remoteHost'),
             remotePort: any(named: 'remotePort'),
             localPort: 15433,
+            onLog: any(named: 'onLog'),
             abortTrigger: any(named: 'abortTrigger'),
           ),
         ).called(1);
@@ -162,6 +166,7 @@ void main() {
           remoteHost: 'db.internal',
           remotePort: 5432,
           localPort: 15432,
+          onLog: any(named: 'onLog'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
       ).called(1);
@@ -177,6 +182,7 @@ void main() {
         () => client.openSocksProxy(
           const SshTarget('bastion'),
           localPort: 1080,
+          onLog: any(named: 'onLog'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
       ).called(1);
@@ -319,6 +325,58 @@ void main() {
     expect(manager.snapshot.connectedCount, 0);
   });
 
+  group('logs', () {
+    const connecting =
+        'I/Tunnels: Connecting Production database: '
+        'localhost:15432 → db.internal:5432 via deploy@bastion';
+    const denied = 'deploy@bastion: Permission denied (publickey).';
+    late List<String> lines;
+
+    setUp(() {
+      lines = [];
+      Fimber.plantTree(_RecordingTree(lines));
+      addTearDown(Fimber.clearAll);
+    });
+
+    test('a tunnel connecting, connected, stopping and dropped', () async {
+      final manager = await loaded();
+      await manager.toggle('a1');
+      await manager.toggle('a1');
+      tunnel = FakeTunnel(15432);
+      await manager.toggle('a1');
+      tunnel.drop();
+      await pumpEventQueue();
+
+      expect(lines, [
+        connecting,
+        'I/Tunnels: Connected Production database',
+        'I/Tunnels: Stopping Production database',
+        connecting,
+        'I/Tunnels: Connected Production database',
+        'W/Tunnels: Production database failed: Disconnected',
+      ]);
+    });
+
+    test("ssh's lines while it connects, then why it failed", () async {
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        (invocation.namedArguments[#onLog]! as void Function(String))
+          ..call('debug1: Connecting to bastion port 22.')
+          ..call(denied);
+        throw const SshTunnelException(denied);
+      });
+      final manager = await loaded();
+
+      await manager.toggle('a1');
+
+      expect(lines, [
+        connecting,
+        'D/ssh: Production database: debug1: Connecting to bastion port 22.',
+        'D/ssh: Production database: $denied',
+        'W/Tunnels: Production database failed: $denied',
+      ]);
+    });
+  });
+
   test('remove while connecting leaves no status behind', () async {
     final opened = Completer<SshTunnel>();
     final manager = await connecting(opened.future);
@@ -427,4 +485,18 @@ class _SlowTunnel(final Future<void> _stopped) implements SshTunnel {
 
   @override
   Future<void> close() => _stopped;
+}
+
+class _RecordingTree(final List<String> _lines) extends LogTree {
+  @override
+  List<String> getLevels() => const ['V', 'D', 'I', 'W', 'E'];
+
+  @override
+  void log(
+    String level,
+    String message, {
+    String? tag,
+    dynamic ex,
+    StackTrace? stacktrace,
+  }) => _lines.add('$level/$tag: $message');
 }

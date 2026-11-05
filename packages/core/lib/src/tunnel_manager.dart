@@ -9,6 +9,7 @@ import 'package:fimber/fimber.dart';
 import 'package:system_ssh/system_ssh.dart';
 
 final _log = FimberLog('Tunnels');
+final _sshLog = FimberLog('ssh');
 
 class TunnelManager({
   required final TunnelStore store,
@@ -65,14 +66,14 @@ class TunnelManager({
     if (_sessions[id] case final running? when running.status.isOn) {
       _sessions.remove(id);
       _emit();
-      _log.i('Stopping $id');
+      _log.i('Stopping ${running.title}');
       return running.stop();
     }
 
     final tunnel = _tunnels.firstWhereOrNull((tunnel) => tunnel.id == id);
     if (_changes.isClosed || tunnel == null) return;
 
-    final session = _sessions[id] = _Session();
+    final session = _sessions[id] = _Session(tunnel.title);
     _emit();
     _log.i('Connecting ${tunnel.title}: ${tunnel.summary}');
     final SshTunnel opened;
@@ -80,14 +81,14 @@ class TunnelManager({
       await beforeConnect?.call();
       opened = session.tunnel = await _open(tunnel, session.abort.future);
     } on Object catch (exception) {
-      return _fail(session, tunnel, _messageOf(exception));
+      return _fail(session, _messageOf(exception));
     }
     if (session.isStopped) return opened.close();
 
     session.status = const Connected();
     _emit();
     _log.i('Connected ${tunnel.title}');
-    unawaited(opened.done.then((_) => _fail(session, tunnel, 'Disconnected')));
+    unawaited(opened.done.then((_) => _fail(session, 'Disconnected')));
   }
 
   Future<void> connectAll() => Future.wait(
@@ -111,22 +112,28 @@ class TunnelManager({
 
   bool _isOn(String id) => _sessions[id]?.status.isOn ?? false;
 
-  Future<SshTunnel> _open(Tunnel tunnel, Future<void> abortTrigger) =>
-      switch (tunnel) {
-        Tunnel(kind: TunnelKind.socks) => client.openSocksProxy(
-          tunnel.target,
-          localPort: tunnel.localPort,
-          abortTrigger: abortTrigger,
-        ),
-        Tunnel(:final remoteHost?, :final remotePort?) => client.openTunnel(
-          tunnel.target,
-          remoteHost: remoteHost,
-          remotePort: remotePort,
-          localPort: tunnel.localPort,
-          abortTrigger: abortTrigger,
-        ),
-        _ => throw ArgumentError('A local tunnel needs a remote host and port'),
-      };
+  Future<SshTunnel> _open(Tunnel tunnel, Future<void> abortTrigger) {
+    // ssh's -v lines until the tunnel is up, named since tunnels connect at once.
+    void onLog(String line) => _sshLog.d('${tunnel.title}: $line');
+
+    return switch (tunnel) {
+      Tunnel(kind: TunnelKind.socks) => client.openSocksProxy(
+        tunnel.target,
+        localPort: tunnel.localPort,
+        onLog: onLog,
+        abortTrigger: abortTrigger,
+      ),
+      Tunnel(:final remoteHost?, :final remotePort?) => client.openTunnel(
+        tunnel.target,
+        remoteHost: remoteHost,
+        remotePort: remotePort,
+        localPort: tunnel.localPort,
+        onLog: onLog,
+        abortTrigger: abortTrigger,
+      ),
+      _ => throw ArgumentError('A local tunnel needs a remote host and port'),
+    };
+  }
 
   String _messageOf(Object exception) => switch (exception) {
     SshException(:final message) => message,
@@ -134,10 +141,10 @@ class TunnelManager({
     _ => '$exception',
   };
 
-  void _fail(_Session session, Tunnel tunnel, String message) {
+  void _fail(_Session session, String message) {
     if (session.isStopped) return;
 
-    _log.w('${tunnel.title} failed: $message');
+    _log.w('${session.title} failed: $message');
     session.status = Failed(message);
     _emit();
   }
@@ -152,7 +159,7 @@ class TunnelManager({
   }
 }
 
-class _Session {
+class _Session(final String title) {
   final abort = Completer<void>();
   TunnelStatus status = const Connecting();
   SshTunnel? tunnel;

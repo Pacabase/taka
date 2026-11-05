@@ -121,6 +121,44 @@ void main() {
       expect(debugLogging.isOn, isFalse);
     });
 
+    test('turned on twice, it writes each line once to one file', () {
+      logging()
+        ..turn(on: true)
+        ..turn(on: true);
+      Fimber.i('once');
+
+      final file = Directory('${directory.path}/logs')
+          .listSync()
+          .whereType<File>()
+          .single;
+      expect(
+        file.readAsLinesSync().where((line) => line.contains('once')),
+        hasLength(1),
+      );
+    });
+
+    test('turning off while off does nothing', () {
+      final debugLogging = logging()..turn(on: false);
+
+      expect(debugLogging.isOn, isFalse);
+    });
+
+    test('stays off when the log folder cannot be made', () {
+      File('${directory.path}/logs').createSync();
+      final debugLogging = logging()..turn(on: true);
+      Fimber.i('nowhere');
+
+      expect(debugLogging.isOn, isFalse);
+      expect(flag.existsSync(), isFalse);
+    });
+
+    test('starts quietly when the log folder cannot be made', () {
+      flag.createSync();
+      File('${directory.path}/logs').createSync();
+
+      expect(() => logging().start(), returnsNormally);
+    });
+
     test('a process started while it is on writes from the start', () {
       logging().turn(on: true);
       Fimber.clearAll();

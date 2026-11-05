@@ -16,16 +16,21 @@ class DebugLogging(
   bool get isOn => _flag.existsSync();
 
   void start() {
-    if (isOn) _startWriting();
+    if (!isOn) return;
+
+    try {
+      _startWriting();
+    } on FileSystemException catch (exception) {
+      Fimber.w('Could not start the debug log', ex: exception);
+    }
   }
 
+  // The flag follows the file, so a log that can't be written stays off.
   void turn({required bool on}) {
     try {
       if (on) {
-        _flag
-          ..createSync(recursive: true)
-          ..writeAsStringSync('');
         _startWriting();
+        _flag.createSync(recursive: true);
       } else {
         _stopWriting();
         if (_flag.existsSync()) _flag.deleteSync();
@@ -46,12 +51,7 @@ class DebugLogging(
   void _startWriting() {
     if (_tree != null) return;
 
-    try {
-      final tree = _tree = FileLogTree.open(_logs, process: process);
-      Fimber.plantTree(tree);
-    } on FileSystemException {
-      _tree = null;
-    }
+    Fimber.plantTree(_tree = FileLogTree.open(_logs, process: process));
   }
 
   void _stopWriting() {

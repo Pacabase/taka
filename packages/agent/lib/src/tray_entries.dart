@@ -52,11 +52,7 @@ class const ActionEntry(
 }) extends TrayEntry {
   @override
   String toString() => [
-    ?switch (isChecked) {
-      true => '☑',
-      false => '☐',
-      null => null,
-    },
+    if (isChecked case final isChecked?) isChecked ? '☑' : '☐',
     label,
     if (shortcut != null) '⌘$shortcut',
     if (!isEnabled) '(off)',
