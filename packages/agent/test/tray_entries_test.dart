@@ -131,6 +131,23 @@ void main() {
     );
   });
 
+  test('Launch at Login follows About, once, and shows whether it is on', () {
+    List<String> afterAbout(bool? launches) {
+      final lines = [
+        for (final entry in trayEntries(
+          const TunnelsSnapshot(),
+          launchesAtLogin: launches,
+        ))
+          '$entry',
+      ];
+      return lines.sublist(lines.indexOf('About Taka') + 1).take(2).toList();
+    }
+
+    expect(afterAbout(true), ['☑ Launch at Login', '☐ Debug Logging']);
+    expect(afterAbout(false), ['☐ Launch at Login', '☐ Debug Logging']);
+    expect(afterAbout(null), ['☐ Debug Logging', 'Settings… ⌘,']);
+  });
+
   test('each tunnel line toggles its own tunnel', () {
     final entries = trayEntries(
       const TunnelsSnapshot(tunnels: [database, proxy]),

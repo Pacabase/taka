@@ -7,12 +7,12 @@ part 'taka_install.freezed.dart';
 /// Where the window and its agent are, found from either one.
 ///
 /// On macOS the window is Taka.app/Contents/MacOS/Taka and the agent
-/// Taka.app/Contents/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka; on
+/// Taka.app/Contents/Library/LoginItems/Taka.app/Contents/MacOS/Taka; on
 /// Linux and in development the agent is agent/bin/taka_agent beside taka.
 /// TAKA_AGENT and TAKA_APP point either at another build.
 @freezed
 sealed class const TakaInstall._() with _$TakaInstall {
-  /// [agentBundle] is TakaAgent.app, or null outside an app bundle;
+  /// [agentBundle] is the agent's Taka.app, or null outside an app bundle;
   /// [agentAssets] holds the tray icons.
   const factory({
     required String app,
@@ -32,7 +32,7 @@ sealed class const TakaInstall._() with _$TakaInstall {
       app,
     ) = (operatingSystem ?? Platform.operatingSystem) == 'macos'
         ? (
-            '${window.parent.parent.path}/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka',
+            '${window.parent.parent.path}/Library/LoginItems/Taka.app/Contents/MacOS/Taka',
             window.parent.parent.parent.path,
           )
         : ('${window.parent.path}/agent/bin/taka_agent', executable);

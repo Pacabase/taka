@@ -37,6 +37,7 @@ enum TrayAction {
   connectAll,
   disconnectAll,
   about,
+  launchAtLogin,
   debugLogging,
   showLogs,
   settings,
@@ -62,6 +63,7 @@ class const ActionEntry(
 List<TrayEntry> trayEntries(
   TunnelsSnapshot snapshot, {
   bool isLogging = false,
+  bool? launchesAtLogin,
 }) {
   final tunnels = snapshot.tunnels;
   final connected = tunnels
@@ -96,6 +98,12 @@ List<TrayEntry> trayEntries(
     ),
     const SeparatorEntry(),
     const ActionEntry(TrayAction.about, 'About Taka'),
+    if (launchesAtLogin != null)
+      ActionEntry(
+        TrayAction.launchAtLogin,
+        'Launch at Login',
+        isChecked: launchesAtLogin,
+      ),
     ActionEntry(TrayAction.debugLogging, 'Debug Logging', isChecked: isLogging),
     if (isLogging) const ActionEntry(TrayAction.showLogs, 'Show Logs'),
     const ActionEntry(TrayAction.settings, 'Settings…', shortcut: ','),
