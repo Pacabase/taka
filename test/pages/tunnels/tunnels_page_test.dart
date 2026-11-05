@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_page.dart';
+import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
+import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
 import 'package:taka/theme/taka_theme.dart';
 
 void main() {
@@ -28,7 +30,9 @@ void main() {
     localPort: 1080,
   );
 
-  testWidgets('dragging a tunnel moves it', (tester) async {
+  testWidgets('lists the tunnels from the top, and dragging one moves it', (
+    tester,
+  ) async {
     final bloc = _MockTunnelsBloc();
     whenListen(
       bloc,
@@ -43,6 +47,11 @@ void main() {
           child: const TunnelsPage(),
         ),
       ),
+    );
+
+    expect(
+      tester.getBottomLeft(find.byType(TunnelsHeader)).dy,
+      tester.getTopLeft(find.byType(TunnelTile).first).dy,
     );
 
     final drag = await tester.startGesture(

@@ -31,59 +31,61 @@ class _ReorderableRowsState extends State<ReorderableRows> {
   Widget build(BuildContext context) {
     final drag = _drag;
 
-    return SingleChildScrollView(
-      child: Stack(
-        children: [
-          Column(
-            children: [
-              for (final (index, child) in widget.children.indexed)
-                KeyedSubtree(
-                  key: _rowKeys.putIfAbsent(child.key!, GlobalKey.new),
-                  child: GestureDetector(
-                    onVerticalDragStart: (_) => _start(index),
-                    onVerticalDragUpdate: _update,
-                    onVerticalDragEnd: (_) => _end(),
-                    onVerticalDragCancel: _end,
-                    child: TweenAnimationBuilder(
-                      tween: Tween(end: drag?.shiftOf(index) ?? 0),
-                      duration: drag == null ? Duration.zero : _duration,
-                      curve: Curves.easeOut,
-                      builder: (context, dy, child) => Transform.translate(
-                        offset: Offset(0, dy),
-                        child: child,
-                      ),
-                      child: Visibility.maintain(
-                        visible: drag?.from != index,
-                        child: child,
+    return SizedBox.expand(
+      child: SingleChildScrollView(
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                for (final (index, child) in widget.children.indexed)
+                  KeyedSubtree(
+                    key: _rowKeys.putIfAbsent(child.key!, GlobalKey.new),
+                    child: GestureDetector(
+                      onVerticalDragStart: (_) => _start(index),
+                      onVerticalDragUpdate: _update,
+                      onVerticalDragEnd: (_) => _end(),
+                      onVerticalDragCancel: _end,
+                      child: TweenAnimationBuilder(
+                        tween: Tween(end: drag?.shiftOf(index) ?? 0),
+                        duration: drag == null ? Duration.zero : _duration,
+                        curve: Curves.easeOut,
+                        builder: (context, dy, child) => Transform.translate(
+                          offset: Offset(0, dy),
+                          child: child,
+                        ),
+                        child: Visibility.maintain(
+                          visible: drag?.from != index,
+                          child: child,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-          if (drag != null)
-            Positioned(
-              top: drag.tops[drag.from],
-              left: 0,
-              right: 0,
-              child: drag.isDropping
-                  ? TweenAnimationBuilder(
-                      tween: Tween(begin: drag.dy, end: drag.slot),
-                      duration: _duration,
-                      curve: Curves.easeOut,
-                      onEnd: _dropped,
-                      builder: (context, dy, child) => Transform.translate(
-                        offset: Offset(0, dy),
-                        child: child,
-                      ),
-                      child: _lifted(widget.children[drag.from]),
-                    )
-                  : Transform.translate(
-                      offset: Offset(0, drag.dy),
-                      child: _lifted(widget.children[drag.from]),
-                    ),
+              ],
             ),
-        ],
+            if (drag != null)
+              Positioned(
+                top: drag.tops[drag.from],
+                left: 0,
+                right: 0,
+                child: drag.isDropping
+                    ? TweenAnimationBuilder(
+                        tween: Tween(begin: drag.dy, end: drag.slot),
+                        duration: _duration,
+                        curve: Curves.easeOut,
+                        onEnd: _dropped,
+                        builder: (context, dy, child) => Transform.translate(
+                          offset: Offset(0, dy),
+                          child: child,
+                        ),
+                        child: _lifted(widget.children[drag.from]),
+                      )
+                    : Transform.translate(
+                        offset: Offset(0, drag.dy),
+                        child: _lifted(widget.children[drag.from]),
+                      ),
+              ),
+          ],
+        ),
       ),
     );
   }
