@@ -17,19 +17,11 @@ void _run() => runZonedGuarded(() => unawaited(_start()), (error, stack) {
 Future<void> _start() async {
   Application.instance.setDockIconVisible(false);
 
-  // Taka.app/Contents/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka on
-  // macOS; agent/bin/taka_agent next to taka on Linux, and in development.
-  final folder = File(Platform.resolvedExecutable).parent;
-  final bundle = folder.parent.parent;
-  final isAppBundle = bundle.path.endsWith('.app');
-  final loginItems = folder.path.indexOf('/Contents/Library/LoginItems/');
-  final app =
-      Platform.environment['TAKA_APP'] ??
-      (loginItems == -1
-          ? '${bundle.path}/taka'
-          : folder.path.substring(0, loginItems));
+  final TakaInstall(:app, :agentBundle, :agentAssets) = TakaInstall.fromAgent(
+    Platform.resolvedExecutable,
+  );
 
-  if (!isAppBundle) Fimber.plantTree(DebugTree());
+  if (agentBundle == null) Fimber.plantTree(DebugTree());
   final debugLogging = DebugLogging('agent')..start();
   final identity = agentIdentity(Platform.resolvedExecutable);
   Fimber.i('Agent $identity on ${Platform.operatingSystemVersion}');
@@ -39,9 +31,9 @@ Future<void> _start() async {
     client: const SystemSshClient(loginShell: true),
     // 1Password shows its approval prompt only while the app asking is in
     // front, and open brings the running agent there.
-    beforeConnect: isAppBundle
-        ? () => Process.run('open', [bundle.path])
-        : null,
+    beforeConnect: agentBundle == null
+        ? null
+        : () => Process.run('open', [agentBundle]),
   );
   try {
     await manager.load();
@@ -79,9 +71,7 @@ Future<void> _start() async {
   AgentTray(
     manager: manager,
     debugLogging: debugLogging,
-    assetsPath: isAppBundle
-        ? '${folder.parent.path}/Resources'
-        : folder.parent.path,
+    assetsPath: agentAssets,
     onAbout: () {
       // On macOS, open also brings an open window to the front.
       if (!server.showAbout() || Platform.isMacOS) unawaited(_open(app));

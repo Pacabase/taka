@@ -81,4 +81,70 @@ void main() {
       );
     });
   });
+
+  group('TakaInstall', () {
+    const bundle = '/Applications/Taka.app';
+    const agentBundle = '$bundle/Contents/Library/LoginItems/TakaAgent.app';
+    const installed = TakaInstall(
+      app: bundle,
+      agent: '$agentBundle/Contents/MacOS/Taka',
+      agentBundle: agentBundle,
+      agentAssets: '$agentBundle/Contents/Resources',
+    );
+    const onLinux = TakaInstall(
+      app: '/opt/taka/taka',
+      agent: '/opt/taka/agent/bin/taka_agent',
+      agentAssets: '/opt/taka/agent',
+    );
+    const development = TakaInstall(
+      app: '/src/taka/build/macos/Build/Products/Debug/Taka.app',
+      agent: '/src/taka/packages/agent/build/cli/macos_arm64/bundle/bin/taka_agent',
+      agentAssets: '/src/taka/packages/agent/build/cli/macos_arm64/bundle',
+    );
+
+    test('is the same macOS bundle from the window and from the agent', () {
+      expect(
+        TakaInstall.fromWindow(
+          '$bundle/Contents/MacOS/Taka',
+          environment: {},
+          operatingSystem: 'macos',
+        ),
+        installed,
+      );
+      expect(
+        TakaInstall.fromAgent(installed.agent, environment: {}),
+        installed,
+      );
+    });
+
+    test('is the same Linux install from the window and from the agent', () {
+      expect(
+        TakaInstall.fromWindow(
+          '/opt/taka/taka',
+          environment: {},
+          operatingSystem: 'linux',
+        ),
+        onLinux,
+      );
+      expect(TakaInstall.fromAgent(onLinux.agent, environment: {}), onLinux);
+    });
+
+    test('follows TAKA_AGENT and TAKA_APP to development builds', () {
+      expect(
+        TakaInstall.fromWindow(
+          '${development.app}/Contents/MacOS/Taka',
+          environment: {'TAKA_AGENT': development.agent},
+          operatingSystem: 'macos',
+        ),
+        development,
+      );
+      expect(
+        TakaInstall.fromAgent(
+          development.agent,
+          environment: {'TAKA_APP': development.app},
+        ),
+        development,
+      );
+    });
+  });
 }

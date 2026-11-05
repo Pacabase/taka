@@ -6,6 +6,7 @@ export 'src/local_tunnel_store.dart';
 export 'src/logging/debug_logging.dart';
 export 'src/paths.dart';
 export 'src/ssh_hosts.dart';
+export 'src/taka_install.dart';
 export 'src/tunnel.dart';
 export 'src/tunnel_manager.dart';
 export 'src/tunnel_store.dart';

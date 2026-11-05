@@ -6,7 +6,9 @@ import 'package:fimber/fimber.dart';
 
 Future<AgentClient> connectToAgent() async {
   final path = agentSocketPath();
-  final (agent, app) = _bundledAgent();
+  final TakaInstall(:agent, :app, :agentBundle) = TakaInstall.fromWindow(
+    Platform.resolvedExecutable,
+  );
   if (await _connect(path) case final running?) {
     if (await _isCurrent(running, agent)) return running;
 
@@ -21,8 +23,7 @@ Future<AgentClient> connectToAgent() async {
 
   // Through open, macOS starts the agent as an app of its own, so Taka doesn't
   // stay in the Dock "running in the background" once this window quits.
-  final bundle = File(agent).parent.parent.parent.path;
-  if (bundle.endsWith('.app')) {
+  if (agentBundle case final bundle?) {
     final result = await Process.run('open', ['-n', '-g', bundle]);
     if (result.exitCode != 0) {
       throw ProcessException('open', [bundle], '${result.stderr}'.trim());
@@ -64,18 +65,4 @@ Future<bool> _isCurrent(AgentClient running, String agent) async {
     onTimeout: () => '',
   );
   return identity == expected;
-}
-
-// Taka.app/Contents/MacOS/Taka on macOS, taka on Linux; the agent ships inside
-// or beside it unless TAKA_AGENT points at another build.
-(String, String) _bundledAgent() {
-  final executable = File(Platform.resolvedExecutable);
-  final (agent, app) = Platform.isMacOS
-      ? (
-          '${executable.parent.parent.path}/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka',
-          executable.parent.parent.parent.path,
-        )
-      : ('${executable.parent.path}/agent/bin/taka_agent', executable.path);
-
-  return (Platform.environment['TAKA_AGENT'] ?? agent, app);
 }
