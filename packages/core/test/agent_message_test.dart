@@ -21,6 +21,8 @@ void main() {
       AgentMessage.snapshot(snapshot),
       AgentMessage.snapshot(TunnelsSnapshot()),
       AgentMessage.showAbout(),
+      AgentMessage.openTunnel('a1'),
+      AgentMessage.openTunnel(),
       AgentMessage.settings(AgentSettings(launchesAtLogin: true)),
       AgentMessage.settings(AgentSettings(isLogging: true)),
     ]) {
@@ -53,6 +55,17 @@ void main() {
       );
       expect(const AgentMessage.settings(AgentSettings()).toJson(), {
         'settings': {'launchAtLogin': null, 'debugLogging': false},
+      });
+    });
+
+    test('openTunnel names the tunnel, or none for a new one', () {
+      expect(const AgentMessage.openTunnel('a1').toJson(), {
+        'show': 'tunnel',
+        'id': 'a1',
+      });
+      expect(const AgentMessage.openTunnel().toJson(), {
+        'show': 'tunnel',
+        'id': null,
       });
     });
 

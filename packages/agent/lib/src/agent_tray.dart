@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:agent/src/local_preferences.dart';
 import 'package:agent/src/tray_entries.dart';
 import 'package:core/core.dart';
 import 'package:fimber/fimber.dart';
@@ -9,10 +8,9 @@ import 'package:nativeapi/nativeapi.dart';
 
 class AgentTray({
   required final TunnelManager manager,
-  required final LocalPreferences preferences,
   required final String assetsPath,
-  required final void Function() onAbout,
-  required final void Function() onSettings,
+  required final void Function() onManageTunnels,
+  required final void Function(String? id) onOpenTunnel,
   required final Future<void> Function() onQuit,
 }) {
   late final Image? _connectedImage = Image.fromFile(
@@ -38,7 +36,7 @@ class AgentTray({
       ..addListener((event) {
         switch (event) {
           case TrayIconClickedEvent() when Platform.isWindows:
-            onSettings();
+            onManageTunnels();
           case TrayIconRightClickedEvent() when !Platform.isWindows:
             icon.openContextMenu();
           case _:
@@ -48,20 +46,12 @@ class AgentTray({
 
     // Nothing else holds the tray: this subscription keeps its icon on screen.
     manager.changes.listen(_rebuild);
-    preferences.changes.listen((_) => _rebuild(manager.snapshot));
     _rebuild(manager.snapshot);
   }
 
   void _rebuild(TunnelsSnapshot snapshot) {
     final icon = _icon;
-    final AgentSettings(:launchesAtLogin, :isLogging) = preferences.settings;
-    final menu = _menu(
-      trayEntries(
-        snapshot,
-        isLogging: isLogging,
-        launchesAtLogin: launchesAtLogin,
-      ),
-    );
+    final menu = _menu(trayEntries(snapshot));
     if (icon == null || menu == null) return;
 
     final count = snapshot.connectedCount;
@@ -94,22 +84,19 @@ class AgentTray({
       MenuItemType.normal,
       onClick: () => Clipboard.instance.writeText(text),
     ),
-    ActionEntry(
-      :final action,
-      :final label,
-      :final isEnabled,
-      :final isChecked,
-      :final shortcut,
-    ) =>
-      _create(
-          label,
-          isChecked == null ? MenuItemType.normal : MenuItemType.checkbox,
-          onClick: isEnabled ? () => _run(action) : null,
-        )
-        ?..accelerator = shortcut == null ? null : _shortcut(shortcut)
-        ..state = isChecked == true
-            ? MenuItemState.checked
-            : MenuItemState.unchecked,
+    ActionEntry(:final action, :final label, :final shortcut) => _create(
+      label,
+      MenuItemType.normal,
+      onClick: () => _run(action),
+    )?..accelerator = shortcut == null ? null : _shortcut(shortcut),
+    TunnelActionEntry(:final tunnel, :final action, :final label) => _create(
+      label,
+      MenuItemType.normal,
+      onClick: () => switch (action) {
+        TunnelAction.edit => onOpenTunnel(tunnel.id),
+        TunnelAction.tryAgain => _guard(manager.toggle(tunnel.id)),
+      },
+    ),
     InfoEntry(:final label) => _create(label, MenuItemType.normal),
     SeparatorEntry() => _create('', MenuItemType.separator),
     SubmenuEntry(:final label, :final entries) =>
@@ -137,15 +124,8 @@ class AgentTray({
   void _run(TrayAction action) => switch (action) {
     TrayAction.connectAll => _guard(manager.connectAll()),
     TrayAction.disconnectAll => _guard(manager.disconnectAll()),
-    TrayAction.about => onAbout(),
-    TrayAction.launchAtLogin => preferences.setLaunchAtLogin(
-      on: preferences.settings.launchesAtLogin != true,
-    ),
-    TrayAction.debugLogging => preferences.setDebugLogging(
-      on: !preferences.settings.isLogging,
-    ),
-    TrayAction.showLogs => _guard(preferences.showLogs()),
-    TrayAction.settings => onSettings(),
+    TrayAction.addTunnel => onOpenTunnel(null),
+    TrayAction.manageTunnels => onManageTunnels(),
     TrayAction.quit => _guard(onQuit()),
   };
 

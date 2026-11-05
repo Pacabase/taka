@@ -33,95 +33,114 @@ class const SubmenuEntry(final String label, final List<TrayEntry> entries)
   String toString() => '$label ▸ ${entries.join(' | ')}';
 }
 
-enum TrayAction {
-  connectAll,
-  disconnectAll,
-  about,
-  launchAtLogin,
-  debugLogging,
-  showLogs,
-  settings,
-  quit,
-}
+enum TrayAction { connectAll, disconnectAll, addTunnel, manageTunnels, quit }
 
 class const ActionEntry(
   final TrayAction action,
   final String label, {
-  final bool isEnabled = true,
-  final bool? isChecked,
   final String? shortcut,
 }) extends TrayEntry {
   @override
-  String toString() => [
-    if (isChecked case final isChecked?) isChecked ? '☑' : '☐',
-    label,
-    if (shortcut != null) '⌘$shortcut',
-    if (!isEnabled) '(off)',
-  ].join(' ');
+  String toString() => [label, if (shortcut != null) '⌘$shortcut'].join(' ');
 }
 
-List<TrayEntry> trayEntries(
-  TunnelsSnapshot snapshot, {
-  bool isLogging = false,
-  bool? launchesAtLogin,
-}) {
+enum TunnelAction { edit, tryAgain }
+
+class const TunnelActionEntry(
+  final Tunnel tunnel,
+  final TunnelAction action,
+  final String label,
+) extends TrayEntry {
+  @override
+  String toString() => label;
+}
+
+List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
   final tunnels = snapshot.tunnels;
-  final connected = tunnels
-      .where((tunnel) => snapshot.statusOf(tunnel.id) is Connected)
-      .toList();
-  bool isOn(Tunnel tunnel) => snapshot.statusOf(tunnel.id).isOn;
+  if (tunnels.isEmpty) {
+    return const [
+      InfoEntry('No tunnels yet'),
+      SeparatorEntry(),
+      ActionEntry(TrayAction.addTunnel, 'Add Tunnel…'),
+      SeparatorEntry(),
+      ActionEntry(TrayAction.quit, 'Quit Taka', shortcut: 'q'),
+    ];
+  }
+
+  final failed = tunnels
+      .where((tunnel) => snapshot.statusOf(tunnel.id) is Failed)
+      .length;
 
   return [
+    InfoEntry(
+      [
+        '${snapshot.connectedCount} of ${tunnels.length} connected',
+        if (failed > 0) '$failed failed',
+      ].join(' · '),
+    ),
+    const SeparatorEntry(),
     for (final tunnel in tunnels)
-      ..._tunnelEntries(tunnel, snapshot.statusOf(tunnel.id)),
-    if (tunnels.isEmpty) const InfoEntry('No tunnels yet'),
+      _tunnelEntry(tunnel, snapshot.statusOf(tunnel.id)),
     const SeparatorEntry(),
-    SubmenuEntry('Copy Address', [
-      for (final tunnel in connected)
-        CopyEntry('${tunnel.title} — ${tunnel.address}', tunnel.address),
-      if (connected.isEmpty) const InfoEntry('Nothing connected'),
+    SubmenuEntry('Tunnel Actions', [
+      for (final tunnel in tunnels)
+        SubmenuEntry(
+          _shortened(tunnel.title),
+          _tunnelActions(tunnel, snapshot.statusOf(tunnel.id)),
+        ),
     ]),
-    if (tunnels.isNotEmpty)
-      SubmenuEntry('Copy SSH Command', [
-        for (final tunnel in tunnels)
-          CopyEntry(tunnel.title, tunnel.sshCommand),
-      ]),
-    ActionEntry(
-      TrayAction.connectAll,
-      'Connect All',
-      isEnabled: !tunnels.every(isOn),
-    ),
-    ActionEntry(
-      TrayAction.disconnectAll,
-      'Disconnect All',
-      isEnabled: tunnels.any(isOn),
-    ),
+    if (tunnels.length > 1)
+      tunnels.any((tunnel) => snapshot.statusOf(tunnel.id).isOn)
+          ? const ActionEntry(TrayAction.disconnectAll, 'Disconnect All')
+          : const ActionEntry(TrayAction.connectAll, 'Connect All'),
     const SeparatorEntry(),
-    const ActionEntry(TrayAction.about, 'About Taka'),
-    if (launchesAtLogin != null)
-      ActionEntry(
-        TrayAction.launchAtLogin,
-        'Launch at Login',
-        isChecked: launchesAtLogin,
-      ),
-    ActionEntry(TrayAction.debugLogging, 'Debug Logging', isChecked: isLogging),
-    if (isLogging) const ActionEntry(TrayAction.showLogs, 'Show Logs'),
-    const ActionEntry(TrayAction.settings, 'Settings…', shortcut: ','),
+    const ActionEntry(TrayAction.manageTunnels, 'Manage Tunnels…'),
     const ActionEntry(TrayAction.quit, 'Quit Taka', shortcut: 'q'),
   ];
 }
 
-List<TrayEntry> _tunnelEntries(Tunnel tunnel, TunnelStatus status) => [
-  TunnelEntry(tunnel, switch (status) {
+TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
+  tunnel,
+  _shortened(switch (status) {
     Stopped() => tunnel.title,
     Connecting() => '${tunnel.title} — connecting…',
     Connected() => '${tunnel.title} — ${tunnel.address}',
     Failed() => '${tunnel.title} — failed',
     Reconnecting() => '${tunnel.title} — reconnecting…',
-  }, isChecked: status.isOn),
-  if (status case Failed(message: final reason) || Reconnecting(:final reason))
-    InfoEntry('    $reason'),
+  }),
+  isChecked: status.isOn,
+);
+
+List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) => [
+  if (status
+      case Failed(message: final reason) || Reconnecting(:final reason)) ...[
+    for (final line in wrapped(reason)) InfoEntry(line),
+    if (status is Failed)
+      TunnelActionEntry(tunnel, TunnelAction.tryAgain, 'Try Again'),
+    const SeparatorEntry(),
+  ],
+  CopyEntry('Copy Address', tunnel.address),
+  CopyEntry('Copy SSH Command', tunnel.sshCommand),
+  TunnelActionEntry(tunnel, TunnelAction.edit, 'Edit…'),
 ];
+
+const _width = 50;
+
+// A menu is as wide as its longest item, and wraps none.
+String _shortened(String label) => label.length <= _width
+    ? label
+    : '${label.substring(0, _width - 1).trimRight()}…';
+
+/// [text] in lines of at most [width] characters, broken between words.
+List<String> wrapped(String text, {int width = _width}) => text
+    .split(RegExp(r'\s+'))
+    .where((word) => word.isNotEmpty)
+    .fold<List<String>>([], (lines, word) {
+      final last = lines.isEmpty ? null : lines.last;
+      return last != null && last.length + 1 + word.length <= width
+          ? [...lines.take(lines.length - 1), '$last $word']
+          : [...lines, _shortened(word)];
+    });
 
 String trayTooltip(TunnelsSnapshot snapshot) =>
     switch (snapshot.connectedCount) {

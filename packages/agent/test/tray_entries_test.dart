@@ -32,22 +32,17 @@ void main() {
   List<String> menu(TunnelsSnapshot snapshot) =>
       trayEntries(snapshot).map((entry) => '$entry').toList();
 
-  test('with no tunnels says so, and has nothing to connect', () {
+  test('with no tunnels, offers only to add one', () {
     expect(menu(const TunnelsSnapshot()), [
       'No tunnels yet',
       '---',
-      'Copy Address ▸ Nothing connected',
-      'Connect All (off)',
-      'Disconnect All (off)',
+      'Add Tunnel…',
       '---',
-      'About Taka',
-      '☐ Debug Logging',
-      'Settings… ⌘,',
       'Quit Taka ⌘q',
     ]);
   });
 
-  test('shows each tunnel with how it is doing', () {
+  test('says how the tunnels are doing, one line each', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [database, proxy, web, other],
       statuses: {
@@ -58,47 +53,82 @@ void main() {
       },
     );
 
-    expect(menu(snapshot), [
+    expect(menu(snapshot).take(7), [
+      '1 of 4 connected · 1 failed',
+      '---',
       '☑ Production database — localhost:15432',
       '☑ Proxy — connecting…',
       '☐ Web — failed',
-      '    127.0.0.1:8080 is already in use',
       '☑ Other — reconnecting…',
-      '    Connection to bastion closed by remote host.',
       '---',
-      'Copy Address ▸ Production database — localhost:15432 ⧉ localhost:15432',
-      'Copy SSH Command ▸ ${['Production database ⧉ ssh -N -L 127.0.0.1:15432:db.internal:5432 bastion', 'Proxy ⧉ ssh -N -D 127.0.0.1:1080 bastion', 'Web ⧉ ssh -N -L 127.0.0.1:8080::0 web', 'Other ⧉ ssh -N -L 127.0.0.1:8081::0 web'].join(' | ')}',
-      'Connect All',
+    ]);
+  });
+
+  test('keeps each tunnel to its actions, and why it failed', () {
+    const snapshot = TunnelsSnapshot(
+      tunnels: [database, web],
+      statuses: {'c3': Failed('127.0.0.1:8080 is already in use')},
+    );
+
+    expect(
+      menu(snapshot).firstWhere((line) => line.startsWith('Tunnel Actions')),
+      'Tunnel Actions ▸ '
+      'Production database ▸ '
+      'Copy Address ⧉ localhost:15432 | '
+      'Copy SSH Command ⧉ '
+      'ssh -N -L 127.0.0.1:15432:db.internal:5432 bastion | '
+      'Edit… | '
+      'Web ▸ '
+      '127.0.0.1:8080 is already in use | '
+      'Try Again | '
+      '--- | '
+      'Copy Address ⧉ localhost:8080 | '
+      'Copy SSH Command ⧉ ssh -N -L 127.0.0.1:8080::0 web | '
+      'Edit…',
+    );
+  });
+
+  test('ends with Disconnect All while any is on, and the window', () {
+    const snapshot = TunnelsSnapshot(
+      tunnels: [database, proxy],
+      statuses: {'a1': Connected()},
+    );
+
+    expect(menu(snapshot).skip(5).skip(1), [
       'Disconnect All',
       '---',
-      'About Taka',
-      '☐ Debug Logging',
-      'Settings… ⌘,',
+      'Manage Tunnels…',
       'Quit Taka ⌘q',
     ]);
   });
 
-  test('a stopped tunnel shows only its title', () {
-    expect(menu(const TunnelsSnapshot(tunnels: [proxy])).first, '☐ Proxy');
+  test('offers Connect All while all are off, and neither for one', () {
+    expect(
+      menu(const TunnelsSnapshot(tunnels: [database, proxy])),
+      contains('Connect All'),
+    );
+    expect(
+      menu(const TunnelsSnapshot(tunnels: [database])),
+      isNot(anyOf(contains('Connect All'), contains('Disconnect All'))),
+    );
   });
 
-  test('Connect All is off once everything is on', () {
-    const snapshot = TunnelsSnapshot(
-      tunnels: [database, proxy],
-      statuses: {'a1': Connected(), 'b2': Connected()},
+  test('cuts a long title to fit, and wraps a long reason', () {
+    const long = Tunnel(
+      id: 'e5',
+      name: 'A very long tunnel name that would make the menu wide',
+      sshHost: 'web',
+      localPort: 8082,
+    );
+    final reason = 'word ' * 30;
+
+    final lines = menu(
+      TunnelsSnapshot(tunnels: [long], statuses: {'e5': Failed(reason)}),
     );
 
-    expect(
-      menu(snapshot),
-      containsAll(['Connect All (off)', 'Disconnect All']),
-    );
-    expect(
-      menu(snapshot),
-      contains(
-        'Copy Address ▸ Production database — localhost:15432 ⧉ localhost:15432'
-        ' | Proxy — socks5h://localhost:1080 ⧉ socks5h://localhost:1080',
-      ),
-    );
+    expect(lines[2], '☐ A very long tunnel name that would make the menu…');
+    expect(wrapped(reason), everyElement(hasLength(lessThanOrEqualTo(50))));
+    expect(wrapped(reason).join(' '), reason.trim());
   });
 
   test('the tooltip counts connected tunnels', () {
@@ -112,40 +142,6 @@ void main() {
       ),
       'Taka · 1 connected',
     );
-  });
-
-  test('with debug logging on, it is checked and Show Logs appears', () {
-    final entries = trayEntries(const TunnelsSnapshot(), isLogging: true);
-
-    expect(
-      entries
-          .map((entry) => '$entry')
-          .skipWhile((line) => line != 'About Taka'),
-      [
-        'About Taka',
-        '☑ Debug Logging',
-        'Show Logs',
-        'Settings… ⌘,',
-        'Quit Taka ⌘q',
-      ],
-    );
-  });
-
-  test('Launch at Login follows About, once, and shows whether it is on', () {
-    List<String> afterAbout(bool? launches) {
-      final lines = [
-        for (final entry in trayEntries(
-          const TunnelsSnapshot(),
-          launchesAtLogin: launches,
-        ))
-          '$entry',
-      ];
-      return lines.sublist(lines.indexOf('About Taka') + 1).take(2).toList();
-    }
-
-    expect(afterAbout(true), ['☑ Launch at Login', '☐ Debug Logging']);
-    expect(afterAbout(false), ['☐ Launch at Login', '☐ Debug Logging']);
-    expect(afterAbout(null), ['☐ Debug Logging', 'Settings… ⌘,']);
   });
 
   test('each tunnel line toggles its own tunnel', () {

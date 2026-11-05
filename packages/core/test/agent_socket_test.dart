@@ -174,7 +174,7 @@ void main() {
       StreamQueue(theirs.snapshots).next,
     ).wait;
 
-    expect(server.showAbout(), isTrue);
+    expect(server.show(const AgentMessage.showAbout()), isTrue);
 
     await Future.wait(requests.map((queue) => queue.next));
   });
@@ -182,7 +182,7 @@ void main() {
   test('showAbout with no window open asks the next one, once', () async {
     final server = await serve();
 
-    expect(server.showAbout(), isFalse);
+    expect(server.show(const AgentMessage.showAbout()), isFalse);
 
     final first = await connect();
     final second = await connect();
@@ -202,7 +202,7 @@ void main() {
     final agent = await connect();
     final snapshots = StreamQueue(agent.snapshots);
     await snapshots.next;
-    server.showAbout();
+    server.show(const AgentMessage.showAbout());
     await manager.save(proxy);
     await snapshots.next;
     await agent.close();
@@ -210,11 +210,29 @@ void main() {
     expect(await agent.aboutRequests.length, 1);
   });
 
+  test('a tunnel request reaches an open window', () async {
+    final server = await serve();
+    final agent = await connect();
+    await agent.snapshots.first;
+
+    expect(server.show(const AgentMessage.openTunnel('a1')), isTrue);
+
+    expect(await agent.tunnelRequests.first, const OpenTunnel('a1'));
+  });
+
+  test('a tunnel request with no window open waits for the next', () async {
+    final server = await serve();
+
+    expect(server.show(const AgentMessage.openTunnel()), isFalse);
+
+    expect(await (await connect()).tunnelRequests.first, const OpenTunnel());
+  });
+
   test('showAbout with a window open leaves none pending', () async {
     final server = await serve();
     final open = await connect();
     await StreamQueue(open.snapshots).next;
-    server.showAbout();
+    server.show(const AgentMessage.showAbout());
     await open.close();
 
     final next = await connect();

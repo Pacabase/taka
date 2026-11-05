@@ -1,6 +1,8 @@
 @Tags(['unit'])
 library;
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
 import 'package:flutter/gestures.dart';
@@ -72,6 +74,37 @@ void main() {
       ).called(1);
     },
   );
+
+  testWidgets("the tray asks for a tunnel's form, or a new one", (
+    tester,
+  ) async {
+    final bloc = _MockTunnelsBloc();
+    whenListen(
+      bloc,
+      const Stream<TunnelsState>.empty(),
+      initialState: const Ready(TunnelsSnapshot(tunnels: [database, proxy])),
+    );
+    final requests = StreamController<OpenTunnel>();
+    addTearDown(requests.close);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: takaTheme(Brightness.light),
+        home: BlocProvider<TunnelsBloc>.value(
+          value: bloc,
+          child: TunnelsPage(tunnelRequests: requests.stream),
+        ),
+      ),
+    );
+
+    requests.add(const OpenTunnel('b2'));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit tunnel'), findsOneWidget);
+    expect(find.text('bastion'), findsOneWidget);
+
+    requests.add(const OpenTunnel());
+    await tester.pumpAndSettle();
+    expect(find.text('New tunnel'), findsOneWidget);
+  });
 }
 
 class _MockTunnelsBloc extends MockBloc<TunnelsEvent, TunnelsState>

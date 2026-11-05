@@ -88,13 +88,13 @@ Future<void> _start() async {
 
   AgentTray(
     manager: manager,
-    preferences: preferences,
     assetsPath: agentAssets,
-    onAbout: () {
-      // On macOS, open also brings an open window to the front.
-      if (!server.showAbout() || Platform.isMacOS) unawaited(_open(app));
+    onManageTunnels: () => unawaited(_open(app)),
+    // On macOS, open also brings an open window to the front.
+    onOpenTunnel: (id) {
+      final isOpen = server.show(AgentMessage.openTunnel(id));
+      if (!isOpen || Platform.isMacOS) unawaited(_open(app));
     },
-    onSettings: () => unawaited(_open(app)),
     onQuit: manager.close,
   ).show();
 }

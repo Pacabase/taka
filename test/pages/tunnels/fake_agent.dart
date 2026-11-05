@@ -5,6 +5,7 @@ import 'package:core/core.dart';
 class FakeAgent implements AgentClient {
   final controller = StreamController<TunnelsSnapshot>();
   final settingsController = StreamController<AgentSettings>();
+  final tunnelRequestsController = StreamController<OpenTunnel>();
   final sent = <AgentCommand>[];
 
   @override
@@ -17,6 +18,9 @@ class FakeAgent implements AgentClient {
   Stream<AgentSettings> get settings => settingsController.stream;
 
   @override
+  Stream<OpenTunnel> get tunnelRequests => tunnelRequestsController.stream;
+
+  @override
   Future<String> get identity => Future.value('');
 
   @override
@@ -25,6 +29,7 @@ class FakeAgent implements AgentClient {
   @override
   Future<void> close() {
     unawaited(settingsController.close());
+    unawaited(tunnelRequestsController.close());
     return controller.close();
   }
 }

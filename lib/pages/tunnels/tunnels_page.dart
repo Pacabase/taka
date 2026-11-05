@@ -13,7 +13,10 @@ import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
 import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_colors.dart';
 
-class const TunnelsPage({super.key}) extends StatefulWidget {
+class const TunnelsPage({
+  super.key,
+  final Stream<OpenTunnel> tunnelRequests = const Stream.empty(),
+}) extends StatefulWidget {
   @override
   State<TunnelsPage> createState() => _TunnelsPageState();
 }
@@ -22,6 +25,36 @@ class _TunnelsPageState extends State<TunnelsPage> {
   var _isFormOpen = false;
   Tunnel? _editing;
   var _hosts = const <String>[];
+  late final StreamSubscription<OpenTunnel> _tunnelRequests;
+
+  @override
+  void initState() {
+    super.initState();
+    _tunnelRequests = widget.tunnelRequests.listen(_openRequested);
+  }
+
+  @override
+  void dispose() {
+    unawaited(_tunnelRequests.cancel());
+    super.dispose();
+  }
+
+  void _openRequested(OpenTunnel request) {
+    Navigator.popUntil(context, (route) => route.isFirst);
+    final tunnels = switch (context.read<TunnelsBloc>().state) {
+      Ready(:final snapshot) => snapshot.tunnels,
+      _ => const <Tunnel>[],
+    };
+    switch (request.id) {
+      case null:
+        _openForm();
+      case final id:
+        if (tunnels.where((tunnel) => tunnel.id == id).firstOrNull
+            case final tunnel?) {
+          _openForm(tunnel);
+        }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

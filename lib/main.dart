@@ -44,7 +44,7 @@ Future<void> main() async {
         home: BlocProvider(
           create: (_) =>
               TunnelsBloc(agent: agent)..add(const TunnelsEvent.started()),
-          child: const TunnelsPage(),
+          child: TunnelsPage(tunnelRequests: agent.tunnelRequests),
         ),
       ),
     );

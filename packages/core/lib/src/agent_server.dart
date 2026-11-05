@@ -20,7 +20,7 @@ class AgentServer(
   final String _identity,
 ) {
   final Set<Socket> _clients = {};
-  var _isAboutPending = false;
+  AgentMessage? _pending;
   late final StreamSubscription<TunnelsSnapshot> _changes;
   late final StreamSubscription<AgentSettings> _settingsChanges;
 
@@ -65,12 +65,17 @@ class AgentServer(
     }
   }
 
-  /// Asks every open window to show About, or the next one to connect when
-  /// none is open; returns whether one was open.
-  bool showAbout() {
-    _isAboutPending = _clients.isEmpty;
-    _clients.forEach(_sendAbout);
-    return !_isAboutPending;
+  /// Sends a request such as [AgentMessage.openTunnel] to every open window,
+  /// or to the next one to connect when none is open; returns whether one was
+  /// open.
+  bool show(AgentMessage request) {
+    if (_clients.isEmpty) {
+      _pending = request;
+      return false;
+    }
+
+    _sendAll(request);
+    return true;
   }
 
   void _accept(Socket client) {
@@ -79,9 +84,9 @@ class AgentServer(
     _send(client, AgentMessage.identity(_identity));
     _send(client, AgentMessage.snapshot(_manager.snapshot));
     _send(client, AgentMessage.settings(_preferences.settings));
-    if (_isAboutPending) {
-      _isAboutPending = false;
-      _sendAbout(client);
+    if (_pending case final request?) {
+      _pending = null;
+      _send(client, request);
     }
 
     utf8.decoder
@@ -130,9 +135,6 @@ class AgentServer(
 
   void _send(Socket client, AgentMessage message) =>
       client.writeln(jsonEncode(message.toJson()));
-
-  void _sendAbout(Socket client) =>
-      _send(client, const AgentMessage.showAbout());
 
   void _drop(Socket client) {
     _clients.remove(client);
