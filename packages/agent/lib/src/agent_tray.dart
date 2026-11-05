@@ -94,7 +94,7 @@ class AgentTray({
       MenuItemType.normal,
       onClick: () => switch (action) {
         TunnelAction.edit => onOpenTunnel(tunnel.id),
-        TunnelAction.tryAgain => _guard(manager.toggle(tunnel.id)),
+        TunnelAction.tryAgain => _tryAgain(tunnel.id),
       },
     ),
     InfoEntry(:final label) => _create(label, MenuItemType.normal),
@@ -119,6 +119,11 @@ class AgentTray({
       });
     }
     return item;
+  }
+
+  // The menu can be stale: don't stop a tunnel that has come back since.
+  void _tryAgain(String id) {
+    if (!manager.snapshot.statusOf(id).isOn) _guard(manager.toggle(id));
   }
 
   void _run(TrayAction action) => switch (action) {

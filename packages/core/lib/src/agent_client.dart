@@ -18,7 +18,6 @@ abstract interface class AgentClient {
 
   Stream<void> get aboutRequests;
 
-  /// Asks to open a tunnel's form, or a new tunnel's.
   Stream<OpenTunnel> get tunnelRequests;
 
   Stream<AgentSettings> get settings;

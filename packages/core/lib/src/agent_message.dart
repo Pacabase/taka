@@ -23,12 +23,7 @@ sealed class const AgentMessage._() with _$AgentMessage {
   static AgentMessage fromJson(Object? json) => switch (json) {
     {'agent': final String identity} => AgentIdentity(identity),
     {'show': 'about'} => const ShowAbout(),
-    {'show': 'tunnel'} && final Map<Object?, Object?> fields => OpenTunnel(
-      switch (fields['id']) {
-        final String id => id,
-        _ => null,
-      },
-    ),
+    {'show': 'tunnel', 'id': final String? id} => OpenTunnel(id),
     {'settings': final settings} => SettingsChanged(
       AgentSettings.fromJson(settings),
     ),

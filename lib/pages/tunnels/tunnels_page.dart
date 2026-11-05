@@ -30,7 +30,9 @@ class _TunnelsPageState extends State<TunnelsPage> {
   @override
   void initState() {
     super.initState();
-    _tunnelRequests = widget.tunnelRequests.listen(_openRequested);
+    _tunnelRequests = widget.tunnelRequests.listen(
+      (request) => unawaited(_openRequested(request)),
+    );
   }
 
   @override
@@ -39,21 +41,23 @@ class _TunnelsPageState extends State<TunnelsPage> {
     super.dispose();
   }
 
-  void _openRequested(OpenTunnel request) {
+  Future<void> _openRequested(OpenTunnel request) async {
+    final bloc = context.read<TunnelsBloc>();
+    // A window opened from the tray gets the request before its first snapshot.
+    final state = bloc.state is Loading
+        ? await bloc.stream.firstWhere(
+            (state) => state is! Loading,
+            orElse: () => const Loading(),
+          )
+        : bloc.state;
+    if (!mounted || state is! Ready) return;
+    final tunnel = state.snapshot.tunnels
+        .where((tunnel) => tunnel.id == request.id)
+        .firstOrNull;
+    if (request.id != null && tunnel == null) return;
+
     Navigator.popUntil(context, (route) => route.isFirst);
-    final tunnels = switch (context.read<TunnelsBloc>().state) {
-      Ready(:final snapshot) => snapshot.tunnels,
-      _ => const <Tunnel>[],
-    };
-    switch (request.id) {
-      case null:
-        _openForm();
-      case final id:
-        if (tunnels.where((tunnel) => tunnel.id == id).firstOrNull
-            case final tunnel?) {
-          _openForm(tunnel);
-        }
-    }
+    _openForm(tunnel);
   }
 
   @override

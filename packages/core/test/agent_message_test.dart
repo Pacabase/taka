@@ -69,6 +69,13 @@ void main() {
       });
     });
 
+    test('openTunnel with a malformed id is not read as a new tunnel', () {
+      expect(
+        () => AgentMessage.fromJson({'show': 'tunnel', 'id': 5}),
+        throwsFormatException,
+      );
+    });
+
     test('showAbout is show about', () {
       expect(const AgentMessage.showAbout().toJson(), {'show': 'about'});
     });

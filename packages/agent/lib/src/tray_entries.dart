@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:core/core.dart';
 
 /// `toString` reads like the menu, so tests can compare whole menus.
@@ -67,9 +69,8 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
     ];
   }
 
-  final failed = tunnels
-      .where((tunnel) => snapshot.statusOf(tunnel.id) is Failed)
-      .length;
+  final statuses = snapshot.statuses.values;
+  final failed = statuses.whereType<Failed>().length;
 
   return [
     InfoEntry(
@@ -90,7 +91,7 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
         ),
     ]),
     if (tunnels.length > 1)
-      tunnels.any((tunnel) => snapshot.statusOf(tunnel.id).isOn)
+      statuses.any((status) => status.isOn)
           ? const ActionEntry(TrayAction.disconnectAll, 'Disconnect All')
           : const ActionEntry(TrayAction.connectAll, 'Connect All'),
     const SeparatorEntry(),
@@ -111,18 +112,22 @@ TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
   isChecked: status.isOn,
 );
 
-List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) => [
-  if (status
-      case Failed(message: final reason) || Reconnecting(:final reason)) ...[
-    for (final line in wrapped(reason)) InfoEntry(line),
+List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
+  final whyDown = [
+    if (status
+        case Failed(message: final reason) || Reconnecting(:final reason))
+      for (final line in _wrapped(reason)) InfoEntry(line),
     if (status is Failed)
       TunnelActionEntry(tunnel, TunnelAction.tryAgain, 'Try Again'),
-    const SeparatorEntry(),
-  ],
-  CopyEntry('Copy Address', tunnel.address),
-  CopyEntry('Copy SSH Command', tunnel.sshCommand),
-  TunnelActionEntry(tunnel, TunnelAction.edit, 'Edit…'),
-];
+  ];
+  return [
+    ...whyDown,
+    if (whyDown.isNotEmpty) const SeparatorEntry(),
+    CopyEntry('Copy Address', tunnel.address),
+    CopyEntry('Copy SSH Command', tunnel.sshCommand),
+    TunnelActionEntry(tunnel, TunnelAction.edit, 'Edit…'),
+  ];
+}
 
 const _width = 50;
 
@@ -131,15 +136,19 @@ String _shortened(String label) => label.length <= _width
     ? label
     : '${label.substring(0, _width - 1).trimRight()}…';
 
-/// [text] in lines of at most [width] characters, broken between words.
-List<String> wrapped(String text, {int width = _width}) => text
+List<String> _wrapped(String text) => text
     .split(RegExp(r'\s+'))
-    .where((word) => word.isNotEmpty)
-    .fold<List<String>>([], (lines, word) {
-      final last = lines.isEmpty ? null : lines.last;
-      return last != null && last.length + 1 + word.length <= width
+    .expand(
+      (word) => [
+        for (var start = 0; start < word.length; start += _width)
+          word.substring(start, min(start + _width, word.length)),
+      ],
+    )
+    .fold([], (lines, word) {
+      final last = lines.lastOrNull;
+      return last != null && last.length + 1 + word.length <= _width
           ? [...lines.take(lines.length - 1), '$last $word']
-          : [...lines, _shortened(word)];
+          : [...lines, word];
     });
 
 String trayTooltip(TunnelsSnapshot snapshot) =>

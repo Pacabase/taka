@@ -90,8 +90,8 @@ Future<void> _start() async {
     manager: manager,
     assetsPath: agentAssets,
     onManageTunnels: () => unawaited(_open(app)),
-    // On macOS, open also brings an open window to the front.
     onOpenTunnel: (id) {
+      // On macOS, open also brings an open window to the front.
       final isOpen = server.show(AgentMessage.openTunnel(id));
       if (!isOpen || Platform.isMacOS) unawaited(_open(app));
     },

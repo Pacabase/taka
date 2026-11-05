@@ -32,6 +32,9 @@ void main() {
   List<String> menu(TunnelsSnapshot snapshot) =>
       trayEntries(snapshot).map((entry) => '$entry').toList();
 
+  String tunnelActions(TunnelsSnapshot snapshot) =>
+      menu(snapshot).firstWhere((line) => line.startsWith('Tunnel Actions'));
+
   test('with no tunnels, offers only to add one', () {
     expect(menu(const TunnelsSnapshot()), [
       'No tunnels yet',
@@ -64,14 +67,17 @@ void main() {
     ]);
   });
 
-  test('keeps each tunnel to its actions, and why it failed', () {
+  test('keeps each tunnel to its actions, and why it is down', () {
     const snapshot = TunnelsSnapshot(
-      tunnels: [database, web],
-      statuses: {'c3': Failed('127.0.0.1:8080 is already in use')},
+      tunnels: [database, web, other],
+      statuses: {
+        'c3': Failed('127.0.0.1:8080 is already in use'),
+        'd4': Reconnecting('Connection to bastion closed by remote host.'),
+      },
     );
 
     expect(
-      menu(snapshot).firstWhere((line) => line.startsWith('Tunnel Actions')),
+      tunnelActions(snapshot),
       'Tunnel Actions ▸ '
       'Production database ▸ '
       'Copy Address ⧉ localhost:15432 | '
@@ -84,7 +90,28 @@ void main() {
       '--- | '
       'Copy Address ⧉ localhost:8080 | '
       'Copy SSH Command ⧉ ssh -N -L 127.0.0.1:8080::0 web | '
+      'Edit… | '
+      'Other ▸ '
+      'Connection to bastion closed by remote host. | '
+      '--- | '
+      'Copy Address ⧉ localhost:8081 | '
+      'Copy SSH Command ⧉ ssh -N -L 127.0.0.1:8081::0 web | '
       'Edit…',
+    );
+  });
+
+  test('a tunnel down for no stated reason starts its actions plainly', () {
+    String actionsWhen(TunnelStatus status) => tunnelActions(
+      TunnelsSnapshot(tunnels: [web], statuses: {'c3': status}),
+    );
+
+    expect(
+      actionsWhen(const Reconnecting('')),
+      startsWith('Tunnel Actions ▸ Web ▸ Copy Address'),
+    );
+    expect(
+      actionsWhen(const Failed('')),
+      startsWith('Tunnel Actions ▸ Web ▸ Try Again | --- | Copy Address'),
     );
   });
 
@@ -94,12 +121,12 @@ void main() {
       statuses: {'a1': Connected()},
     );
 
-    expect(menu(snapshot).skip(5).skip(1), [
-      'Disconnect All',
-      '---',
-      'Manage Tunnels…',
-      'Quit Taka ⌘q',
-    ]);
+    expect(
+      menu(snapshot)
+          .skipWhile((line) => !line.startsWith('Tunnel Actions'))
+          .skip(1),
+      ['Disconnect All', '---', 'Manage Tunnels…', 'Quit Taka ⌘q'],
+    );
   });
 
   test('offers Connect All while all are off, and neither for one', () {
@@ -120,15 +147,40 @@ void main() {
       sshHost: 'web',
       localPort: 8082,
     );
-    final reason = 'word ' * 30;
+    final line = List.filled(10, 'word').join(' ');
 
-    final lines = menu(
-      TunnelsSnapshot(tunnels: [long], statuses: {'e5': Failed(reason)}),
+    final snapshot = TunnelsSnapshot(
+      tunnels: [long],
+      statuses: {'e5': Failed('word ' * 30)},
     );
 
-    expect(lines[2], '☐ A very long tunnel name that would make the menu…');
-    expect(wrapped(reason), everyElement(hasLength(lessThanOrEqualTo(50))));
-    expect(wrapped(reason).join(' '), reason.trim());
+    expect(
+      menu(snapshot)[2],
+      '☐ A very long tunnel name that would make the menu…',
+    );
+    expect(
+      tunnelActions(snapshot),
+      startsWith(
+        'Tunnel Actions ▸ A very long tunnel name that would make the menu… ▸ '
+        '$line | $line | $line | Try Again',
+      ),
+    );
+  });
+
+  test('splits a word too long for a line, rather than cutting it', () {
+    final host = 'a' * 60;
+
+    expect(
+      tunnelActions(
+        TunnelsSnapshot(
+          tunnels: [web],
+          statuses: {'c3': Failed('Could not resolve $host')},
+        ),
+      ),
+      startsWith(
+        'Tunnel Actions ▸ Web ▸ Could not resolve | ${'a' * 50} | ${'a' * 10} |',
+      ),
+    );
   });
 
   test('the tooltip counts connected tunnels', () {
@@ -153,5 +205,22 @@ void main() {
       'a1',
       'b2',
     ]);
+  });
+
+  test("each tunnel's Edit… opens its own tunnel", () {
+    final entries = trayEntries(
+      const TunnelsSnapshot(tunnels: [database, proxy]),
+    );
+
+    expect(
+      [
+        for (final SubmenuEntry(:entries) in entries.whereType<SubmenuEntry>())
+          for (final SubmenuEntry(:entries)
+              in entries.whereType<SubmenuEntry>())
+            for (final entry in entries.whereType<TunnelActionEntry>())
+              if (entry.action == TunnelAction.edit) entry.tunnel.id,
+      ],
+      ['a1', 'b2'],
+    );
   });
 }

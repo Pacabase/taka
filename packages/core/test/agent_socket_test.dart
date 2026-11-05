@@ -220,13 +220,27 @@ void main() {
     expect(await agent.tunnelRequests.first, const OpenTunnel('a1'));
   });
 
-  test('a tunnel request with no window open waits for the next', () async {
-    final server = await serve();
+  test(
+    'with no window open, the next one gets the latest request, once',
+    () async {
+      final server = await serve();
 
-    expect(server.show(const AgentMessage.openTunnel()), isFalse);
+      expect(server.show(const AgentMessage.openTunnel('a1')), isFalse);
+      expect(server.show(const AgentMessage.openTunnel()), isFalse);
 
-    expect(await (await connect()).tunnelRequests.first, const OpenTunnel());
-  });
+      final first = await connect();
+      final second = await connect();
+      final snapshots = StreamQueue(second.snapshots);
+      await snapshots.next;
+      await manager.save(proxy);
+      await snapshots.next;
+      await first.close();
+      await second.close();
+
+      expect(await first.tunnelRequests.toList(), [const OpenTunnel()]);
+      expect(await second.tunnelRequests.toList(), isEmpty);
+    },
+  );
 
   test('showAbout with a window open leaves none pending', () async {
     final server = await serve();
