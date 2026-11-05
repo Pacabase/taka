@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_form.dart';
@@ -18,51 +22,60 @@ class _TunnelsPageState extends State<TunnelsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          TunnelsHeader(
-            title: switch ((_isFormOpen, _editing)) {
-              (false, _) => 'Tunnels',
-              (true, null) => 'New tunnel',
-              (true, _?) => 'Edit tunnel',
-            },
-            isFormOpen: _isFormOpen,
-            onPressed: _isFormOpen ? _closeForm : _openForm,
-          ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween(
-                    begin: const Offset(0, -0.01),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              ),
-              layoutBuilder: (current, previous) => Stack(
-                fit: StackFit.expand,
-                children: [...previous, ?current],
-              ),
-              child: _isFormOpen
-                  ? TunnelForm(
-                      key: ValueKey(_editing?.id ?? 'new'),
-                      initial: _editing,
-                      onSave: (tunnel) {
-                        context.read<TunnelsBloc>().add(
-                          TunnelsEvent.send(AgentCommand.save(tunnel)),
-                        );
-                        _closeForm();
-                      },
-                      onCancel: _closeForm,
-                    )
-                  : _TunnelList(key: const ValueKey('list'), onEdit: _openForm),
+    return BlocListener<TunnelsBloc, TunnelsState>(
+      listenWhen: (_, state) => state is Closed,
+      listener: (_, _) => unawaited(
+        ServicesBinding.instance.exitApplication(AppExitType.required),
+      ),
+      child: Scaffold(
+        body: Column(
+          children: [
+            TunnelsHeader(
+              title: switch ((_isFormOpen, _editing)) {
+                (false, _) => 'Tunnels',
+                (true, null) => 'New tunnel',
+                (true, _?) => 'Edit tunnel',
+              },
+              isFormOpen: _isFormOpen,
+              onPressed: _isFormOpen ? _closeForm : _openForm,
             ),
-          ),
-        ],
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween(
+                      begin: const Offset(0, -0.01),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                ),
+                layoutBuilder: (current, previous) => Stack(
+                  fit: StackFit.expand,
+                  children: [...previous, ?current],
+                ),
+                child: _isFormOpen
+                    ? TunnelForm(
+                        key: ValueKey(_editing?.id ?? 'new'),
+                        initial: _editing,
+                        onSave: (tunnel) {
+                          context.read<TunnelsBloc>().add(
+                            TunnelsEvent.send(AgentCommand.save(tunnel)),
+                          );
+                          _closeForm();
+                        },
+                        onCancel: _closeForm,
+                      )
+                    : _TunnelList(
+                        key: const ValueKey('list'),
+                        onEdit: _openForm,
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
