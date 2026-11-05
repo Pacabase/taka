@@ -79,6 +79,11 @@ List<TrayEntry> trayEntries(
         CopyEntry('${tunnel.title} — ${tunnel.address}', tunnel.address),
       if (connected.isEmpty) const InfoEntry('Nothing connected'),
     ]),
+    if (tunnels.isNotEmpty)
+      SubmenuEntry('Copy SSH Command', [
+        for (final tunnel in tunnels)
+          CopyEntry(tunnel.title, tunnel.sshCommand),
+      ]),
     ActionEntry(
       TrayAction.connectAll,
       'Connect All',

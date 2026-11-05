@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
 import 'package:taka/theme/taka_colors.dart';
@@ -21,6 +24,26 @@ class const TunnelTile({
 class _TunnelTileState extends State<TunnelTile> {
   var _hovered = false;
   var _focused = false;
+  Timer? _copied;
+
+  @override
+  void dispose() {
+    _copied?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _copy() async {
+    await Clipboard.setData(ClipboardData(text: widget.tunnel.sshCommand));
+    if (!mounted) return;
+
+    _copied?.cancel();
+    setState(
+      () => _copied = Timer(
+        const Duration(milliseconds: 1500),
+        () => setState(() => _copied = null),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +105,16 @@ class _TunnelTileState extends State<TunnelTile> {
                 ),
               ),
               if (isHovered || _focused) ...[
+                IconButton(
+                  tooltip: _copied == null ? 'Copy ssh command' : 'Copied',
+                  onPressed: _copy,
+                  icon: AppIcon(
+                    _copied == null ? AppIcons.copy : AppIcons.check,
+                    color: _copied == null
+                        ? colors.textSecondary
+                        : colors.green,
+                  ),
+                ),
                 IconButton(
                   tooltip: 'Edit',
                   onPressed: widget.onEdit,
