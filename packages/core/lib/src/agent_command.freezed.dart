@@ -56,7 +56,7 @@ extension AgentCommandPatterns on AgentCommand {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SaveTunnel value)?  save,TResult Function( RemoveTunnel value)?  remove,TResult Function( ToggleTunnel value)?  toggle,TResult Function( MoveTunnel value)?  move,TResult Function( QuitAgent value)?  quit,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SaveTunnel value)?  save,TResult Function( RemoveTunnel value)?  remove,TResult Function( ToggleTunnel value)?  toggle,TResult Function( MoveTunnel value)?  move,TResult Function( QuitAgent value)?  quit,TResult Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult Function( SetDebugLogging value)?  setDebugLogging,TResult Function( ShowLogs value)?  showLogs,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
@@ -64,7 +64,10 @@ return save(_that);case RemoveTunnel() when remove != null:
 return remove(_that);case ToggleTunnel() when toggle != null:
 return toggle(_that);case MoveTunnel() when move != null:
 return move(_that);case QuitAgent() when quit != null:
-return quit(_that);case _:
+return quit(_that);case SetLaunchAtLogin() when setLaunchAtLogin != null:
+return setLaunchAtLogin(_that);case SetDebugLogging() when setDebugLogging != null:
+return setDebugLogging(_that);case ShowLogs() when showLogs != null:
+return showLogs(_that);case _:
   return orElse();
 
 }
@@ -82,7 +85,7 @@ return quit(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SaveTunnel value)  save,required TResult Function( RemoveTunnel value)  remove,required TResult Function( ToggleTunnel value)  toggle,required TResult Function( MoveTunnel value)  move,required TResult Function( QuitAgent value)  quit,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SaveTunnel value)  save,required TResult Function( RemoveTunnel value)  remove,required TResult Function( ToggleTunnel value)  toggle,required TResult Function( MoveTunnel value)  move,required TResult Function( QuitAgent value)  quit,required TResult Function( SetLaunchAtLogin value)  setLaunchAtLogin,required TResult Function( SetDebugLogging value)  setDebugLogging,required TResult Function( ShowLogs value)  showLogs,}){
 final _that = this;
 switch (_that) {
 case SaveTunnel():
@@ -90,7 +93,10 @@ return save(_that);case RemoveTunnel():
 return remove(_that);case ToggleTunnel():
 return toggle(_that);case MoveTunnel():
 return move(_that);case QuitAgent():
-return quit(_that);}
+return quit(_that);case SetLaunchAtLogin():
+return setLaunchAtLogin(_that);case SetDebugLogging():
+return setDebugLogging(_that);case ShowLogs():
+return showLogs(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -104,7 +110,7 @@ return quit(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SaveTunnel value)?  save,TResult? Function( RemoveTunnel value)?  remove,TResult? Function( ToggleTunnel value)?  toggle,TResult? Function( MoveTunnel value)?  move,TResult? Function( QuitAgent value)?  quit,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SaveTunnel value)?  save,TResult? Function( RemoveTunnel value)?  remove,TResult? Function( ToggleTunnel value)?  toggle,TResult? Function( MoveTunnel value)?  move,TResult? Function( QuitAgent value)?  quit,TResult? Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult? Function( SetDebugLogging value)?  setDebugLogging,TResult? Function( ShowLogs value)?  showLogs,}){
 final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
@@ -112,7 +118,10 @@ return save(_that);case RemoveTunnel() when remove != null:
 return remove(_that);case ToggleTunnel() when toggle != null:
 return toggle(_that);case MoveTunnel() when move != null:
 return move(_that);case QuitAgent() when quit != null:
-return quit(_that);case _:
+return quit(_that);case SetLaunchAtLogin() when setLaunchAtLogin != null:
+return setLaunchAtLogin(_that);case SetDebugLogging() when setDebugLogging != null:
+return setDebugLogging(_that);case ShowLogs() when showLogs != null:
+return showLogs(_that);case _:
   return null;
 
 }
@@ -129,14 +138,17 @@ return quit(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,TResult Function( String id,  int index)?  move,TResult Function()?  quit,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,TResult Function( String id,  int index)?  move,TResult Function()?  quit,TResult Function( bool on)?  setLaunchAtLogin,TResult Function( bool on)?  setDebugLogging,TResult Function()?  showLogs,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that.tunnel);case RemoveTunnel() when remove != null:
 return remove(_that.id);case ToggleTunnel() when toggle != null:
 return toggle(_that.id);case MoveTunnel() when move != null:
 return move(_that.id,_that.index);case QuitAgent() when quit != null:
-return quit();case _:
+return quit();case SetLaunchAtLogin() when setLaunchAtLogin != null:
+return setLaunchAtLogin(_that.on);case SetDebugLogging() when setDebugLogging != null:
+return setDebugLogging(_that.on);case ShowLogs() when showLogs != null:
+return showLogs();case _:
   return orElse();
 
 }
@@ -154,14 +166,17 @@ return quit();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,required TResult Function( String id,  int index)  move,required TResult Function()  quit,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,required TResult Function( String id,  int index)  move,required TResult Function()  quit,required TResult Function( bool on)  setLaunchAtLogin,required TResult Function( bool on)  setDebugLogging,required TResult Function()  showLogs,}) {final _that = this;
 switch (_that) {
 case SaveTunnel():
 return save(_that.tunnel);case RemoveTunnel():
 return remove(_that.id);case ToggleTunnel():
 return toggle(_that.id);case MoveTunnel():
 return move(_that.id,_that.index);case QuitAgent():
-return quit();}
+return quit();case SetLaunchAtLogin():
+return setLaunchAtLogin(_that.on);case SetDebugLogging():
+return setDebugLogging(_that.on);case ShowLogs():
+return showLogs();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -175,14 +190,17 @@ return quit();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,TResult? Function( String id,  int index)?  move,TResult? Function()?  quit,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,TResult? Function( String id,  int index)?  move,TResult? Function()?  quit,TResult? Function( bool on)?  setLaunchAtLogin,TResult? Function( bool on)?  setDebugLogging,TResult? Function()?  showLogs,}) {final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that.tunnel);case RemoveTunnel() when remove != null:
 return remove(_that.id);case ToggleTunnel() when toggle != null:
 return toggle(_that.id);case MoveTunnel() when move != null:
 return move(_that.id,_that.index);case QuitAgent() when quit != null:
-return quit();case _:
+return quit();case SetLaunchAtLogin() when setLaunchAtLogin != null:
+return setLaunchAtLogin(_that.on);case SetDebugLogging() when setDebugLogging != null:
+return setDebugLogging(_that.on);case ShowLogs() when showLogs != null:
+return showLogs();case _:
   return null;
 
 }
@@ -497,6 +515,174 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
     return 'AgentCommand.quit()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class SetLaunchAtLogin extends AgentCommand {
+  const SetLaunchAtLogin({required this.on}): super._();
+  
+
+ final  bool on;
+
+/// Create a copy of AgentCommand
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$SetLaunchAtLoginCopyWith<SetLaunchAtLogin> get copyWith => _$SetLaunchAtLoginCopyWithImpl<SetLaunchAtLogin>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is SetLaunchAtLogin&&(identical(other.on, on) || other.on == on));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,on);
+}
+
+@override
+String toString() {
+    return 'AgentCommand.setLaunchAtLogin(on: $on)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $SetLaunchAtLoginCopyWith<$Res> implements $AgentCommandCopyWith<$Res> {
+  factory $SetLaunchAtLoginCopyWith(SetLaunchAtLogin value, $Res Function(SetLaunchAtLogin) _then) = _$SetLaunchAtLoginCopyWithImpl;
+@useResult
+$Res call({
+ bool on
+});
+
+
+
+
+}
+/// @nodoc
+class _$SetLaunchAtLoginCopyWithImpl<$Res>
+    implements $SetLaunchAtLoginCopyWith<$Res> {
+  _$SetLaunchAtLoginCopyWithImpl(this._self, this._then);
+
+  final SetLaunchAtLogin _self;
+  final $Res Function(SetLaunchAtLogin) _then;
+
+/// Create a copy of AgentCommand
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? on = null,}) {
+  return _then(SetLaunchAtLogin(
+on: null == on ? _self.on : on // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class SetDebugLogging extends AgentCommand {
+  const SetDebugLogging({required this.on}): super._();
+  
+
+ final  bool on;
+
+/// Create a copy of AgentCommand
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$SetDebugLoggingCopyWith<SetDebugLogging> get copyWith => _$SetDebugLoggingCopyWithImpl<SetDebugLogging>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is SetDebugLogging&&(identical(other.on, on) || other.on == on));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,on);
+}
+
+@override
+String toString() {
+    return 'AgentCommand.setDebugLogging(on: $on)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $SetDebugLoggingCopyWith<$Res> implements $AgentCommandCopyWith<$Res> {
+  factory $SetDebugLoggingCopyWith(SetDebugLogging value, $Res Function(SetDebugLogging) _then) = _$SetDebugLoggingCopyWithImpl;
+@useResult
+$Res call({
+ bool on
+});
+
+
+
+
+}
+/// @nodoc
+class _$SetDebugLoggingCopyWithImpl<$Res>
+    implements $SetDebugLoggingCopyWith<$Res> {
+  _$SetDebugLoggingCopyWithImpl(this._self, this._then);
+
+  final SetDebugLogging _self;
+  final $Res Function(SetDebugLogging) _then;
+
+/// Create a copy of AgentCommand
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? on = null,}) {
+  return _then(SetDebugLogging(
+on: null == on ? _self.on : on // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class ShowLogs extends AgentCommand {
+  const ShowLogs(): super._();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is ShowLogs);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'AgentCommand.showLogs()';
 }
 
 

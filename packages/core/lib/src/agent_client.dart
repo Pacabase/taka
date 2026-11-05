@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:core/src/agent_command.dart';
 import 'package:core/src/agent_message.dart';
+import 'package:core/src/agent_settings.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 import 'package:fimber/fimber.dart';
 
@@ -17,6 +18,8 @@ abstract interface class AgentClient {
 
   Stream<void> get aboutRequests;
 
+  Stream<AgentSettings> get settings;
+
   void send(AgentCommand command);
 
   Future<void> close();
@@ -25,6 +28,7 @@ abstract interface class AgentClient {
 class SocketAgentClient(final Socket _socket) implements AgentClient {
   final _snapshots = StreamController<TunnelsSnapshot>();
   final _aboutRequests = StreamController<void>();
+  final _settings = StreamController<AgentSettings>();
   final _identity = Completer<String>();
 
   this {
@@ -41,6 +45,7 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
             _identify('');
             unawaited(_snapshots.close());
             unawaited(_aboutRequests.close());
+            unawaited(_settings.close());
           },
         );
   }
@@ -63,6 +68,9 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
   Stream<void> get aboutRequests => _aboutRequests.stream;
 
   @override
+  Stream<AgentSettings> get settings => _settings.stream;
+
+  @override
   void send(AgentCommand command) =>
       _socket.writeln(jsonEncode(command.toJson()));
 
@@ -76,6 +84,8 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
           _identify(identity);
         case ShowAbout():
           _aboutRequests.add(null);
+        case SettingsChanged(:final settings):
+          _settings.add(settings);
         case AgentSnapshot(:final snapshot):
           // An agent that sends a snapshot first is too old to say.
           _identify('');

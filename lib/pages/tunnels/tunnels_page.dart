@@ -10,6 +10,7 @@ import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_form.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
+import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_colors.dart';
 
 class const TunnelsPage({super.key}) extends StatefulWidget {
@@ -40,6 +41,8 @@ class _TunnelsPageState extends State<TunnelsPage> {
               },
               isFormOpen: _isFormOpen,
               onPressed: _isFormOpen ? _closeForm : _openForm,
+              onSettings: () =>
+                  Navigator.pushNamed(context, TakaApp.settingsRoute),
             ),
             Expanded(
               child: AnimatedSwitcher(

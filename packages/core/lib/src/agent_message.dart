@@ -1,3 +1,4 @@
+import 'package:core/src/agent_settings.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
@@ -14,9 +15,14 @@ sealed class const AgentMessage._() with _$AgentMessage {
 
   const factory showAbout() = ShowAbout;
 
+  const factory settings(AgentSettings settings) = SettingsChanged;
+
   static AgentMessage fromJson(Object? json) => switch (json) {
     {'agent': final String identity} => AgentIdentity(identity),
     {'show': 'about'} => const ShowAbout(),
+    {'settings': final settings} => SettingsChanged(
+      AgentSettings.fromJson(settings),
+    ),
     _ => AgentSnapshot(TunnelsSnapshot.fromJson(json)),
   };
 
@@ -24,5 +30,6 @@ sealed class const AgentMessage._() with _$AgentMessage {
     AgentIdentity(:final identity) => {'agent': identity},
     AgentSnapshot(:final snapshot) => snapshot.toJson(),
     ShowAbout() => {'show': 'about'},
+    SettingsChanged(:final settings) => {'settings': settings.toJson()},
   };
 }

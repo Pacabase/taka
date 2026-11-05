@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
-import 'package:core/src/agent_command.dart';
 import 'package:core/src/tunnel.dart';
 import 'package:core/src/tunnel_session.dart';
 import 'package:core/src/tunnel_store.dart';
@@ -60,14 +59,6 @@ class TunnelManager({
           _start(tunnel, isRestored: true),
     ]);
   }
-
-  Future<void> handle(AgentCommand command) => switch (command) {
-    SaveTunnel(:final tunnel) => save(tunnel),
-    RemoveTunnel(:final id) => remove(id),
-    ToggleTunnel(:final id) => toggle(id),
-    MoveTunnel(:final id, :final index) => move(id, index),
-    QuitAgent() => close(),
-  };
 
   Future<void> save(Tunnel tunnel) async {
     final previous = _tunnels.firstWhereOrNull(

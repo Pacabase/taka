@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:agent/src/agent_tray.dart';
+import 'package:agent/src/local_preferences.dart';
 import 'package:agent/src/process_name.dart';
 import 'package:core/core.dart';
 import 'package:fimber/fimber.dart';
@@ -43,9 +44,22 @@ Future<void> _start() async {
     Fimber.e('Could not load the saved tunnels', ex: exception);
   }
 
+  final preferences = LocalPreferences(
+    debugLogging: debugLogging,
+    // SMAppService registers only the running app bundle, not a bare executable.
+    launchAtLogin: !LaunchAtLogin.isSupported()
+        ? null
+        : Platform.isMacOS
+        ? (agentBundle == null ? null : LaunchAtLogin.create())
+        : LaunchAtLogin.createWithIdAndDisplayName(
+            'com.pacabase.taka.agent',
+            'Taka',
+          ),
+  );
   final server = await AgentServer.bind(
     agentSocketPath(),
     manager,
+    preferences,
     identity: identity,
   );
   if (server == null) {
@@ -74,16 +88,7 @@ Future<void> _start() async {
 
   AgentTray(
     manager: manager,
-    debugLogging: debugLogging,
-    // SMAppService registers only the running app bundle, not a bare executable.
-    launchAtLogin: !LaunchAtLogin.isSupported()
-        ? null
-        : Platform.isMacOS
-        ? (agentBundle == null ? null : LaunchAtLogin.create())
-        : LaunchAtLogin.createWithIdAndDisplayName(
-            'com.pacabase.taka.agent',
-            'Taka',
-          ),
+    preferences: preferences,
     assetsPath: agentAssets,
     onAbout: () {
       // On macOS, open also brings an open window to the front.

@@ -21,6 +21,8 @@ void main() {
       AgentMessage.snapshot(snapshot),
       AgentMessage.snapshot(TunnelsSnapshot()),
       AgentMessage.showAbout(),
+      AgentMessage.settings(AgentSettings(launchesAtLogin: true)),
+      AgentMessage.settings(AgentSettings(isLogging: true)),
     ]) {
       test('$message round-trips', () {
         expect(
@@ -38,6 +40,20 @@ void main() {
 
     test('a snapshot is sent untagged', () {
       expect(const AgentMessage.snapshot(snapshot).toJson(), snapshot.toJson());
+    });
+
+    test('settings say whether launch at login is offered and on', () {
+      expect(
+        const AgentMessage.settings(
+          AgentSettings(launchesAtLogin: true, isLogging: true),
+        ).toJson(),
+        {
+          'settings': {'launchAtLogin': true, 'debugLogging': true},
+        },
+      );
+      expect(const AgentMessage.settings(AgentSettings()).toJson(), {
+        'settings': {'launchAtLogin': null, 'debugLogging': false},
+      });
     });
 
     test('showAbout is show about', () {

@@ -56,13 +56,14 @@ extension AgentMessagePatterns on AgentMessage {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AgentIdentity value)?  identity,TResult Function( AgentSnapshot value)?  snapshot,TResult Function( ShowAbout value)?  showAbout,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AgentIdentity value)?  identity,TResult Function( AgentSnapshot value)?  snapshot,TResult Function( ShowAbout value)?  showAbout,TResult Function( SettingsChanged value)?  settings,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that);case AgentSnapshot() when snapshot != null:
 return snapshot(_that);case ShowAbout() when showAbout != null:
-return showAbout(_that);case _:
+return showAbout(_that);case SettingsChanged() when settings != null:
+return settings(_that);case _:
   return orElse();
 
 }
@@ -80,13 +81,14 @@ return showAbout(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AgentIdentity value)  identity,required TResult Function( AgentSnapshot value)  snapshot,required TResult Function( ShowAbout value)  showAbout,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AgentIdentity value)  identity,required TResult Function( AgentSnapshot value)  snapshot,required TResult Function( ShowAbout value)  showAbout,required TResult Function( SettingsChanged value)  settings,}){
 final _that = this;
 switch (_that) {
 case AgentIdentity():
 return identity(_that);case AgentSnapshot():
 return snapshot(_that);case ShowAbout():
-return showAbout(_that);}
+return showAbout(_that);case SettingsChanged():
+return settings(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -100,13 +102,14 @@ return showAbout(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AgentIdentity value)?  identity,TResult? Function( AgentSnapshot value)?  snapshot,TResult? Function( ShowAbout value)?  showAbout,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AgentIdentity value)?  identity,TResult? Function( AgentSnapshot value)?  snapshot,TResult? Function( ShowAbout value)?  showAbout,TResult? Function( SettingsChanged value)?  settings,}){
 final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that);case AgentSnapshot() when snapshot != null:
 return snapshot(_that);case ShowAbout() when showAbout != null:
-return showAbout(_that);case _:
+return showAbout(_that);case SettingsChanged() when settings != null:
+return settings(_that);case _:
   return null;
 
 }
@@ -123,12 +126,13 @@ return showAbout(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String identity)?  identity,TResult Function( TunnelsSnapshot snapshot)?  snapshot,TResult Function()?  showAbout,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String identity)?  identity,TResult Function( TunnelsSnapshot snapshot)?  snapshot,TResult Function()?  showAbout,TResult Function( AgentSettings settings)?  settings,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that.identity);case AgentSnapshot() when snapshot != null:
 return snapshot(_that.snapshot);case ShowAbout() when showAbout != null:
-return showAbout();case _:
+return showAbout();case SettingsChanged() when settings != null:
+return settings(_that.settings);case _:
   return orElse();
 
 }
@@ -146,12 +150,13 @@ return showAbout();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String identity)  identity,required TResult Function( TunnelsSnapshot snapshot)  snapshot,required TResult Function()  showAbout,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String identity)  identity,required TResult Function( TunnelsSnapshot snapshot)  snapshot,required TResult Function()  showAbout,required TResult Function( AgentSettings settings)  settings,}) {final _that = this;
 switch (_that) {
 case AgentIdentity():
 return identity(_that.identity);case AgentSnapshot():
 return snapshot(_that.snapshot);case ShowAbout():
-return showAbout();}
+return showAbout();case SettingsChanged():
+return settings(_that.settings);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -165,12 +170,13 @@ return showAbout();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String identity)?  identity,TResult? Function( TunnelsSnapshot snapshot)?  snapshot,TResult? Function()?  showAbout,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String identity)?  identity,TResult? Function( TunnelsSnapshot snapshot)?  snapshot,TResult? Function()?  showAbout,TResult? Function( AgentSettings settings)?  settings,}) {final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that.identity);case AgentSnapshot() when snapshot != null:
 return snapshot(_that.snapshot);case ShowAbout() when showAbout != null:
-return showAbout();case _:
+return showAbout();case SettingsChanged() when settings != null:
+return settings(_that.settings);case _:
   return null;
 
 }
@@ -354,5 +360,82 @@ String toString() {
 
 
 
+
+/// @nodoc
+
+
+class SettingsChanged extends AgentMessage {
+  const SettingsChanged(this.settings): super._();
+  
+
+ final  AgentSettings settings;
+
+/// Create a copy of AgentMessage
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$SettingsChangedCopyWith<SettingsChanged> get copyWith => _$SettingsChangedCopyWithImpl<SettingsChanged>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is SettingsChanged&&(identical(other.settings, settings) || other.settings == settings));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,settings);
+}
+
+@override
+String toString() {
+    return 'AgentMessage.settings(settings: $settings)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $SettingsChangedCopyWith<$Res> implements $AgentMessageCopyWith<$Res> {
+  factory $SettingsChangedCopyWith(SettingsChanged value, $Res Function(SettingsChanged) _then) = _$SettingsChangedCopyWithImpl;
+@useResult
+$Res call({
+ AgentSettings settings
+});
+
+
+$AgentSettingsCopyWith<$Res> get settings;
+
+}
+/// @nodoc
+class _$SettingsChangedCopyWithImpl<$Res>
+    implements $SettingsChangedCopyWith<$Res> {
+  _$SettingsChangedCopyWithImpl(this._self, this._then);
+
+  final SettingsChanged _self;
+  final $Res Function(SettingsChanged) _then;
+
+/// Create a copy of AgentMessage
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? settings = null,}) {
+  return _then(SettingsChanged(
+null == settings ? _self.settings : settings // ignore: cast_nullable_to_non_nullable
+as AgentSettings,
+  ));
+}
+
+/// Create a copy of AgentMessage
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$AgentSettingsCopyWith<$Res> get settings {
+  
+  return $AgentSettingsCopyWith<$Res>(_self.settings, (value) {
+    return _then(_self.copyWith(settings: value));
+  });
+}
+}
 
 // dart format on

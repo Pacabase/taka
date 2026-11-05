@@ -15,6 +15,9 @@ void main() {
       AgentCommand.remove('a1'),
       AgentCommand.toggle('b2'),
       AgentCommand.move('b2', 0),
+      AgentCommand.setLaunchAtLogin(on: true),
+      AgentCommand.setDebugLogging(on: false),
+      AgentCommand.showLogs(),
       AgentCommand.quit(),
     ]) {
       test('$command round-trips', () {
@@ -30,6 +33,7 @@ void main() {
       {'command': 'remove'},
       {'command': 'toggle', 'id': 3},
       {'command': 'move', 'id': 'b2'},
+      {'command': 'debugLogging'},
       {
         'command': 'save',
         'tunnel': {'id': 'a1'},

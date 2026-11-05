@@ -59,3 +59,25 @@ const proxy = Tunnel(
   sshHost: 'bastion',
   localPort: 1080,
 );
+
+class FakePreferences implements AgentPreferences {
+  final _changes = StreamController<AgentSettings>.broadcast();
+  final calls = <String>[];
+
+  @override
+  AgentSettings settings = const AgentSettings(launchesAtLogin: false);
+
+  @override
+  Stream<AgentSettings> get changes => _changes.stream;
+
+  void change(AgentSettings changed) => _changes.add(settings = changed);
+
+  @override
+  void setLaunchAtLogin({required bool on}) => calls.add('launchAtLogin $on');
+
+  @override
+  void setDebugLogging({required bool on}) => calls.add('debugLogging $on');
+
+  @override
+  Future<void> showLogs() async => calls.add('showLogs');
+}

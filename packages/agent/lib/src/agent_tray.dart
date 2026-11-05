@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:agent/src/local_preferences.dart';
 import 'package:agent/src/tray_entries.dart';
 import 'package:core/core.dart';
 import 'package:fimber/fimber.dart';
@@ -8,8 +9,7 @@ import 'package:nativeapi/nativeapi.dart';
 
 class AgentTray({
   required final TunnelManager manager,
-  required final DebugLogging debugLogging,
-  final LaunchAtLogin? launchAtLogin,
+  required final LocalPreferences preferences,
   required final String assetsPath,
   required final void Function() onAbout,
   required final void Function() onSettings,
@@ -48,16 +48,18 @@ class AgentTray({
 
     // Nothing else holds the tray: this subscription keeps its icon on screen.
     manager.changes.listen(_rebuild);
+    preferences.changes.listen((_) => _rebuild(manager.snapshot));
     _rebuild(manager.snapshot);
   }
 
   void _rebuild(TunnelsSnapshot snapshot) {
     final icon = _icon;
+    final AgentSettings(:launchesAtLogin, :isLogging) = preferences.settings;
     final menu = _menu(
       trayEntries(
         snapshot,
-        isLogging: debugLogging.isOn,
-        launchesAtLogin: launchAtLogin?.isEnabled,
+        isLogging: isLogging,
+        launchesAtLogin: launchesAtLogin,
       ),
     );
     if (icon == null || menu == null) return;
@@ -136,36 +138,16 @@ class AgentTray({
     TrayAction.connectAll => _guard(manager.connectAll()),
     TrayAction.disconnectAll => _guard(manager.disconnectAll()),
     TrayAction.about => onAbout(),
-    TrayAction.launchAtLogin => _toggleLaunchAtLogin(),
-    TrayAction.debugLogging => _toggleDebugLogging(),
-    TrayAction.showLogs => _guard(debugLogging.reveal()),
+    TrayAction.launchAtLogin => preferences.setLaunchAtLogin(
+      on: preferences.settings.launchesAtLogin != true,
+    ),
+    TrayAction.debugLogging => preferences.setDebugLogging(
+      on: !preferences.settings.isLogging,
+    ),
+    TrayAction.showLogs => _guard(preferences.showLogs()),
     TrayAction.settings => onSettings(),
     TrayAction.quit => _guard(onQuit()),
   };
-
-  // macOS may want the login item approved in System Settings first.
-  void _toggleLaunchAtLogin() {
-    if (launchAtLogin case final login?) {
-      final isEnabling = !login.isEnabled;
-      isEnabling ? login.enable() : login.disable();
-      if (login.isEnabled != isEnabling) {
-        Fimber.w('Could not turn launch at login ${isEnabling ? 'on' : 'off'}');
-        if (isEnabling && Platform.isMacOS) {
-          _guard(
-            Process.run('open', [
-              'x-apple.systempreferences:com.apple.LoginItems-Settings.extension',
-            ]),
-          );
-        }
-      }
-      _rebuild(manager.snapshot);
-    }
-  }
-
-  void _toggleDebugLogging() {
-    debugLogging.turn(on: !debugLogging.isOn);
-    _rebuild(manager.snapshot);
-  }
 
   // An uncaught error would end the agent, and every tunnel with it.
   void _guard(Future<void> work) => unawaited(
