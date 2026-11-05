@@ -59,7 +59,7 @@ class _TunnelTileState extends State<TunnelTile> {
         child: Container(
           constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          color: _hovered ? colors.selection : null,
+          color: _hovered ? colors.selection : Colors.transparent,
           child: Row(
             spacing: 8,
             children: [

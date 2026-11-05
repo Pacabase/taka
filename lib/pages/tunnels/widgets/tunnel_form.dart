@@ -229,7 +229,14 @@ class const _KindTab({
 }
 
 class _KindTabState extends State<_KindTab> {
+  final _focus = FocusNode();
   var _showsFocus = false;
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -241,6 +248,7 @@ class _KindTabState extends State<_KindTab> {
       button: true,
       onTap: onTap,
       child: FocusableActionDetector(
+        focusNode: _focus,
         mouseCursor: SystemMouseCursors.click,
         onShowFocusHighlight: (shows) => setState(() => _showsFocus = shows),
         actions: {
@@ -250,7 +258,10 @@ class _KindTabState extends State<_KindTab> {
         },
         child: GestureDetector(
           excludeFromSemantics: true,
-          onTap: onTap,
+          onTap: () {
+            _focus.unfocus();
+            onTap();
+          },
           child: Container(
             height: 20,
             decoration: BoxDecoration(
