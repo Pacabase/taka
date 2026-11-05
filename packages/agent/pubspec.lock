@@ -404,10 +404,10 @@ packages:
     dependency: "direct main"
     description:
       name: system_ssh
-      sha256: d2ff35b0d7c6a0abfa68739f23d569fbbc02c814d5c7bb8db46d9a0d0f6cb47a
+      sha256: edb9d699830e3da17b8d66fbc51062eb4ef66f61ff22e2f6a9c29aa733d490d7
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.0"
+    version: "0.4.0"
   term_glyph:
     dependency: transitive
     description:

@@ -25,6 +25,8 @@ class FakeTunnel(@override final int localPort) implements SshTunnel {
 
   void drop() => _done.complete();
 
+  void dropWith(Object reason) => _done.completeError(reason);
+
   @override
   Future<void> get done => _done.future;
 
