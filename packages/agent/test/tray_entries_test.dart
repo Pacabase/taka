@@ -131,33 +131,21 @@ void main() {
     );
   });
 
-  test('Launch at Login shows whether it is on, where it is offered', () {
-    List<String> withLaunch(bool? launches) => [
-      for (final entry in trayEntries(
-        const TunnelsSnapshot(),
-        launchesAtLogin: launches,
-      ))
-        if ('$entry'.contains('Launch at Login')) '$entry',
-    ];
+  test('Launch at Login follows About, once, and shows whether it is on', () {
+    List<String> afterAbout(bool? launches) {
+      final lines = [
+        for (final entry in trayEntries(
+          const TunnelsSnapshot(),
+          launchesAtLogin: launches,
+        ))
+          '$entry',
+      ];
+      return lines.sublist(lines.indexOf('About Taka') + 1).take(2).toList();
+    }
 
-    expect(withLaunch(null), isEmpty);
-    expect(withLaunch(false), ['☐ Launch at Login']);
-    expect(withLaunch(true), ['☑ Launch at Login']);
-  });
-
-  test('Launch at Login comes right after About', () {
-    final labels = [
-      for (final entry in trayEntries(
-        const TunnelsSnapshot(),
-        launchesAtLogin: false,
-      ))
-        '$entry',
-    ];
-
-    expect(
-      labels.indexOf('☐ Launch at Login'),
-      labels.indexOf('About Taka') + 1,
-    );
+    expect(afterAbout(true), ['☑ Launch at Login', '☐ Debug Logging']);
+    expect(afterAbout(false), ['☐ Launch at Login', '☐ Debug Logging']);
+    expect(afterAbout(null), ['☐ Debug Logging', 'Settings… ⌘,']);
   });
 
   test('each tunnel line toggles its own tunnel', () {

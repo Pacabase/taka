@@ -147,7 +147,8 @@ class AgentTray({
   void _toggleLaunchAtLogin() {
     if (launchAtLogin case final login?) {
       final isEnabling = !login.isEnabled;
-      if (!(isEnabling ? login.enable() : login.disable())) {
+      isEnabling ? login.enable() : login.disable();
+      if (login.isEnabled != isEnabling) {
         Fimber.w('Could not turn launch at login ${isEnabling ? 'on' : 'off'}');
         if (isEnabling && Platform.isMacOS) {
           _guard(

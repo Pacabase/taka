@@ -75,12 +75,15 @@ Future<void> _start() async {
   AgentTray(
     manager: manager,
     debugLogging: debugLogging,
-    // macOS registers the running app, so a build outside a bundle can't.
-    launchAtLogin:
-        LaunchAtLogin.isSupported() &&
-            (agentBundle != null || !Platform.isMacOS)
-        ? LaunchAtLogin.create()
-        : null,
+    // SMAppService registers only the running app bundle, not a bare executable.
+    launchAtLogin: !LaunchAtLogin.isSupported()
+        ? null
+        : Platform.isMacOS
+        ? (agentBundle == null ? null : LaunchAtLogin.create())
+        : LaunchAtLogin.createWithIdAndDisplayName(
+            'com.pacabase.taka.agent',
+            'Taka',
+          ),
     assetsPath: agentAssets,
     onAbout: () {
       // On macOS, open also brings an open window to the front.
