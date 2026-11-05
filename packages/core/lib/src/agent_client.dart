@@ -33,7 +33,7 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
           _receive,
           onError: (Object exception) => stderr.writeln('Ignoring $exception'),
           onDone: () {
-            if (!_identity.isCompleted) _identity.complete('');
+            _identify('');
             unawaited(_snapshots.close());
             unawaited(_aboutRequests.close());
           },
@@ -67,15 +67,21 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
   void _receive(String line) {
     try {
       switch (jsonDecode(line)) {
-        case {'agent': final String identity} when !_identity.isCompleted:
-          _identity.complete(identity);
+        case {'agent': final String identity}:
+          _identify(identity);
         case {'show': 'about'}:
           _aboutRequests.add(null);
         case final json:
+          // An agent that sends a snapshot first is too old to say.
+          _identify('');
           _snapshots.add(TunnelsSnapshot.fromJson(json));
       }
     } on FormatException catch (exception) {
       stderr.writeln('Ignoring $exception');
     }
+  }
+
+  void _identify(String identity) {
+    if (!_identity.isCompleted) _identity.complete(identity);
   }
 }

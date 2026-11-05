@@ -202,15 +202,39 @@ void main() {
         0,
       );
       addTearDown(server.close);
-      server.listen(
-        (socket) => socket
-          ..writeln(jsonEncode(manager.snapshot.toJson()))
-          ..destroy(),
+      server.listen((socket) {
+        addTearDown(socket.destroy);
+        socket.writeln(jsonEncode(manager.snapshot.toJson()));
+      });
+      final agent = await connect();
+
+      expect(await agent.identity, '');
+      expect(await agent.snapshots.first, manager.snapshot);
+    },
+  );
+
+  test(
+    'an agent that goes away before a word is identified as empty',
+    () async {
+      final server = await ServerSocket.bind(
+        InternetAddress(path, type: InternetAddressType.unix),
+        0,
       );
+      addTearDown(server.close);
+      server.listen((socket) => socket.destroy());
 
       expect(await (await connect()).identity, '');
     },
   );
+
+  test('a quit command closes the manager', () async {
+    await serve();
+    final changes = manager.changes.toList();
+
+    (await connect()).send(const AgentCommand.quit());
+
+    await changes;
+  });
 
   test('a second agent finds the first one running', () async {
     await serve();

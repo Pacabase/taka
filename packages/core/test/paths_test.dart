@@ -73,5 +73,12 @@ void main() {
 
       expect(agentIdentity(link.path), agentIdentity(agent.path));
     });
+
+    test('throws when there is no agent at the path', () {
+      expect(
+        () => agentIdentity('${directory.path}/missing'),
+        throwsA(isA<FileSystemException>()),
+      );
+    });
   });
 }

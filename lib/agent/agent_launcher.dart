@@ -14,13 +14,17 @@ Future<AgentClient> connectToAgent() async {
       const Duration(seconds: 3),
       onTimeout: () {},
     );
+    await running.close();
   }
 
   // Through open, macOS starts the agent as an app of its own, so Taka doesn't
   // stay in the Dock "running in the background" once this window quits.
-  if (agent.indexOf('.app/Contents/MacOS/') case final bundleEnd
-      when bundleEnd != -1) {
-    await Process.run('open', ['-n', '-g', agent.substring(0, bundleEnd + 4)]);
+  final bundle = File(agent).parent.parent.parent.path;
+  if (bundle.endsWith('.app')) {
+    final result = await Process.run('open', ['-n', '-g', bundle]);
+    if (result.exitCode != 0) {
+      throw ProcessException('open', [bundle], '${result.stderr}'.trim());
+    }
   } else {
     await Process.start(
       agent,
@@ -53,11 +57,11 @@ Future<bool> _isCurrent(AgentClient running, String agent) async {
     return true;
   }
 
-  return await running.identity.timeout(
-        const Duration(seconds: 1),
-        onTimeout: () => '',
-      ) ==
-      expected;
+  final identity = await running.identity.timeout(
+    const Duration(seconds: 1),
+    onTimeout: () => '',
+  );
+  return identity == expected;
 }
 
 // Taka.app/Contents/MacOS/Taka on macOS, taka on Linux; the agent ships inside

@@ -13,13 +13,24 @@ void _run() => unawaited(_start());
 Future<void> _start() async {
   Application.instance.setDockIconVisible(false);
 
-  final bundle = File(Platform.resolvedExecutable).parent.parent.parent;
+  // Taka.app/Contents/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka on
+  // macOS; agent/bin/taka_agent next to taka on Linux, and in development.
+  final folder = File(Platform.resolvedExecutable).parent;
+  final bundle = folder.parent.parent;
+  final isAppBundle = bundle.path.endsWith('.app');
+  final loginItems = folder.path.indexOf('/Contents/Library/LoginItems/');
+  final app =
+      Platform.environment['TAKA_APP'] ??
+      (loginItems == -1
+          ? '${bundle.path}/taka'
+          : folder.path.substring(0, loginItems));
+
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
     client: const SystemSshClient(loginShell: true),
     // 1Password shows its approval prompt only while the app asking is in
     // front, and open brings the running agent there.
-    beforeConnect: bundle.path.endsWith('.app')
+    beforeConnect: isAppBundle
         ? () => Process.run('open', [bundle.path])
         : null,
   );
@@ -40,31 +51,20 @@ Future<void> _start() async {
     return;
   }
 
-  // Taka.app/Contents/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka on
-  // macOS; agent/bin/taka_agent next to taka on Linux, and in development.
-  final folder = File(Platform.resolvedExecutable).parent;
-  final loginItems = folder.path.indexOf('/Contents/Library/LoginItems/');
-  final isAppBundle = folder.path.endsWith('.app/Contents/MacOS');
-  final app =
-      Platform.environment['TAKA_APP'] ??
-      (loginItems == -1
-          ? '${folder.parent.parent.path}/taka'
-          : folder.path.substring(0, loginItems));
-
-  var isQuitting = false;
-  Future<void> quit() async {
-    if (isQuitting) return;
-    isQuitting = true;
-    try {
-      await server.close();
-      await manager.close();
-    } finally {
-      Application.instance.quit(0);
-    }
-  }
-
-  // A newer window's quit command closes the manager.
-  manager.changes.listen(null, onDone: () => unawaited(quit()));
+  // Closing the manager, from the tray or a window's quit command, quits.
+  manager.changes.listen(
+    null,
+    onDone: () async {
+      try {
+        await manager.close();
+        await server.close();
+      } on Object catch (exception) {
+        stderr.writeln('Could not close the agent socket: $exception');
+      } finally {
+        Application.instance.quit(0);
+      }
+    },
+  );
 
   AgentTray(
     manager: manager,
@@ -76,7 +76,7 @@ Future<void> _start() async {
       if (!server.showAbout() || Platform.isMacOS) unawaited(_open(app));
     },
     onSettings: () => unawaited(_open(app)),
-    onQuit: quit,
+    onQuit: manager.close,
   ).show();
 }
 
