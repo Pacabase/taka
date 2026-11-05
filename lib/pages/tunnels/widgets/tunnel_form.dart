@@ -1,8 +1,9 @@
-import 'dart:math';
-
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:taka/pages/tunnels/widgets/form_fields.dart';
+import 'package:taka/pages/tunnels/widgets/host_input.dart';
+import 'package:taka/pages/tunnels/widgets/route_step.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 
@@ -75,7 +76,7 @@ class _TunnelFormState extends State<TunnelForm> {
                 kind: _kind,
                 onPick: (kind) => setState(() => _kind = kind),
               ),
-              _RouteStep(
+              RouteStep(
                 label: 'From',
                 hasNext: true,
                 child: Row(
@@ -84,7 +85,7 @@ class _TunnelFormState extends State<TunnelForm> {
                     Expanded(
                       child: Opacity(
                         opacity: 0.5,
-                        child: _FieldBox(
+                        child: FieldBox(
                           child: Text(
                             '127.0.0.1',
                             style: mono.copyWith(color: colors.textSecondary),
@@ -105,10 +106,10 @@ class _TunnelFormState extends State<TunnelForm> {
                   ],
                 ),
               ),
-              _RouteStep(
+              RouteStep(
                 label: 'SSH host',
                 hasNext: _isLocal,
-                child: _HostInput(
+                child: HostInput(
                   controller: _sshHost,
                   hosts: widget.hosts,
                   hint: 'Host from ~/.ssh/config, or user@host',
@@ -117,7 +118,7 @@ class _TunnelFormState extends State<TunnelForm> {
                 ),
               ),
               if (_isLocal)
-                _RouteStep(
+                RouteStep(
                   label: 'To',
                   hasNext: false,
                   child: Row(
@@ -139,8 +140,8 @@ class _TunnelFormState extends State<TunnelForm> {
                   ),
                 ),
               Padding(
-                padding: const EdgeInsets.only(left: _RouteStep.indent),
-                child: _Labelled(
+                padding: const EdgeInsets.only(left: RouteStep.indent),
+                child: Labelled(
                   label: 'Name',
                   child: _input(_name, hint: 'Optional'),
                 ),
@@ -175,7 +176,7 @@ class _TunnelFormState extends State<TunnelForm> {
     required String hint,
     TextStyle style = const TextStyle(),
     bool autofocus = false,
-  }) => _Input(
+  }) => Input(
     controller: controller,
     hint: hint,
     style: style,
@@ -300,195 +301,6 @@ class _KindTabState extends State<_KindTab> {
   }
 }
 
-class const _FieldBox({
-  final bool isFocused = false,
-  required final Widget child,
-}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
-
-    return Container(
-      height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(
-        color: colors.background,
-        borderRadius: BorderRadius.circular(2),
-        border: Border.all(
-          color: isFocused ? colors.accent : Colors.transparent,
-        ),
-      ),
-      child: child,
-    );
-  }
-}
-
-class const _Input({
-  required final TextEditingController controller,
-  final FocusNode? focusNode,
-  required final String hint,
-  required final TextStyle style,
-  final bool autofocus = false,
-  required final void Function() onSubmitted,
-}) extends StatefulWidget {
-  @override
-  State<_Input> createState() => _InputState();
-}
-
-class _InputState extends State<_Input> {
-  late final _focus = widget.focusNode ?? FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(_rebuild);
-  }
-
-  @override
-  void dispose() {
-    _focus.removeListener(_rebuild);
-    if (widget.focusNode == null) _focus.dispose();
-    super.dispose();
-  }
-
-  void _rebuild() => setState(() {});
-
-  @override
-  Widget build(BuildContext context) {
-    return _FieldBox(
-      isFocused: _focus.hasFocus,
-      child: TextField(
-        controller: widget.controller,
-        focusNode: _focus,
-        autofocus: widget.autofocus,
-        style: widget.style,
-        decoration: InputDecoration.collapsed(
-          hintText: widget.hint,
-          hintStyle: widget.style.copyWith(
-            color: TakaColors.of(context).textSecondary,
-          ),
-        ),
-        onSubmitted: (_) => widget.onSubmitted(),
-      ),
-    );
-  }
-}
-
-class const _HostInput({
-  required final TextEditingController controller,
-  required final List<String> hosts,
-  required final String hint,
-  required final TextStyle style,
-  required final void Function() onSubmitted,
-}) extends StatefulWidget {
-  @override
-  State<_HostInput> createState() => _HostInputState();
-}
-
-class _HostInputState extends State<_HostInput> {
-  final _focus = FocusNode();
-
-  @override
-  void dispose() {
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
-
-    return RawAutocomplete<String>(
-      textEditingController: widget.controller,
-      focusNode: _focus,
-      optionsBuilder: (value) {
-        final typed = value.text.trim().toLowerCase();
-        return widget.hosts.where(
-          (host) => host.toLowerCase().contains(typed) && host != value.text,
-        );
-      },
-      fieldViewBuilder: (context, controller, focus, onFieldSubmitted) =>
-          _Input(
-            controller: controller,
-            focusNode: focus,
-            hint: widget.hint,
-            style: widget.style,
-            onSubmitted: () {
-              final typed = controller.text;
-              if (!widget.hosts.contains(typed.trim())) onFieldSubmitted();
-              if (controller.text == typed) widget.onSubmitted();
-            },
-          ),
-      optionsViewBuilder: (context, onSelected, options) => Align(
-        alignment: Alignment.topLeft,
-        child: TextFieldTapRegion(
-          child: Container(
-            margin: const EdgeInsets.only(top: 4),
-            constraints: const BoxConstraints(maxHeight: 160, maxWidth: 320),
-            decoration: BoxDecoration(
-              color: colors.selection,
-              borderRadius: BorderRadius.circular(4),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 8,
-                ),
-              ],
-            ),
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              shrinkWrap: true,
-              children: [
-                for (final (index, host) in options.indexed)
-                  _Suggestion(
-                    host: host,
-                    style: widget.style,
-                    isHighlighted:
-                        AutocompleteHighlightedOption.of(context) == index,
-                    onTap: () => onSelected(host),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class const _Suggestion({
-  required final String host,
-  required final TextStyle style,
-  required final bool isHighlighted,
-  required final void Function() onTap,
-}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    if (isHighlighted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) Scrollable.ensureVisible(context, alignment: 0.5);
-      });
-    }
-
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          height: 24,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          alignment: Alignment.centerLeft,
-          color: isHighlighted
-              ? TakaColors.of(context).surface
-              : Colors.transparent,
-          child: Text(host, style: style),
-        ),
-      ),
-    );
-  }
-}
-
 class const _Colon() extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -507,97 +319,4 @@ class const _Colon() extends StatelessWidget {
       children: [dot, dot],
     );
   }
-}
-
-class const _Labelled({
-  required final String label,
-  required final Widget child,
-}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 4,
-      children: [
-        SizedBox(
-          height: 16,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: TakaColors.of(context).textSecondary,
-            ),
-          ),
-        ),
-        child,
-      ],
-    );
-  }
-}
-
-// The dashes run on through the 12px gap to the next step's dot.
-class const _RouteStep({
-  required final String label,
-  required final bool hasNext,
-  required final Widget child,
-}) extends StatelessWidget {
-  static const indent = 22.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = TakaColors.of(context).textSecondary;
-
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned(
-          left: 2,
-          top: 30,
-          bottom: hasNext ? -41 : null,
-          width: 9,
-          child: Column(
-            spacing: 2,
-            children: [
-              Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: hasNext ? null : color,
-                  border: Border.all(color: color, width: 1.5),
-                ),
-              ),
-              if (hasNext)
-                Expanded(
-                  child: CustomPaint(
-                    size: Size.infinite,
-                    painter: _Dashes(color),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(left: indent),
-          child: _Labelled(label: label, child: child),
-        ),
-      ],
-    );
-  }
-}
-
-class const _Dashes(final Color color) extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.5;
-    final x = size.width / 2;
-    for (var y = 0.0; y < size.height; y += 6) {
-      canvas.drawLine(Offset(x, y), Offset(x, min(y + 3, size.height)), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_Dashes old) => old.color != color;
 }
