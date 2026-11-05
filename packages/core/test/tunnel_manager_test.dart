@@ -584,6 +584,113 @@ void main() {
     });
   });
 
+  group('which tunnels are on', () {
+    test('is saved as tunnels turn on and off', () async {
+      final manager = await loaded();
+
+      await manager.toggle('a1');
+      expect(store.on, {'a1'});
+
+      await manager.toggle('a1');
+      expect(store.on, isEmpty);
+    });
+
+    test('is not saved again when only a status changes', () async {
+      final manager = await loaded();
+
+      await manager.toggle('a1');
+
+      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(store.saveCount, 1);
+    });
+
+    test('stays saved when the manager closes', () async {
+      final manager = await loaded();
+      await manager.toggle('a1');
+
+      await manager.close();
+
+      expect(store.on, {'a1'});
+    });
+
+    test('drops a tunnel that is removed', () async {
+      final manager = await loaded();
+      await manager.toggle('a1');
+
+      await manager.remove('a1');
+
+      expect(store.on, isEmpty);
+    });
+
+    test('is not turned on by load alone', () async {
+      store = FakeStore([database, proxy], {'a1'});
+
+      final manager = await loaded();
+
+      expect(manager.snapshot.statusOf('a1'), const Stopped());
+      expect(store.on, {'a1'});
+      expect(store.saveCount, 0);
+    });
+
+    test('restore turns on the saved tunnels that still exist', () async {
+      store = FakeStore([database, proxy], {'b2', 'gone'});
+      final manager = await loaded();
+
+      await manager.restore();
+
+      expect(manager.snapshot.statusOf('a1'), const Stopped());
+      expect(manager.snapshot.statusOf('b2'), const Connected());
+    });
+
+    test('a restored tunnel tries again when its first try fails', () {
+      fakeAsync((time) {
+        store = FakeStore([database], {'a1'});
+        var tries = 0;
+        when(openAnyTunnel).thenAnswer((_) async {
+          if (++tries == 1) {
+            throw const SshTunnelException(
+              'ssh: Could not resolve hostname bastion',
+            );
+          }
+          return tunnel;
+        });
+        final manager = TunnelManager(store: store, client: client);
+        unawaited(manager.load().then((_) => manager.restore()));
+        time.flushMicrotasks();
+
+        expect(
+          manager.snapshot.statusOf('a1'),
+          const Reconnecting('ssh: Could not resolve hostname bastion'),
+        );
+
+        time.elapse(const Duration(seconds: 1));
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+
+        unawaited(manager.close());
+        time.flushMicrotasks();
+      });
+    });
+
+    test('a restored tunnel still stops on a permanent failure', () async {
+      store = FakeStore([database], {'a1'});
+      when(openAnyTunnel).thenThrow(
+        const SshTunnelException(
+          'deploy@bastion: Permission denied (publickey).',
+          isPermanent: true,
+        ),
+      );
+      final manager = await loaded();
+
+      await manager.restore();
+
+      expect(
+        manager.snapshot.statusOf('a1'),
+        const Failed('deploy@bastion: Permission denied (publickey).'),
+      );
+      expect(store.on, isEmpty);
+    });
+  });
+
   group('logs', () {
     const connecting =
         'I/Tunnels: Connecting Production database: '

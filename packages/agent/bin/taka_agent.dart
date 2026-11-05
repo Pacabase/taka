@@ -51,6 +51,8 @@ Future<void> _start() async {
     Application.instance.quit(0);
     return;
   }
+  // Only once this agent owns the socket, so a second one starts no ssh.
+  unawaited(manager.restore());
 
   // Closing the manager, from the tray or a window's quit command, quits.
   manager.changes.listen(

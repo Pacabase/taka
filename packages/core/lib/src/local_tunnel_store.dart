@@ -15,13 +15,20 @@ class LocalTunnelStore({required final File file}) implements TunnelStore {
       LocalTunnelStore(file: File('${takaDirectory().path}/tunnels.json'));
 
   @override
-  Future<List<Tunnel>> load() async {
-    if (!await file.exists()) return [];
+  Future<({List<Tunnel> tunnels, Set<String> on})> load() async {
+    if (!await file.exists()) return (tunnels: <Tunnel>[], on: <String>{});
 
     try {
       return switch (jsonDecode(await file.readAsString())) {
-        {'version': _version, 'tunnels': final List<Object?> tunnels} =>
-          tunnels.map(Tunnel.fromJson).toList(),
+        {'version': _version, 'tunnels': final List<Object?> tunnels} &&
+            final Map<Object?, Object?> saved =>
+          (
+            tunnels: tunnels.map(Tunnel.fromJson).toList(),
+            on: switch (saved['on']) {
+              final List<Object?> on => on.whereType<String>().toSet(),
+              _ => <String>{},
+            },
+          ),
         {'version': final version} => throw FormatException(
           'Unsupported tunnels file version: $version',
         ),
@@ -34,14 +41,14 @@ class LocalTunnelStore({required final File file}) implements TunnelStore {
   }
 
   @override
-  Future<void> save(List<Tunnel> tunnels) {
-    final saved = _lastSave.then((_) => _save(tunnels));
+  Future<void> save(List<Tunnel> tunnels, {required Set<String> on}) {
+    final saved = _lastSave.then((_) => _save(tunnels, on));
     _lastSave = saved.catchError((Object _) {});
 
     return saved;
   }
 
-  Future<void> _save(List<Tunnel> tunnels) async {
+  Future<void> _save(List<Tunnel> tunnels, Set<String> on) async {
     // A newer Taka may have written it; losing its tunnels is worse than not saving.
     if (_isUnreadable) {
       throw FileSystemException(
@@ -56,6 +63,7 @@ class LocalTunnelStore({required final File file}) implements TunnelStore {
       const JsonEncoder.withIndent('  ').convert({
         'version': _version,
         'tunnels': tunnels.map((tunnel) => tunnel.toJson()).toList(),
+        'on': on.toList(),
       }),
       flush: true,
     );
