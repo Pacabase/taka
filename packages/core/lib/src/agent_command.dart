@@ -11,12 +11,15 @@ sealed class const AgentCommand._() with _$AgentCommand {
 
   const factory toggle(String id) = ToggleTunnel;
 
+  const factory quit() = QuitAgent;
+
   static AgentCommand fromJson(Object? json) => switch (json) {
     {'command': 'save', 'tunnel': final tunnel} => SaveTunnel(
       Tunnel.fromJson(tunnel),
     ),
     {'command': 'remove', 'id': final String id} => RemoveTunnel(id),
     {'command': 'toggle', 'id': final String id} => ToggleTunnel(id),
+    {'command': 'quit'} => const QuitAgent(),
     _ => throw FormatException('Not a command: $json'),
   };
 
@@ -24,5 +27,6 @@ sealed class const AgentCommand._() with _$AgentCommand {
     SaveTunnel(:final tunnel) => {'command': 'save', 'tunnel': tunnel.toJson()},
     RemoveTunnel(:final id) => {'command': 'remove', 'id': id},
     ToggleTunnel(:final id) => {'command': 'toggle', 'id': id},
+    QuitAgent() => {'command': 'quit'},
   };
 }

@@ -19,6 +19,9 @@ class FakeAgent implements AgentClient {
   Stream<void> get aboutRequests => const Stream.empty();
 
   @override
+  Future<String> get identity => Future.value('');
+
+  @override
   void send(AgentCommand command) => sent.add(command);
 
   @override

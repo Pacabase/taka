@@ -354,6 +354,44 @@ void main() {
     expect(manager.snapshot.statusOf('a1'), const Connected());
   });
 
+  test(
+    'close from a listener of changes waits for the tunnels to stop',
+    () async {
+      final stopping = Completer<void>();
+      when(openAnyTunnel).thenAnswer((_) async => _SlowTunnel(stopping.future));
+      final manager = await loaded();
+      await manager.toggle('a1');
+      var listenerClosed = false;
+      manager.changes.listen(
+        null,
+        onDone: () async {
+          await manager.close();
+          listenerClosed = true;
+        },
+      );
+
+      final closing = manager.close();
+      await pumpEventQueue();
+      expect(listenerClosed, isFalse);
+
+      stopping.complete();
+      await closing;
+      await pumpEventQueue();
+      expect(listenerClosed, isTrue);
+    },
+  );
+
+  test('handle quit stops every tunnel and ends changes', () async {
+    final manager = await loaded();
+    await manager.toggle('a1');
+    final changes = manager.changes.toList();
+
+    await manager.handle(const AgentCommand.quit());
+
+    await changes;
+    expect(tunnel.closeCount, 1);
+  });
+
   test('close stops every tunnel, ends changes, and is idempotent', () async {
     when(openAnySocksProxy).thenAnswer(abortable);
     final manager = await loaded();
@@ -378,4 +416,15 @@ void main() {
 
     verifyNever(openAnyTunnel);
   });
+}
+
+class _SlowTunnel(final Future<void> _stopped) implements SshTunnel {
+  @override
+  int get localPort => 15432;
+
+  @override
+  Future<void> get done => Completer<void>().future;
+
+  @override
+  Future<void> close() => _stopped;
 }

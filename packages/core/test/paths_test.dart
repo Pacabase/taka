@@ -41,4 +41,44 @@ void main() {
       endsWith('com.pacabase.taka/agent.sock'),
     );
   });
+
+  group('agentIdentity', () {
+    late Directory directory;
+    late File agent;
+
+    setUp(() async {
+      directory = await Directory.systemTemp.createTemp('taka_identity');
+      agent = File('${directory.path}/taka_agent')
+        ..writeAsStringSync('v1')
+        ..setLastModifiedSync(DateTime(2026));
+    });
+
+    tearDown(() => directory.delete(recursive: true));
+
+    test('stays the same for the same build', () {
+      expect(agentIdentity(agent.path), agentIdentity(agent.path));
+    });
+
+    test('changes when a newer build replaces the file', () {
+      final before = agentIdentity(agent.path);
+      agent
+        ..writeAsStringSync('v2')
+        ..setLastModifiedSync(DateTime(2026, 2));
+
+      expect(agentIdentity(agent.path), isNot(before));
+    });
+
+    test('is the same through a link to the file', () {
+      final link = Link('${directory.path}/link')..createSync(agent.path);
+
+      expect(agentIdentity(link.path), agentIdentity(agent.path));
+    });
+
+    test('throws when there is no agent at the path', () {
+      expect(
+        () => agentIdentity('${directory.path}/missing'),
+        throwsA(isA<FileSystemException>()),
+      );
+    });
+  });
 }

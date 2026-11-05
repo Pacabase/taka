@@ -14,6 +14,7 @@ class TunnelManager({
 }) {
   final _changes = StreamController<TunnelsSnapshot>.broadcast(sync: true);
   final Map<String, _Session> _sessions = {};
+  final _closed = Completer<void>();
   List<Tunnel> _tunnels = const [];
 
   TunnelsSnapshot get snapshot => TunnelsSnapshot(
@@ -32,6 +33,7 @@ class TunnelManager({
     SaveTunnel(:final tunnel) => save(tunnel),
     RemoveTunnel(:final id) => remove(id),
     ToggleTunnel(:final id) => toggle(id),
+    QuitAgent() => close(),
   };
 
   Future<void> save(Tunnel tunnel) async {
@@ -89,12 +91,16 @@ class TunnelManager({
   Future<void> disconnectAll() =>
       Future.wait([..._sessions.keys].where(_isOn).map(toggle));
 
+  // A listener of changes may call close again from inside the first call,
+  // and waits for the same tunnels to stop.
   Future<void> close() async {
-    if (_changes.isClosed) return;
-
-    final changesClosed = _changes.close();
-    await Future.wait(_sessions.values.map((session) => session.stop()));
-    await changesClosed;
+    if (!_changes.isClosed) {
+      final changesClosed = _changes.close();
+      await Future.wait(_sessions.values.map((session) => session.stop()));
+      await changesClosed;
+      _closed.complete();
+    }
+    return _closed.future;
   }
 
   bool _isOn(String id) => _sessions[id]?.status.isOn ?? false;

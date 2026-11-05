@@ -21,3 +21,8 @@ Directory takaDirectory({Map<String, String>? environment}) {
 
 String agentSocketPath({Map<String, String>? environment}) =>
     '${takaDirectory(environment: environment).path}/agent.sock';
+
+String agentIdentity(String executable) {
+  final file = File(File(executable).resolveSymbolicLinksSync());
+  return '${file.path}@${file.statSync().modified.millisecondsSinceEpoch}';
+}

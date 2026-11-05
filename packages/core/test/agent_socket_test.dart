@@ -183,6 +183,59 @@ void main() {
     expect(await agent.aboutRequests.length, 0);
   });
 
+  test('a client learns which build of the agent it reached', () async {
+    final server = (await AgentServer.bind(
+      path,
+      manager,
+      identity: '/Taka@1',
+    ))!;
+    addTearDown(server.close);
+
+    expect(await (await connect()).identity, '/Taka@1');
+  });
+
+  test(
+    'an agent too old to send its identity is identified as empty',
+    () async {
+      final server = await ServerSocket.bind(
+        InternetAddress(path, type: InternetAddressType.unix),
+        0,
+      );
+      addTearDown(server.close);
+      server.listen((socket) {
+        addTearDown(socket.destroy);
+        socket.writeln(jsonEncode(manager.snapshot.toJson()));
+      });
+      final agent = await connect();
+
+      expect(await agent.identity, '');
+      expect(await agent.snapshots.first, manager.snapshot);
+    },
+  );
+
+  test(
+    'an agent that goes away before a word is identified as empty',
+    () async {
+      final server = await ServerSocket.bind(
+        InternetAddress(path, type: InternetAddressType.unix),
+        0,
+      );
+      addTearDown(server.close);
+      server.listen((socket) => socket.destroy());
+
+      expect(await (await connect()).identity, '');
+    },
+  );
+
+  test('a quit command closes the manager', () async {
+    await serve();
+    final changes = manager.changes.toList();
+
+    (await connect()).send(const AgentCommand.quit());
+
+    await changes;
+  });
+
   test('a second agent finds the first one running', () async {
     await serve();
 
