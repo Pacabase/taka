@@ -33,6 +33,7 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Notifications** when a tunnel connects, drops or gives up.
 - [ ] **Activity log** per tunnel.
 - [ ] **Groups and tags**, as tray submenus too.
+- [ ] **A colour per tunnel**, picked from the app theme's palette and shown on its row, so tunnels tell apart at a glance. Tray menus can't show colour on macOS or Linux, so it stays in the window.
 - [ ] **Import** hosts from `~/.ssh/config`, or a tunnel from a pasted `ssh -L` command.
 - [ ] **Linux packages** — AppImage, `.deb`, `.rpm` and the AUR.
 
