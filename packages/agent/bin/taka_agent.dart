@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:agent/src/agent_tray.dart';
+import 'package:agent/src/process_name.dart';
 import 'package:core/core.dart';
 import 'package:fimber/fimber.dart';
 import 'package:nativeapi/nativeapi.dart';
@@ -23,6 +24,7 @@ Future<void> _start() async {
 
   if (agentBundle == null) Fimber.plantTree(DebugTree());
   final debugLogging = DebugLogging('agent')..start();
+  if (Platform.isMacOS) restoreProcessName('Taka');
   final identity = agentIdentity(Platform.resolvedExecutable);
   Fimber.i('Agent $identity on ${Platform.operatingSystemVersion}');
 
