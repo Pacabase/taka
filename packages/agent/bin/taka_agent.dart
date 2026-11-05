@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:agent/src/agent_tray.dart';
+import 'package:agent/src/process_name.dart';
 import 'package:core/core.dart';
 import 'package:fimber/fimber.dart';
 import 'package:nativeapi/nativeapi.dart';
@@ -16,6 +17,7 @@ void _run() => runZonedGuarded(() => unawaited(_start()), (error, stack) {
 
 Future<void> _start() async {
   Application.instance.setDockIconVisible(false);
+  if (Platform.isMacOS) restoreProcessName('Taka');
 
   final TakaInstall(:app, :agentBundle, :agentAssets) = TakaInstall.fromAgent(
     Platform.resolvedExecutable,

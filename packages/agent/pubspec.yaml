@@ -9,6 +9,7 @@ environment:
 dependencies:
   core:
     path: ../core
+  ffi: 2.2.0
   fimber: 0.7.0
   nativeapi: 0.5.8
   system_ssh: 0.6.0
