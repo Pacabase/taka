@@ -6,8 +6,7 @@ import 'package:core/core.dart';
 Future<AgentClient> connectToAgent() async {
   final path = agentSocketPath();
   final (agent, app) = _bundledAgent();
-  try {
-    final running = await SocketAgentClient.connect(path);
+  if (await _connect(path) case final running?) {
     if (await _isCurrent(running, agent)) return running;
 
     running.send(const AgentCommand.quit());
@@ -15,8 +14,6 @@ Future<AgentClient> connectToAgent() async {
       const Duration(seconds: 3),
       onTimeout: () {},
     );
-  } on SocketException {
-    // No agent is running yet.
   }
 
   // Through open, macOS starts the agent as an app of its own, so Taka doesn't
@@ -33,18 +30,21 @@ Future<AgentClient> connectToAgent() async {
     );
   }
   final deadline = DateTime.now().add(const Duration(seconds: 5));
-  while (true) {
+  while (DateTime.now().isBefore(deadline)) {
     await Future<void>.delayed(const Duration(milliseconds: 100));
-    try {
-      return await SocketAgentClient.connect(path);
-    } on SocketException {
-      if (DateTime.now().isAfter(deadline)) rethrow;
-    }
+    if (await _connect(path) case final started?) return started;
+  }
+  throw const SocketException('no answer on its socket within 5 seconds');
+}
+
+Future<SocketAgentClient?> _connect(String path) async {
+  try {
+    return await SocketAgentClient.connect(path);
+  } on SocketException {
+    return null;
   }
 }
 
-// An agent left running from before an update is a different build than the
-// one this window ships with.
 Future<bool> _isCurrent(AgentClient running, String agent) async {
   final String expected;
   try {

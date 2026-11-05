@@ -22,8 +22,6 @@ Directory takaDirectory({Map<String, String>? environment}) {
 String agentSocketPath({Map<String, String>? environment}) =>
     '${takaDirectory(environment: environment).path}/agent.sock';
 
-/// Which build of the agent [executable] is, so a window can tell an agent
-/// left running from before an update.
 String agentIdentity(String executable) {
   final file = File(File(executable).resolveSymbolicLinksSync());
   return '${file.path}@${file.statSync().modified.millisecondsSinceEpoch}';
