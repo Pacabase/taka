@@ -22,16 +22,6 @@ class _TunnelsPageState extends State<TunnelsPage> {
   var _hosts = const <String>[];
 
   @override
-  void initState() {
-    super.initState();
-    unawaited(
-      configuredSshHosts().then((hosts) {
-        if (mounted) setState(() => _hosts = hosts);
-      }),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
     return BlocListener<TunnelsBloc, TunnelsState>(
       listenWhen: (_, state) => state is Closed,
@@ -88,10 +78,18 @@ class _TunnelsPageState extends State<TunnelsPage> {
     );
   }
 
-  void _openForm([Tunnel? tunnel]) => setState(() {
-    _isFormOpen = true;
-    _editing = tunnel;
-  });
+  // Read on every open, so edits to ~/.ssh/config show up.
+  void _openForm([Tunnel? tunnel]) {
+    setState(() {
+      _isFormOpen = true;
+      _editing = tunnel;
+    });
+    unawaited(
+      configuredSshHosts().then((hosts) {
+        if (mounted) setState(() => _hosts = hosts);
+      }),
+    );
+  }
 
   void _closeForm() => setState(() => _isFormOpen = false);
 }

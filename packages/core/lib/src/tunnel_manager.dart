@@ -11,6 +11,12 @@ import 'package:system_ssh/system_ssh.dart';
 final _log = FimberLog('Tunnels');
 final _sshLog = FimberLog('ssh');
 
+// "channel 2: open failed: connect failed: Connection refused", or
+// "channel 3: open failed: administratively prohibited: open failed".
+final _openFailed = RegExp(
+  r'open failed: (?:connect failed: )?(.+?)(?:: open failed)?$',
+);
+
 class TunnelManager({
   required final TunnelStore store,
   required final SshClient client,
@@ -123,7 +129,9 @@ class TunnelManager({
     // ssh's lines, named since tunnels connect at once.
     void onLog(String line) {
       _sshLog.d('${tunnel.title}: $line');
-      if (line.contains('open failed')) _warn(session, tunnel, line);
+      if (_openFailed.firstMatch(line)?[1] case final reason?) {
+        _warn(session, tunnel, reason);
+      }
     }
 
     return switch (tunnel) {
@@ -164,18 +172,16 @@ class TunnelManager({
     return store.save(_tunnels);
   }
 
-  // From "channel 2: open failed: connect failed: Connection refused".
-  void _warn(_Session session, Tunnel tunnel, String line) {
+  // A stopping session is already out of _sessions but still Connected.
+  void _warn(_Session session, Tunnel tunnel, String reason) {
     if (session.isStopped || session.status is! Connected) return;
 
     final destination = switch (tunnel) {
       Tunnel(kind: TunnelKind.socks) => 'A SOCKS destination',
       Tunnel(:final remoteHost, :final remotePort) => '$remoteHost:$remotePort',
     };
-    final warning = '$destination: ${line.split(': ').last}';
-    _log.w('${tunnel.title}: $warning');
+    final warning = '$destination: $reason';
     session
-      ..status = Connected(warning: warning)
       ..clearWarning?.cancel()
       ..clearWarning = Timer(warningLifetime, () {
         if (session.status is Connected) {
@@ -183,6 +189,10 @@ class TunnelManager({
           _emit();
         }
       });
+    if (session.status == Connected(warning: warning)) return;
+
+    _log.w('${tunnel.title}: $warning');
+    session.status = Connected(warning: warning);
     _emit();
   }
 

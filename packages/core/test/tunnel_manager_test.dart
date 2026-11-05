@@ -4,6 +4,7 @@ library;
 import 'dart:async';
 
 import 'package:core/core.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:fimber/fimber.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:system_ssh/system_ssh.dart';
@@ -343,9 +344,13 @@ void main() {
   group('a warning from ssh', () {
     const refused =
         'channel 2: open failed: connect failed: Connection refused';
+    const lifetime = Duration(seconds: 30);
     late void Function(String line) sshSays;
 
-    Future<TunnelManager> warned(Tunnel added) async {
+    void warned(
+      Tunnel added,
+      void Function(TunnelManager manager, FakeAsync time) body,
+    ) => fakeAsync((time) {
       void capture(Invocation invocation) => sshSays =
           invocation.namedArguments[#onLog]! as void Function(String line);
       when(openAnyTunnel).thenAnswer((invocation) async {
@@ -356,65 +361,100 @@ void main() {
         capture(invocation);
         return FakeTunnel(1080);
       });
-      final manager = TunnelManager(
-        store: store,
-        client: client,
-        warningLifetime: const Duration(milliseconds: 50),
-      );
-      addTearDown(manager.close);
-      await manager.load();
-      await manager.toggle(added.id);
-      return manager;
-    }
+      final manager = TunnelManager(store: store, client: client);
+      unawaited(manager.load().then((_) => manager.toggle(added.id)));
+      time.flushMicrotasks();
 
-    test('keeps the tunnel connected and names the destination', () async {
-      final manager = await warned(database);
+      body(manager, time);
 
-      sshSays(refused);
-
-      expect(
-        manager.snapshot.statusOf('a1'),
-        const Connected(warning: 'db.internal:5432: Connection refused'),
-      );
+      unawaited(manager.close());
+      time.flushMicrotasks();
     });
 
-    test('for a SOCKS proxy says a destination refused', () async {
-      final manager = await warned(proxy);
+    test('keeps the tunnel connected and names the destination', () {
+      warned(database, (manager, _) {
+        sshSays(refused);
 
-      sshSays(refused);
-
-      expect(
-        manager.snapshot.statusOf('b2'),
-        const Connected(warning: 'A SOCKS destination: Connection refused'),
-      );
+        expect(
+          manager.snapshot.statusOf('a1'),
+          const Connected(warning: 'db.internal:5432: Connection refused'),
+        );
+      });
     });
 
-    test('fades once ssh has said nothing more for a while', () async {
-      final manager = await warned(database);
-      sshSays(refused);
+    test('for a SOCKS proxy says a destination refused', () {
+      warned(proxy, (manager, _) {
+        sshSays(refused);
 
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(
+          manager.snapshot.statusOf('b2'),
+          const Connected(warning: 'A SOCKS destination: Connection refused'),
+        );
+      });
     });
 
-    test('is not kept for a tunnel that is stopped', () async {
-      final manager = await warned(database);
-      sshSays(refused);
+    test('says when the SSH host forbids forwarding', () {
+      warned(database, (manager, _) {
+        sshSays(
+          'channel 3: open failed: administratively prohibited: open failed',
+        );
 
-      await manager.toggle('a1');
-      sshSays(refused);
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-
-      expect(manager.snapshot.statusOf('a1'), const Stopped());
+        expect(
+          manager.snapshot.statusOf('a1'),
+          const Connected(
+            warning: 'db.internal:5432: administratively prohibited',
+          ),
+        );
+      });
     });
 
-    test('ignores lines that are not open failures', () async {
-      final manager = await warned(database);
+    test('fades once ssh has said nothing more for a while', () {
+      warned(database, (manager, time) {
+        sshSays(refused);
+        time.elapse(lifetime ~/ 2);
+        sshSays(refused);
 
-      sshSays('debug1: channel 3: new direct-tcpip');
+        time.elapse(lifetime ~/ 2);
+        expect(manager.snapshot.statusOf('a1'), isNot(const Connected()));
 
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+        time.elapse(lifetime ~/ 2);
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+      });
+    });
+
+    test('is announced once while ssh repeats it', () {
+      warned(database, (manager, time) {
+        final changes = <TunnelsSnapshot>[];
+        manager.changes.listen(changes.add);
+
+        sshSays(refused);
+        sshSays(refused);
+        time.flushMicrotasks();
+
+        expect(changes, hasLength(1));
+      });
+    });
+
+    test('is not kept for a tunnel that is stopped', () {
+      warned(database, (manager, time) {
+        unawaited(manager.toggle('a1'));
+        time.flushMicrotasks();
+        final changes = <TunnelsSnapshot>[];
+        manager.changes.listen(changes.add);
+
+        sshSays(refused);
+        time.elapse(lifetime);
+
+        expect(changes, isEmpty);
+      });
+    });
+
+    test('ignores lines that are not open failures', () {
+      warned(database, (manager, _) {
+        sshSays('debug1: channel 3: new direct-tcpip');
+
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+      });
     });
   });
 
