@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:core/core.dart';
+import 'package:fimber/fimber.dart';
 
 Future<AgentClient> connectToAgent() async {
   final path = agentSocketPath();
@@ -9,6 +10,7 @@ Future<AgentClient> connectToAgent() async {
   if (await _connect(path) case final running?) {
     if (await _isCurrent(running, agent)) return running;
 
+    Fimber.i('Replacing an agent from another build');
     running.send(const AgentCommand.quit());
     await running.snapshots.drain<void>().timeout(
       const Duration(seconds: 3),

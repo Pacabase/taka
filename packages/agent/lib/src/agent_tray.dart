@@ -3,10 +3,12 @@ import 'dart:io';
 
 import 'package:agent/src/tray_entries.dart';
 import 'package:core/core.dart';
+import 'package:fimber/fimber.dart';
 import 'package:nativeapi/nativeapi.dart';
 
 class AgentTray({
   required final TunnelManager manager,
+  required final DebugLogging debugLogging,
   required final String assetsPath,
   required final void Function() onAbout,
   required final void Function() onSettings,
@@ -19,8 +21,10 @@ class AgentTray({
     '$assetsPath/tray_icon_off.png',
   );
 
+  TrayIcon? _icon;
+
   void show() {
-    final icon = TrayIcon.create();
+    final icon = _icon = TrayIcon.create();
     if (icon == null) return;
 
     icon
@@ -41,14 +45,15 @@ class AgentTray({
       })
       ..setVisible(true);
 
-    // Nothing else holds the icon: this subscription keeps it on screen.
-    manager.changes.listen((snapshot) => _rebuild(icon, snapshot));
-    _rebuild(icon, manager.snapshot);
+    // Nothing else holds the tray: this subscription keeps its icon on screen.
+    manager.changes.listen(_rebuild);
+    _rebuild(manager.snapshot);
   }
 
-  void _rebuild(TrayIcon icon, TunnelsSnapshot snapshot) {
-    final menu = _menu(trayEntries(snapshot));
-    if (menu == null) return;
+  void _rebuild(TunnelsSnapshot snapshot) {
+    final icon = _icon;
+    final menu = _menu(trayEntries(snapshot, isLogging: debugLogging.isOn));
+    if (icon == null || menu == null) return;
 
     final count = snapshot.connectedCount;
     final image = count == 0 ? _idleImage : _connectedImage;
@@ -84,13 +89,18 @@ class AgentTray({
       :final action,
       :final label,
       :final isEnabled,
+      :final isChecked,
       :final shortcut,
     ) =>
       _create(
-        label,
-        MenuItemType.normal,
-        onClick: isEnabled ? () => _run(action) : null,
-      )?..accelerator = shortcut == null ? null : _shortcut(shortcut),
+          label,
+          isChecked == null ? MenuItemType.normal : MenuItemType.checkbox,
+          onClick: isEnabled ? () => _run(action) : null,
+        )
+        ?..accelerator = shortcut == null ? null : _shortcut(shortcut)
+        ..state = isChecked == true
+            ? MenuItemState.checked
+            : MenuItemState.unchecked,
     InfoEntry(:final label) => _create(label, MenuItemType.normal),
     SeparatorEntry() => _create('', MenuItemType.separator),
     SubmenuEntry(:final label, :final entries) =>
@@ -119,14 +129,21 @@ class AgentTray({
     TrayAction.connectAll => _guard(manager.connectAll()),
     TrayAction.disconnectAll => _guard(manager.disconnectAll()),
     TrayAction.about => onAbout(),
+    TrayAction.debugLogging => _toggleDebugLogging(),
+    TrayAction.showLogs => _guard(debugLogging.reveal()),
     TrayAction.settings => onSettings(),
     TrayAction.quit => _guard(onQuit()),
   };
 
+  void _toggleDebugLogging() {
+    debugLogging.turn(on: !debugLogging.isOn);
+    _rebuild(manager.snapshot);
+  }
+
   // An uncaught error would end the agent, and every tunnel with it.
   void _guard(Future<void> work) => unawaited(
     work.catchError(
-      (Object exception) => stderr.writeln('A tray action failed: $exception'),
+      (Object exception) => Fimber.e('A tray action failed', ex: exception),
     ),
   );
 

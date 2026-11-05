@@ -33,20 +33,36 @@ class const SubmenuEntry(final String label, final List<TrayEntry> entries)
   String toString() => '$label ▸ ${entries.join(' | ')}';
 }
 
-enum TrayAction { connectAll, disconnectAll, about, settings, quit }
+enum TrayAction {
+  connectAll,
+  disconnectAll,
+  about,
+  debugLogging,
+  showLogs,
+  settings,
+  quit,
+}
 
 class const ActionEntry(
   final TrayAction action,
   final String label, {
   final bool isEnabled = true,
+  final bool? isChecked,
   final String? shortcut,
 }) extends TrayEntry {
   @override
-  String toString() =>
-      '$label${shortcut == null ? '' : ' ⌘$shortcut'}${isEnabled ? '' : ' (off)'}';
+  String toString() => [
+    if (isChecked case final isChecked?) isChecked ? '☑' : '☐',
+    label,
+    if (shortcut != null) '⌘$shortcut',
+    if (!isEnabled) '(off)',
+  ].join(' ');
 }
 
-List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
+List<TrayEntry> trayEntries(
+  TunnelsSnapshot snapshot, {
+  bool isLogging = false,
+}) {
   final tunnels = snapshot.tunnels;
   final connected = tunnels
       .where((tunnel) => snapshot.statusOf(tunnel.id) is Connected)
@@ -75,6 +91,8 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
     ),
     const SeparatorEntry(),
     const ActionEntry(TrayAction.about, 'About Taka'),
+    ActionEntry(TrayAction.debugLogging, 'Debug Logging', isChecked: isLogging),
+    if (isLogging) const ActionEntry(TrayAction.showLogs, 'Show Logs'),
     const ActionEntry(TrayAction.settings, 'Settings…', shortcut: ','),
     const ActionEntry(TrayAction.quit, 'Quit Taka', shortcut: 'q'),
   ];

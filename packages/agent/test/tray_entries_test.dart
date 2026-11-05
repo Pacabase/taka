@@ -35,6 +35,7 @@ void main() {
       'Disconnect All (off)',
       '---',
       'About Taka',
+      '☐ Debug Logging',
       'Settings… ⌘,',
       'Quit Taka ⌘q',
     ]);
@@ -61,6 +62,7 @@ void main() {
       'Disconnect All',
       '---',
       'About Taka',
+      '☐ Debug Logging',
       'Settings… ⌘,',
       'Quit Taka ⌘q',
     ]);
@@ -99,6 +101,23 @@ void main() {
         ),
       ),
       'Taka · 1 connected',
+    );
+  });
+
+  test('with debug logging on, it is checked and Show Logs appears', () {
+    final entries = trayEntries(const TunnelsSnapshot(), isLogging: true);
+
+    expect(
+      entries
+          .map((entry) => '$entry')
+          .skipWhile((line) => line != 'About Taka'),
+      [
+        'About Taka',
+        '☑ Debug Logging',
+        'Show Logs',
+        'Settings… ⌘,',
+        'Quit Taka ⌘q',
+      ],
     );
   });
 
