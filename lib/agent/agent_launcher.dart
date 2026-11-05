@@ -20,7 +20,7 @@ Future<AgentClient> connectToAgent() async {
   // stay in the Dock "running in the background" once this window quits.
   if (agent.indexOf('.app/Contents/MacOS/') case final bundleEnd
       when bundleEnd != -1) {
-    await Process.run('open', ['-g', agent.substring(0, bundleEnd + 4)]);
+    await Process.run('open', ['-n', '-g', agent.substring(0, bundleEnd + 4)]);
   } else {
     await Process.start(
       agent,
