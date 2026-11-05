@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:core/src/agent_command.dart';
+import 'package:core/src/agent_message.dart';
 import 'package:core/src/tunnel_manager.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 import 'package:fimber/fimber.dart';
@@ -23,7 +24,7 @@ class AgentServer(
   this {
     _changes = _manager.changes.listen((snapshot) {
       for (final client in _clients) {
-        _send(client, snapshot);
+        _send(client, AgentMessage.snapshot(snapshot));
       }
     });
     _server.listen(_accept);
@@ -69,8 +70,8 @@ class AgentServer(
   void _accept(Socket client) {
     _clients.add(client);
     client.done.ignore();
-    client.writeln(jsonEncode({'agent': _identity}));
-    _send(client, _manager.snapshot);
+    _send(client, AgentMessage.identity(_identity));
+    _send(client, AgentMessage.snapshot(_manager.snapshot));
     if (_isAboutPending) {
       _isAboutPending = false;
       _sendAbout(client);
@@ -103,12 +104,11 @@ class AgentServer(
     }
   }
 
-  void _send(Socket client, TunnelsSnapshot snapshot) =>
-      client.writeln(jsonEncode(snapshot.toJson()));
+  void _send(Socket client, AgentMessage message) =>
+      client.writeln(jsonEncode(message.toJson()));
 
-  void _sendAbout(Socket client) => client.writeln(jsonEncode(_about));
-
-  static const _about = {'show': 'about'};
+  void _sendAbout(Socket client) =>
+      _send(client, const AgentMessage.showAbout());
 
   void _drop(Socket client) {
     _clients.remove(client);
