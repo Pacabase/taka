@@ -3,6 +3,7 @@
 ARCH := $(if $(filter arm64,$(shell uname -m)),arm64,x64)
 AGENT := packages/agent/build/cli/macos_$(ARCH)/bundle
 APP := build/macos/Build/Products/Release/Taka.app
+AGENT_APP := $(APP)/Contents/Library/LoginItems/TakaAgent.app
 
 default: help
 
@@ -17,9 +18,12 @@ agent:
 
 macos: agent
 	fvm flutter build macos --release
-	rm -rf $(APP)/Contents/Helpers/agent
-	mkdir -p $(APP)/Contents/Helpers
-	cp -R $(AGENT) $(APP)/Contents/Helpers/agent
+	rm -rf $(AGENT_APP)
+	mkdir -p $(AGENT_APP)/Contents/MacOS $(AGENT_APP)/Contents/Resources
+	cp packages/agent/macos/Info.plist $(AGENT_APP)/Contents/
+	cp $(AGENT)/bin/taka_agent $(AGENT_APP)/Contents/MacOS/Taka
+	cp -R $(AGENT)/lib $(AGENT_APP)/Contents/lib
+	cp $(AGENT)/*.png $(APP)/Contents/Resources/AppIcon.icns $(AGENT_APP)/Contents/Resources/
 	codesign --force --deep --sign - $(APP)
 
 run: agent

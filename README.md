@@ -29,7 +29,7 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Say why a tunnel dropped** — today it says "Disconnected"; needs `system_ssh` to report ssh's last lines.
 - [ ] **Reconnect a dropped tunnel** with backoff and keepalive, and stop on a failure that won't heal (host key changed, port in use).
 - [ ] **Launch at login**, and reconnect the tunnels that were on.
-- [ ] **Bring up 1Password's approval prompt** — 1Password keeps it in the menu bar when the app asking isn't in front, and the agent that starts `ssh` never is; bring the agent forward first, or ship it as its own small app.
+- [ ] **Name the agent in 1Password's prompt** — it reads `dart:Taka`, a name that comes from how Dart starts `ssh`; look at it with `system_ssh`.
 - [ ] **Empty and error states** — a first run that explains what a tunnel is, and a proper screen when the agent can't start.
 - [ ] **Releases** — a universal `.dmg` from CI on a version tag, a Homebrew tap, and signed auto-updates. The agent's packages (`nativeapi` and its C++ library, `platform`, `process`) must be in the app's licences first: a Dart command-line build collects none.
 

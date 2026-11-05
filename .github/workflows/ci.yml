@@ -87,7 +87,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/flutter
       - run: make macos
-      - run: test -x build/macos/Build/Products/Release/Taka.app/Contents/Helpers/agent/bin/taka_agent
+      - run: test -x build/macos/Build/Products/Release/Taka.app/Contents/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka
 
   # The one required check, so jobs can be added without touching branch rules.
   ci:

@@ -13,9 +13,15 @@ void _run() => unawaited(_start());
 Future<void> _start() async {
   Application.instance.setDockIconVisible(false);
 
+  final bundle = File(Platform.resolvedExecutable).parent.parent.parent;
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
     client: const SystemSshClient(loginShell: true),
+    // 1Password shows its approval prompt only while the app asking is in
+    // front, and open brings the running agent there.
+    beforeConnect: bundle.path.endsWith('.app')
+        ? () => Process.run('open', [bundle.path])
+        : null,
   );
   try {
     await manager.load();
@@ -30,18 +36,22 @@ Future<void> _start() async {
     return;
   }
 
-  // Taka.app/Contents/Helpers/agent/bin/taka_agent on macOS,
-  // agent/bin/taka_agent next to taka on Linux.
-  final agent = File(Platform.resolvedExecutable).parent.parent;
+  // Taka.app/Contents/Library/LoginItems/TakaAgent.app/Contents/MacOS/Taka on
+  // macOS; agent/bin/taka_agent next to taka on Linux, and in development.
+  final folder = File(Platform.resolvedExecutable).parent;
+  final loginItems = folder.path.indexOf('/Contents/Library/LoginItems/');
+  final isAppBundle = folder.path.endsWith('.app/Contents/MacOS');
   final app =
       Platform.environment['TAKA_APP'] ??
-      (Platform.isMacOS
-          ? agent.parent.parent.parent.path
-          : '${agent.parent.path}/taka');
+      (loginItems == -1
+          ? '${folder.parent.parent.path}/taka'
+          : folder.path.substring(0, loginItems));
 
   AgentTray(
     manager: manager,
-    assetsPath: agent.path,
+    assetsPath: isAppBundle
+        ? '${folder.parent.path}/Resources'
+        : folder.parent.path,
     onAbout: () {
       // On macOS, open also brings an open window to the front.
       if (!server.showAbout() || Platform.isMacOS) unawaited(_open(app));

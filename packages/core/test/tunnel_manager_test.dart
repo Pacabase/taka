@@ -130,6 +130,25 @@ void main() {
   });
 
   group('toggle', () {
+    test('runs beforeConnect before ssh starts', () async {
+      final calls = <String>[];
+      when(openAnyTunnel).thenAnswer((_) async {
+        calls.add('ssh');
+        return tunnel;
+      });
+      final manager = TunnelManager(
+        store: store,
+        client: client,
+        beforeConnect: () async => calls.add('before'),
+      );
+      addTearDown(manager.close);
+      await manager.load();
+
+      await manager.toggle('a1');
+
+      expect(calls, ['before', 'ssh']);
+    });
+
     test('opens a local tunnel with its fields', () async {
       final manager = await loaded();
 

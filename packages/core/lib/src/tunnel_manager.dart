@@ -10,6 +10,7 @@ import 'package:system_ssh/system_ssh.dart';
 class TunnelManager({
   required final TunnelStore store,
   required final SshClient client,
+  final Future<void> Function()? beforeConnect,
 }) {
   final _changes = StreamController<TunnelsSnapshot>.broadcast(sync: true);
   final Map<String, _Session> _sessions = {};
@@ -69,6 +70,7 @@ class TunnelManager({
     _emit();
     final SshTunnel opened;
     try {
+      await beforeConnect?.call();
       opened = session.tunnel = await _open(tunnel, session.abort.future);
     } on Object catch (exception) {
       return _fail(session, _messageOf(exception));
