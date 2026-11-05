@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/theme/taka_theme.dart';
-import 'package:taka/widgets/focus_ring.dart';
+import 'package:taka/widgets/input_kind.dart';
 
 void main() {
   setUp(watchInputKind);

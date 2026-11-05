@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
-import 'package:taka/widgets/focus_ring.dart';
 
 class const TunnelForm({
   super.key,
@@ -252,26 +251,24 @@ class _KindTabState extends State<_KindTab> {
         child: GestureDetector(
           excludeFromSemantics: true,
           onTap: onTap,
-          child: FocusRing(
-            isFocused: _showsFocus,
-            child: Container(
-              height: 20,
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: isSelected ? colors.accent : Colors.transparent,
-                  ),
+          child: Container(
+            height: 20,
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isSelected ? colors.accent : Colors.transparent,
                 ),
               ),
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.w300,
-                  color: isSelected
-                      ? colors.textBrilliant
-                      : colors.textSecondary,
-                ),
+            ),
+            foregroundDecoration: _showsFocus
+                ? BoxDecoration(border: Border.all(color: colors.accent))
+                : null,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w300,
+                color: isSelected ? colors.textBrilliant : colors.textSecondary,
               ),
             ),
           ),
