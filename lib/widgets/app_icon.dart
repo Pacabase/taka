@@ -7,7 +7,9 @@ import 'package:taka/theme/taka_colors.dart';
 class const AppIconData._(final String name) {}
 
 abstract final class AppIcons {
+  static const check = AppIconData._('check');
   static const chevronLeft = AppIconData._('chevron-left');
+  static const copy = AppIconData._('copy');
   static const pencil = AppIconData._('pencil');
   static const plus = AppIconData._('plus');
   static const trash = AppIconData._('trash-2');

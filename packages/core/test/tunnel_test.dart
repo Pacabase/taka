@@ -118,4 +118,17 @@ void main() {
       expect(tunnels.moved('zz', 0), tunnels);
     });
   });
+
+  group('sshCommand', () {
+    test('forwards the local port through the SSH host', () {
+      expect(
+        database.sshCommand,
+        'ssh -N -L 127.0.0.1:15432:db.internal:5432 deploy@bastion.example.com',
+      );
+    });
+
+    test('serves a SOCKS proxy through the SSH host', () {
+      expect(proxy.sshCommand, 'ssh -N -D 127.0.0.1:1080 bastion');
+    });
+  });
 }

@@ -67,6 +67,7 @@ void main() {
       '    Connection to bastion closed by remote host.',
       '---',
       'Copy Address ▸ Production database — localhost:15432 ⧉ localhost:15432',
+      'Copy SSH Command ▸ ${['Production database ⧉ ssh -N -L 127.0.0.1:15432:db.internal:5432 bastion', 'Proxy ⧉ ssh -N -D 127.0.0.1:1080 bastion', 'Web ⧉ ssh -N -L 127.0.0.1:8080::0 web', 'Other ⧉ ssh -N -L 127.0.0.1:8081::0 web'].join(' | ')}',
       'Connect All',
       'Disconnect All',
       '---',

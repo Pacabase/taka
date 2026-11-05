@@ -184,4 +184,32 @@ void main() {
     expect(caption.didExceedMaxLines, isFalse);
     expect(caption.size.height, greaterThan(20));
   });
+
+  testWidgets('the copy button copies the ssh command, and says so', (
+    tester,
+  ) async {
+    final copied = <Object?>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') copied.add(call.arguments);
+        return null;
+      },
+    );
+    await pumpTile(tester);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(find.byType(TunnelTile)));
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Copy ssh command'));
+    await tester.pump();
+
+    expect(copied, [
+      {'text': unnamed.sshCommand},
+    ]);
+    expect(find.byTooltip('Copied'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 1500));
+    expect(find.byTooltip('Copy ssh command'), findsOneWidget);
+  });
 }

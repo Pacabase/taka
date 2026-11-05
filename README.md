@@ -33,7 +33,7 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Notifications** when a tunnel connects, drops or gives up.
 - [ ] **Activity log** per tunnel.
 - [ ] **Groups and tags**, as tray submenus too.
-- [ ] **Import** hosts from `~/.ssh/config`, or a tunnel from a pasted `ssh -L` command; copy a tunnel back as an `ssh` command.
+- [ ] **Import** hosts from `~/.ssh/config`, or a tunnel from a pasted `ssh -L` command.
 - [ ] **Linux packages** — AppImage, `.deb`, `.rpm` and the AUR.
 
 ### Windows (0.3)
