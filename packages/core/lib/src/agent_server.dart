@@ -5,6 +5,9 @@ import 'dart:io';
 import 'package:core/src/agent_command.dart';
 import 'package:core/src/tunnel_manager.dart';
 import 'package:core/src/tunnels_snapshot.dart';
+import 'package:fimber/fimber.dart';
+
+final _log = FimberLog('Socket');
 
 /// One JSON object per line each way: the agent's identity, snapshots and
 /// About requests out, commands in.
@@ -88,7 +91,7 @@ class AgentServer(
     try {
       await _manager.handle(AgentCommand.fromJson(jsonDecode(line)));
     } on Object catch (exception) {
-      stderr.writeln('Ignoring $line: $exception');
+      _log.w('Ignoring $line', ex: exception);
     }
   }
 

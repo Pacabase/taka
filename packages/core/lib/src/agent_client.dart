@@ -4,6 +4,9 @@ import 'dart:io';
 
 import 'package:core/src/agent_command.dart';
 import 'package:core/src/tunnels_snapshot.dart';
+import 'package:fimber/fimber.dart';
+
+final _log = FimberLog('Socket');
 
 abstract interface class AgentClient {
   /// Which build the agent is, or '' from an agent too old to say.
@@ -31,7 +34,8 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
         .transform(const LineSplitter())
         .listen(
           _receive,
-          onError: (Object exception) => stderr.writeln('Ignoring $exception'),
+          onError: (Object exception) =>
+              _log.w('Ignoring a broken message', ex: exception),
           onDone: () {
             _identify('');
             unawaited(_snapshots.close());
@@ -77,7 +81,7 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
           _snapshots.add(TunnelsSnapshot.fromJson(json));
       }
     } on FormatException catch (exception) {
-      stderr.writeln('Ignoring $exception');
+      _log.w('Ignoring $line', ex: exception);
     }
   }
 

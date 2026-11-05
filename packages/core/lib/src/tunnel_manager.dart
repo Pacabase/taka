@@ -5,7 +5,10 @@ import 'package:core/src/agent_command.dart';
 import 'package:core/src/tunnel.dart';
 import 'package:core/src/tunnel_store.dart';
 import 'package:core/src/tunnels_snapshot.dart';
+import 'package:fimber/fimber.dart';
 import 'package:system_ssh/system_ssh.dart';
+
+final _log = FimberLog('Tunnels');
 
 class TunnelManager({
   required final TunnelStore store,
@@ -62,6 +65,7 @@ class TunnelManager({
     if (_sessions[id] case final running? when running.status.isOn) {
       _sessions.remove(id);
       _emit();
+      _log.i('Stopping $id');
       return running.stop();
     }
 
@@ -70,18 +74,20 @@ class TunnelManager({
 
     final session = _sessions[id] = _Session();
     _emit();
+    _log.i('Connecting ${tunnel.title}: ${tunnel.summary}');
     final SshTunnel opened;
     try {
       await beforeConnect?.call();
       opened = session.tunnel = await _open(tunnel, session.abort.future);
     } on Object catch (exception) {
-      return _fail(session, _messageOf(exception));
+      return _fail(session, tunnel, _messageOf(exception));
     }
     if (session.isStopped) return opened.close();
 
     session.status = const Connected();
     _emit();
-    unawaited(opened.done.then((_) => _fail(session, 'Disconnected')));
+    _log.i('Connected ${tunnel.title}');
+    unawaited(opened.done.then((_) => _fail(session, tunnel, 'Disconnected')));
   }
 
   Future<void> connectAll() => Future.wait(
@@ -128,9 +134,10 @@ class TunnelManager({
     _ => '$exception',
   };
 
-  void _fail(_Session session, String message) {
+  void _fail(_Session session, Tunnel tunnel, String message) {
     if (session.isStopped) return;
 
+    _log.w('${tunnel.title} failed: $message');
     session.status = Failed(message);
     _emit();
   }

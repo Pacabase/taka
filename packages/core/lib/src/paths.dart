@@ -26,3 +26,16 @@ String agentIdentity(String executable) {
   final file = File(File(executable).resolveSymbolicLinksSync());
   return '${file.path}@${file.statSync().modified.millisecondsSinceEpoch}';
 }
+
+Directory logDirectory({Map<String, String>? environment}) {
+  final variables = environment ?? Platform.environment;
+  final home = variables['HOME'] ?? '';
+
+  if (Platform.isMacOS) return Directory('$home/Library/Logs/Taka');
+
+  final state = switch (variables['XDG_STATE_HOME']) {
+    final String state when state.isNotEmpty => state,
+    _ => '$home/.local/state',
+  };
+  return Directory('$state/taka/logs');
+}

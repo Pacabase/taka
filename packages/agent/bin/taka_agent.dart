@@ -3,12 +3,17 @@ import 'dart:io';
 
 import 'package:agent/src/agent_tray.dart';
 import 'package:core/core.dart';
+import 'package:fimber/fimber.dart';
 import 'package:nativeapi/nativeapi.dart';
 import 'package:system_ssh/system_ssh.dart';
 
 void main() => runNativeApp(_run);
 
-void _run() => unawaited(_start());
+// An uncaught error still ends the agent, but is logged first.
+void _run() => runZonedGuarded(() => unawaited(_start()), (error, stack) {
+  Fimber.e('Uncaught error', ex: error, stacktrace: stack);
+  Application.instance.quit(1);
+});
 
 Future<void> _start() async {
   Application.instance.setDockIconVisible(false);
@@ -25,6 +30,11 @@ Future<void> _start() async {
           ? '${bundle.path}/taka'
           : folder.path.substring(0, loginItems));
 
+  if (!isAppBundle) Fimber.plantTree(DebugTree());
+  final debugLogging = DebugLogging('agent')..start();
+  final identity = agentIdentity(Platform.resolvedExecutable);
+  Fimber.i('Agent $identity on ${Platform.operatingSystemVersion}');
+
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
     client: const SystemSshClient(loginShell: true),
@@ -37,16 +47,16 @@ Future<void> _start() async {
   try {
     await manager.load();
   } on Object catch (exception) {
-    stderr.writeln('Could not load the saved tunnels: $exception');
+    Fimber.e('Could not load the saved tunnels', ex: exception);
   }
 
   final server = await AgentServer.bind(
     agentSocketPath(),
     manager,
-    identity: agentIdentity(Platform.resolvedExecutable),
+    identity: identity,
   );
   if (server == null) {
-    stdout.writeln('Another Taka agent is running');
+    Fimber.i('Another Taka agent is running');
     Application.instance.quit(0);
     return;
   }
@@ -55,11 +65,12 @@ Future<void> _start() async {
   manager.changes.listen(
     null,
     onDone: () async {
+      Fimber.i('Quitting');
       try {
         await manager.close();
         await server.close();
       } on Object catch (exception) {
-        stderr.writeln('Could not close the agent socket: $exception');
+        Fimber.e('Could not close the agent socket', ex: exception);
       } finally {
         Application.instance.quit(0);
       }
@@ -68,6 +79,7 @@ Future<void> _start() async {
 
   AgentTray(
     manager: manager,
+    debugLogging: debugLogging,
     assetsPath: isAppBundle
         ? '${folder.parent.path}/Resources'
         : folder.parent.path,
@@ -87,6 +99,6 @@ Future<void> _open(String app) async {
   try {
     await Process.start(executable, arguments, mode: ProcessStartMode.detached);
   } on ProcessException catch (exception) {
-    stderr.writeln('Could not open Settings: $exception');
+    Fimber.e('Could not open the window', ex: exception);
   }
 }

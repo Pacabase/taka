@@ -3,10 +3,12 @@ import 'dart:io';
 
 import 'package:agent/src/tray_entries.dart';
 import 'package:core/core.dart';
+import 'package:fimber/fimber.dart';
 import 'package:nativeapi/nativeapi.dart';
 
 class AgentTray({
   required final TunnelManager manager,
+  required final DebugLogging debugLogging,
   required final String assetsPath,
   required final void Function() onAbout,
   required final void Function() onSettings,
@@ -19,8 +21,10 @@ class AgentTray({
     '$assetsPath/tray_icon_off.png',
   );
 
+  TrayIcon? _icon;
+
   void show() {
-    final icon = TrayIcon.create();
+    final icon = _icon = TrayIcon.create();
     if (icon == null) return;
 
     icon
@@ -47,7 +51,7 @@ class AgentTray({
   }
 
   void _rebuild(TrayIcon icon, TunnelsSnapshot snapshot) {
-    final menu = _menu(trayEntries(snapshot));
+    final menu = _menu(trayEntries(snapshot, isLogging: debugLogging.isOn));
     if (menu == null) return;
 
     final count = snapshot.connectedCount;
@@ -119,14 +123,21 @@ class AgentTray({
     TrayAction.connectAll => _guard(manager.connectAll()),
     TrayAction.disconnectAll => _guard(manager.disconnectAll()),
     TrayAction.about => onAbout(),
+    TrayAction.debugLogging => _toggleDebugLogging(),
+    TrayAction.showLogs => _guard(debugLogging.reveal()),
     TrayAction.settings => onSettings(),
     TrayAction.quit => _guard(onQuit()),
   };
 
+  void _toggleDebugLogging() {
+    debugLogging.turn(on: !debugLogging.isOn);
+    if (_icon case final icon?) _rebuild(icon, manager.snapshot);
+  }
+
   // An uncaught error would end the agent, and every tunnel with it.
   void _guard(Future<void> work) => unawaited(
     work.catchError(
-      (Object exception) => stderr.writeln('A tray action failed: $exception'),
+      (Object exception) => Fimber.e('A tray action failed', ex: exception),
     ),
   );
 

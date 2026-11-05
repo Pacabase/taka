@@ -13,6 +13,7 @@ dependencies:
   bloc: 9.2.1
   core:
     path: packages/core
+  fimber: 0.7.0
   flutter:
     sdk: flutter
   flutter_bloc: 9.1.1

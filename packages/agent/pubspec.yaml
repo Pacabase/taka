@@ -9,6 +9,7 @@ environment:
 dependencies:
   core:
     path: ../core
+  fimber: 0.7.0
   nativeapi: 0.5.8
   system_ssh: 0.3.0
 
