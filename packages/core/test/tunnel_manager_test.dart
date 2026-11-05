@@ -340,6 +340,84 @@ void main() {
     );
   });
 
+  group('a warning from ssh', () {
+    const refused =
+        'channel 2: open failed: connect failed: Connection refused';
+    late void Function(String line) sshSays;
+
+    Future<TunnelManager> warned(Tunnel added) async {
+      void capture(Invocation invocation) => sshSays =
+          invocation.namedArguments[#onLog]! as void Function(String line);
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        capture(invocation);
+        return tunnel;
+      });
+      when(openAnySocksProxy).thenAnswer((invocation) async {
+        capture(invocation);
+        return FakeTunnel(1080);
+      });
+      final manager = TunnelManager(
+        store: store,
+        client: client,
+        warningLifetime: const Duration(milliseconds: 50),
+      );
+      addTearDown(manager.close);
+      await manager.load();
+      await manager.toggle(added.id);
+      return manager;
+    }
+
+    test('keeps the tunnel connected and names the destination', () async {
+      final manager = await warned(database);
+
+      sshSays(refused);
+
+      expect(
+        manager.snapshot.statusOf('a1'),
+        const Connected(warning: 'db.internal:5432: Connection refused'),
+      );
+    });
+
+    test('for a SOCKS proxy says a destination refused', () async {
+      final manager = await warned(proxy);
+
+      sshSays(refused);
+
+      expect(
+        manager.snapshot.statusOf('b2'),
+        const Connected(warning: 'A SOCKS destination: Connection refused'),
+      );
+    });
+
+    test('fades once ssh has said nothing more for a while', () async {
+      final manager = await warned(database);
+      sshSays(refused);
+
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(manager.snapshot.statusOf('a1'), const Connected());
+    });
+
+    test('is not kept for a tunnel that is stopped', () async {
+      final manager = await warned(database);
+      sshSays(refused);
+
+      await manager.toggle('a1');
+      sshSays(refused);
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(manager.snapshot.statusOf('a1'), const Stopped());
+    });
+
+    test('ignores lines that are not open failures', () async {
+      final manager = await warned(database);
+
+      sshSays('debug1: channel 3: new direct-tcpip');
+
+      expect(manager.snapshot.statusOf('a1'), const Connected());
+    });
+  });
+
   group('logs', () {
     const connecting =
         'I/Tunnels: Connecting Production database: '

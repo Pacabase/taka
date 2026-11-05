@@ -9,6 +9,7 @@ import 'package:taka/theme/taka_theme.dart';
 class const TunnelForm({
   super.key,
   final Tunnel? initial,
+  final List<String> hosts = const [],
   required final void Function(Tunnel tunnel) onSave,
   required final void Function() onCancel,
 }) extends StatefulWidget {
@@ -100,10 +101,12 @@ class _TunnelFormState extends State<TunnelForm> {
             _RouteStep(
               label: 'SSH host',
               hasNext: _isLocal,
-              child: _input(
-                _sshHost,
+              child: _HostInput(
+                controller: _sshHost,
+                hosts: widget.hosts,
                 hint: 'Host from ~/.ssh/config, or user@host',
                 style: mono,
+                onSubmitted: _save,
               ),
             ),
             if (_isLocal)
@@ -355,6 +358,109 @@ class _InputState extends State<_Input> {
           ),
         ),
         onSubmitted: (_) => widget.onSubmitted(),
+      ),
+    );
+  }
+}
+
+class const _HostInput({
+  required final TextEditingController controller,
+  required final List<String> hosts,
+  required final String hint,
+  required final TextStyle style,
+  required final void Function() onSubmitted,
+}) extends StatefulWidget {
+  @override
+  State<_HostInput> createState() => _HostInputState();
+}
+
+class _HostInputState extends State<_HostInput> {
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  Iterable<String> _matching(String text) {
+    final typed = text.trim().toLowerCase();
+    return widget.hosts.where(
+      (host) => host.toLowerCase().contains(typed) && host != text,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = TakaColors.of(context);
+
+    return RawAutocomplete<String>(
+      textEditingController: widget.controller,
+      focusNode: _focus,
+      optionsBuilder: (value) => _matching(value.text),
+      fieldViewBuilder: (context, controller, focus, onFieldSubmitted) =>
+          _FieldBox(
+            isFocused: focus.hasFocus,
+            child: TextField(
+              controller: controller,
+              focusNode: focus,
+              style: widget.style,
+              decoration: InputDecoration.collapsed(
+                hintText: widget.hint,
+                hintStyle: widget.style.copyWith(color: colors.textSecondary),
+              ),
+              onSubmitted: (text) => _matching(text).isEmpty
+                  ? widget.onSubmitted()
+                  : onFieldSubmitted(),
+            ),
+          ),
+      optionsViewBuilder: (context, onSelected, options) => Align(
+        alignment: Alignment.topLeft,
+        child: TextFieldTapRegion(
+          child: Container(
+            margin: const EdgeInsets.only(top: 4),
+            constraints: const BoxConstraints(maxHeight: 160, maxWidth: 320),
+            decoration: BoxDecoration(
+              color: colors.selection,
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                shrinkWrap: true,
+                children: [
+                  for (final (index, host) in options.indexed)
+                    InkWell(
+                      onTap: () => onSelected(host),
+                      child: Container(
+                        height: 24,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        alignment: Alignment.centerLeft,
+                        color:
+                            AutocompleteHighlightedOption.of(context) == index
+                            ? colors.surface
+                            : null,
+                        child: Text(host, style: widget.style),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

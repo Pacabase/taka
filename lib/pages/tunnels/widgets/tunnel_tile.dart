@@ -36,6 +36,12 @@ class _TunnelTileState extends State<TunnelTile> {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(fontSize: 12, color: colors.orange),
       ),
+      Connected(:final warning) when warning.isNotEmpty => Text(
+        "Can't reach $warning",
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 12, color: colors.orange),
+      ),
       Stopped() || Connected() when tunnel.name.isEmpty => null,
       Stopped() || Connected() => Text(
         tunnel.summary,

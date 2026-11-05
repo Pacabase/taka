@@ -9,12 +9,17 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
 
   const factory connecting() = Connecting;
 
-  const factory connected() = Connected;
+  /// [warning] says what ssh last couldn't forward, such as a destination
+  /// that refused, while the tunnel itself stays up.
+  const factory connected({@Default('') String warning}) = Connected;
 
   const factory failed(String message) = Failed;
 
   static TunnelStatus fromJson(Object? json) => switch (json) {
     {'status': 'connecting'} => const Connecting(),
+    {'status': 'connected', 'warning': final String warning} => Connected(
+      warning: warning,
+    ),
     {'status': 'connected'} => const Connected(),
     {'status': 'failed', 'message': final String message} => Failed(message),
     {'status': 'failed'} => const Failed(''),
@@ -24,7 +29,10 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
   Map<String, Object?> toJson() => switch (this) {
     Stopped() => {'status': 'stopped'},
     Connecting() => {'status': 'connecting'},
-    Connected() => {'status': 'connected'},
+    Connected(:final warning) => {
+      'status': 'connected',
+      if (warning.isNotEmpty) 'warning': warning,
+    },
     Failed(:final message) => {'status': 'failed', 'message': message},
   };
 

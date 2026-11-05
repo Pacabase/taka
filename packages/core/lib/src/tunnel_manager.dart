@@ -15,6 +15,7 @@ class TunnelManager({
   required final TunnelStore store,
   required final SshClient client,
   final Future<void> Function()? beforeConnect,
+  final Duration warningLifetime = const Duration(seconds: 30),
 }) {
   final _changes = StreamController<TunnelsSnapshot>.broadcast(sync: true);
   final Map<String, _Session> _sessions = {};
@@ -79,7 +80,7 @@ class TunnelManager({
     final SshTunnel opened;
     try {
       await beforeConnect?.call();
-      opened = session.tunnel = await _open(tunnel, session.abort.future);
+      opened = session.tunnel = await _open(tunnel, session);
     } on Object catch (exception) {
       return _fail(session, _messageOf(exception));
     }
@@ -117,9 +118,13 @@ class TunnelManager({
 
   bool _isOn(String id) => _sessions[id]?.status.isOn ?? false;
 
-  Future<SshTunnel> _open(Tunnel tunnel, Future<void> abortTrigger) {
-    // ssh's -v lines until the tunnel is up, named since tunnels connect at once.
-    void onLog(String line) => _sshLog.d('${tunnel.title}: $line');
+  Future<SshTunnel> _open(Tunnel tunnel, _Session session) {
+    final abortTrigger = session.abort.future;
+    // ssh's lines, named since tunnels connect at once.
+    void onLog(String line) {
+      _sshLog.d('${tunnel.title}: $line');
+      if (line.contains('open failed')) _warn(session, tunnel, line);
+    }
 
     return switch (tunnel) {
       Tunnel(kind: TunnelKind.socks) => client.openSocksProxy(
@@ -159,6 +164,28 @@ class TunnelManager({
     return store.save(_tunnels);
   }
 
+  // From "channel 2: open failed: connect failed: Connection refused".
+  void _warn(_Session session, Tunnel tunnel, String line) {
+    if (session.isStopped || session.status is! Connected) return;
+
+    final destination = switch (tunnel) {
+      Tunnel(kind: TunnelKind.socks) => 'A SOCKS destination',
+      Tunnel(:final remoteHost, :final remotePort) => '$remoteHost:$remotePort',
+    };
+    final warning = '$destination: ${line.split(': ').last}';
+    _log.w('${tunnel.title}: $warning');
+    session
+      ..status = Connected(warning: warning)
+      ..clearWarning?.cancel()
+      ..clearWarning = Timer(warningLifetime, () {
+        if (session.status is Connected) {
+          session.status = const Connected();
+          _emit();
+        }
+      });
+    _emit();
+  }
+
   void _emit() {
     if (!_changes.isClosed) _changes.add(snapshot);
   }
@@ -168,10 +195,12 @@ class _Session(final String title) {
   final abort = Completer<void>();
   TunnelStatus status = const Connecting();
   SshTunnel? tunnel;
+  Timer? clearWarning;
 
   bool get isStopped => abort.isCompleted;
 
   Future<void> stop() async {
+    clearWarning?.cancel();
     if (!isStopped) abort.complete();
     await tunnel?.close();
   }

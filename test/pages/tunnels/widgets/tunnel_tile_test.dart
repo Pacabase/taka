@@ -136,4 +136,18 @@ void main() {
     expect(FocusManager.instance.primaryFocus, same(focused));
     expect(focused?.hasPrimaryFocus, isTrue);
   });
+
+  testWidgets('a connected tunnel says what it could not reach', (
+    tester,
+  ) async {
+    await pumpTile(
+      tester,
+      status: const Connected(warning: 'db.internal:5432: Connection refused'),
+    );
+
+    expect(
+      find.text("Can't reach db.internal:5432: Connection refused"),
+      findsOneWidget,
+    );
+  });
 }
