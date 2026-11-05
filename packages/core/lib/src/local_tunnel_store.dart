@@ -63,7 +63,10 @@ class LocalTunnelStore({required final File file}) implements TunnelStore {
       const JsonEncoder.withIndent('  ').convert({
         'version': _version,
         'tunnels': tunnels.map((tunnel) => tunnel.toJson()).toList(),
-        'on': on.toList(),
+        'on': [
+          for (final tunnel in tunnels)
+            if (on.contains(tunnel.id)) tunnel.id,
+        ],
       }),
       flush: true,
     );

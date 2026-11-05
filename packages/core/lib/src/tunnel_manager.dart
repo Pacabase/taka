@@ -50,11 +50,16 @@ class TunnelManager({
   /// Turns back on the tunnels that were on when Taka last stopped. Unlike a
   /// tunnel the user just turned on, one that fails to connect tries again:
   /// at login, the network may not be up yet.
-  Future<void> restore() => Future.wait([
-    for (final tunnel in _tunnels)
-      if (_wasOn.contains(tunnel.id) && !_isOn(tunnel.id))
-        _start(tunnel, isRestored: true),
-  ]);
+  Future<void> restore() {
+    final wasOn = _wasOn;
+    _wasOn = const {};
+
+    return Future.wait([
+      for (final tunnel in _tunnels)
+        if (wasOn.contains(tunnel.id) && !_isOn(tunnel.id))
+          _start(tunnel, isRestored: true),
+    ]);
+  }
 
   Future<void> handle(AgentCommand command) => switch (command) {
     SaveTunnel(:final tunnel) => save(tunnel),
@@ -75,8 +80,10 @@ class TunnelManager({
     await _persist();
 
     if (_isOn(tunnel.id) && previous?.copyWith(name: tunnel.name) != tunnel) {
-      await toggle(tunnel.id);
-      await toggle(tunnel.id);
+      final running = _sessions.remove(tunnel.id)!;
+      _log.i('Stopping ${running.tunnel.title}');
+      await running.stop();
+      await _start(tunnel);
     }
   }
 
@@ -163,8 +170,9 @@ class TunnelManager({
     if (_changes.isClosed) return;
 
     _changes.add(snapshot);
-    if (!const SetEquality<String>().equals(_on, _savedOn)) {
-      _savedOn = _on;
+    if (_on case final on
+        when !const SetEquality<String>().equals(on, _savedOn)) {
+      _savedOn = on;
       unawaited(
         store
             .save(_tunnels, on: _savedOn)

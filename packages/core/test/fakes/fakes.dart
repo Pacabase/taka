@@ -11,6 +11,7 @@ class FakeStore([
   var Set<String> on = const {},
 ]) implements TunnelStore {
   int saveCount = 0;
+  Exception? saveError;
 
   @override
   Future<({List<Tunnel> tunnels, Set<String> on})> load() async =>
@@ -18,6 +19,7 @@ class FakeStore([
 
   @override
   Future<void> save(List<Tunnel> tunnels, {required Set<String> on}) async {
+    if (saveError case final error?) throw error;
     this.tunnels = tunnels;
     this.on = on;
     saveCount++;

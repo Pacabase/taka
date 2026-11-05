@@ -172,4 +172,13 @@ void main() {
 
     expect((await store().load()).on, isEmpty);
   });
+
+  test('save lists the tunnels that are on in their order', () async {
+    await store().save([database, proxy], on: {'b2', 'a1', 'gone'});
+
+    expect(
+      jsonDecode(await file.readAsString()),
+      containsPair('on', ['a1', 'b2']),
+    );
+  });
 }
