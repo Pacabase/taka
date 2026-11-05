@@ -6,9 +6,13 @@ import 'package:core/src/agent_command.dart';
 import 'package:core/src/tunnel_manager.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 
-/// One JSON object per line each way: snapshots and About requests out,
-/// commands in.
-class AgentServer(final ServerSocket _server, final TunnelManager _manager) {
+/// One JSON object per line each way: the agent's identity, snapshots and
+/// About requests out, commands in.
+class AgentServer(
+  final ServerSocket _server,
+  final TunnelManager _manager,
+  final String _identity,
+) {
   final Set<Socket> _clients = {};
   var _isAboutPending = false;
   late final StreamSubscription<TunnelsSnapshot> _changes;
@@ -23,7 +27,11 @@ class AgentServer(final ServerSocket _server, final TunnelManager _manager) {
   }
 
   /// Listens on [path], or returns null when another agent already does.
-  static Future<AgentServer?> bind(String path, TunnelManager manager) async {
+  static Future<AgentServer?> bind(
+    String path,
+    TunnelManager manager, {
+    String identity = '',
+  }) async {
     final address = InternetAddress(path, type: InternetAddressType.unix);
     final file = File(path);
     if (await file.exists()) {
@@ -37,7 +45,11 @@ class AgentServer(final ServerSocket _server, final TunnelManager _manager) {
 
     await file.parent.create(recursive: true);
     try {
-      return AgentServer(await ServerSocket.bind(address, 0), manager);
+      return AgentServer(
+        await ServerSocket.bind(address, 0),
+        manager,
+        identity,
+      );
     } on SocketException {
       return null;
     }
@@ -54,6 +66,7 @@ class AgentServer(final ServerSocket _server, final TunnelManager _manager) {
   void _accept(Socket client) {
     _clients.add(client);
     client.done.ignore();
+    client.writeln(jsonEncode({'agent': _identity}));
     _send(client, _manager.snapshot);
     if (_isAboutPending) {
       _isAboutPending = false;

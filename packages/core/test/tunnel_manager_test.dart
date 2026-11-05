@@ -354,6 +354,17 @@ void main() {
     expect(manager.snapshot.statusOf('a1'), const Connected());
   });
 
+  test('handle quit stops every tunnel and ends changes', () async {
+    final manager = await loaded();
+    await manager.toggle('a1');
+    final changes = manager.changes.toList();
+
+    await manager.handle(const AgentCommand.quit());
+
+    await changes;
+    expect(tunnel.closeCount, 1);
+  });
+
   test('close stops every tunnel, ends changes, and is idempotent', () async {
     when(openAnySocksProxy).thenAnswer(abortable);
     final manager = await loaded();

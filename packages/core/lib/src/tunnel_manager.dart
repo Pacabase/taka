@@ -32,6 +32,7 @@ class TunnelManager({
     SaveTunnel(:final tunnel) => save(tunnel),
     RemoveTunnel(:final id) => remove(id),
     ToggleTunnel(:final id) => toggle(id),
+    QuitAgent() => close(),
   };
 
   Future<void> save(Tunnel tunnel) async {

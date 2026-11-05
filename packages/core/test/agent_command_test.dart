@@ -14,6 +14,7 @@ void main() {
       AgentCommand.save(database),
       AgentCommand.remove('a1'),
       AgentCommand.toggle('b2'),
+      AgentCommand.quit(),
     ]) {
       test('$command round-trips', () {
         expect(

@@ -56,13 +56,14 @@ extension AgentCommandPatterns on AgentCommand {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SaveTunnel value)?  save,TResult Function( RemoveTunnel value)?  remove,TResult Function( ToggleTunnel value)?  toggle,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SaveTunnel value)?  save,TResult Function( RemoveTunnel value)?  remove,TResult Function( ToggleTunnel value)?  toggle,TResult Function( QuitAgent value)?  quit,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that);case RemoveTunnel() when remove != null:
 return remove(_that);case ToggleTunnel() when toggle != null:
-return toggle(_that);case _:
+return toggle(_that);case QuitAgent() when quit != null:
+return quit(_that);case _:
   return orElse();
 
 }
@@ -80,13 +81,14 @@ return toggle(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SaveTunnel value)  save,required TResult Function( RemoveTunnel value)  remove,required TResult Function( ToggleTunnel value)  toggle,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SaveTunnel value)  save,required TResult Function( RemoveTunnel value)  remove,required TResult Function( ToggleTunnel value)  toggle,required TResult Function( QuitAgent value)  quit,}){
 final _that = this;
 switch (_that) {
 case SaveTunnel():
 return save(_that);case RemoveTunnel():
 return remove(_that);case ToggleTunnel():
-return toggle(_that);}
+return toggle(_that);case QuitAgent():
+return quit(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -100,13 +102,14 @@ return toggle(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SaveTunnel value)?  save,TResult? Function( RemoveTunnel value)?  remove,TResult? Function( ToggleTunnel value)?  toggle,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SaveTunnel value)?  save,TResult? Function( RemoveTunnel value)?  remove,TResult? Function( ToggleTunnel value)?  toggle,TResult? Function( QuitAgent value)?  quit,}){
 final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that);case RemoveTunnel() when remove != null:
 return remove(_that);case ToggleTunnel() when toggle != null:
-return toggle(_that);case _:
+return toggle(_that);case QuitAgent() when quit != null:
+return quit(_that);case _:
   return null;
 
 }
@@ -123,12 +126,13 @@ return toggle(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,TResult Function()?  quit,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that.tunnel);case RemoveTunnel() when remove != null:
 return remove(_that.id);case ToggleTunnel() when toggle != null:
-return toggle(_that.id);case _:
+return toggle(_that.id);case QuitAgent() when quit != null:
+return quit();case _:
   return orElse();
 
 }
@@ -146,12 +150,13 @@ return toggle(_that.id);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,required TResult Function()  quit,}) {final _that = this;
 switch (_that) {
 case SaveTunnel():
 return save(_that.tunnel);case RemoveTunnel():
 return remove(_that.id);case ToggleTunnel():
-return toggle(_that.id);}
+return toggle(_that.id);case QuitAgent():
+return quit();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -165,12 +170,13 @@ return toggle(_that.id);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,TResult? Function()?  quit,}) {final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that.tunnel);case RemoveTunnel() when remove != null:
 return remove(_that.id);case ToggleTunnel() when toggle != null:
-return toggle(_that.id);case _:
+return toggle(_that.id);case QuitAgent() when quit != null:
+return quit();case _:
   return null;
 
 }
@@ -390,5 +396,37 @@ as String,
 
 
 }
+
+/// @nodoc
+
+
+class QuitAgent extends AgentCommand {
+  const QuitAgent(): super._();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is QuitAgent);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'AgentCommand.quit()';
+}
+
+
+}
+
+
+
 
 // dart format on

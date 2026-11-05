@@ -6,6 +6,9 @@ import 'package:core/src/agent_command.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 
 abstract interface class AgentClient {
+  /// Which build the agent is, or '' from an agent too old to say.
+  Future<String> get identity;
+
   Stream<TunnelsSnapshot> get snapshots;
 
   Stream<void> get aboutRequests;
@@ -18,6 +21,7 @@ abstract interface class AgentClient {
 class SocketAgentClient(final Socket _socket) implements AgentClient {
   final _snapshots = StreamController<TunnelsSnapshot>();
   final _aboutRequests = StreamController<void>();
+  final _identity = Completer<String>();
 
   this {
     _socket.done.ignore();
@@ -29,6 +33,7 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
           _receive,
           onError: (Object exception) => stderr.writeln('Ignoring $exception'),
           onDone: () {
+            if (!_identity.isCompleted) _identity.complete('');
             unawaited(_snapshots.close());
             unawaited(_aboutRequests.close());
           },
@@ -42,6 +47,9 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
           0,
         ),
       );
+
+  @override
+  Future<String> get identity => _identity.future;
 
   @override
   Stream<TunnelsSnapshot> get snapshots => _snapshots.stream;
@@ -59,6 +67,8 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
   void _receive(String line) {
     try {
       switch (jsonDecode(line)) {
+        case {'agent': final String identity} when !_identity.isCompleted:
+          _identity.complete(identity);
         case {'show': 'about'}:
           _aboutRequests.add(null);
         case final json:

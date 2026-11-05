@@ -29,7 +29,11 @@ Future<void> _start() async {
     stderr.writeln('Could not load the saved tunnels: $exception');
   }
 
-  final server = await AgentServer.bind(agentSocketPath(), manager);
+  final server = await AgentServer.bind(
+    agentSocketPath(),
+    manager,
+    identity: agentIdentity(Platform.resolvedExecutable),
+  );
   if (server == null) {
     stdout.writeln('Another Taka agent is running');
     Application.instance.quit(0);
@@ -47,6 +51,21 @@ Future<void> _start() async {
           ? '${folder.parent.parent.path}/taka'
           : folder.path.substring(0, loginItems));
 
+  var isQuitting = false;
+  Future<void> quit() async {
+    if (isQuitting) return;
+    isQuitting = true;
+    try {
+      await server.close();
+      await manager.close();
+    } finally {
+      Application.instance.quit(0);
+    }
+  }
+
+  // A newer window's quit command closes the manager.
+  manager.changes.listen(null, onDone: () => unawaited(quit()));
+
   AgentTray(
     manager: manager,
     assetsPath: isAppBundle
@@ -57,14 +76,7 @@ Future<void> _start() async {
       if (!server.showAbout() || Platform.isMacOS) unawaited(_open(app));
     },
     onSettings: () => unawaited(_open(app)),
-    onQuit: () async {
-      try {
-        await server.close();
-        await manager.close();
-      } finally {
-        Application.instance.quit(0);
-      }
-    },
+    onQuit: quit,
   ).show();
 }
 
