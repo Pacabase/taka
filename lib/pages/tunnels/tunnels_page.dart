@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
+import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_form.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
@@ -111,36 +112,13 @@ class const _TunnelList({
             style: TextStyle(color: colors.textSecondary),
           ),
         ),
-        Ready(:final snapshot) => ReorderableListView.builder(
-          buildDefaultDragHandles: false,
-          itemCount: snapshot.tunnels.length,
-          onReorderItem: (from, to) =>
+        Ready(:final snapshot) => ReorderableRows(
+          onReorder: (from, to) =>
               _send(context, AgentCommand.move(snapshot.tunnels[from].id, to)),
-          proxyDecorator: (child, _, animation) => AnimatedBuilder(
-            animation: animation,
-            builder: (context, child) => DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.surface,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(
-                      alpha: 0.25 * animation.value,
-                    ),
-                    blurRadius: 8,
-                  ),
-                ],
-              ),
-              child: child,
-            ),
-            child: child,
-          ),
-          itemBuilder: (context, index) {
-            final tunnel = snapshot.tunnels[index];
-
-            return ReorderableDragStartListener(
-              key: ValueKey(tunnel.id),
-              index: index,
-              child: Column(
+          children: [
+            for (final (index, tunnel) in snapshot.tunnels.indexed)
+              Column(
+                key: ValueKey(tunnel.id),
                 children: [
                   TunnelTile(
                     tunnel: tunnel,
@@ -160,8 +138,7 @@ class const _TunnelList({
                     ),
                 ],
               ),
-            );
-          },
+          ],
         ),
       },
     );

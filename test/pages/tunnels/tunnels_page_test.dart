@@ -48,7 +48,7 @@ void main() {
     final drag = await tester.startGesture(
       tester.getCenter(find.text('Database')),
     );
-    for (var step = 0; step < 8; step++) {
+    for (var step = 0; step < 12; step++) {
       await drag.moveBy(const Offset(0, 10));
       await tester.pump();
     }
