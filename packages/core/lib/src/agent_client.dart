@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:core/src/agent_command.dart';
+import 'package:core/src/agent_message.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 import 'package:fimber/fimber.dart';
 
@@ -70,15 +71,15 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
 
   void _receive(String line) {
     try {
-      switch (jsonDecode(line)) {
-        case {'agent': final String identity}:
+      switch (AgentMessage.fromJson(jsonDecode(line))) {
+        case AgentIdentity(:final identity):
           _identify(identity);
-        case {'show': 'about'}:
+        case ShowAbout():
           _aboutRequests.add(null);
-        case final json:
+        case AgentSnapshot(:final snapshot):
           // An agent that sends a snapshot first is too old to say.
           _identify('');
-          _snapshots.add(TunnelsSnapshot.fromJson(json));
+          _snapshots.add(snapshot);
       }
     } on FormatException catch (exception) {
       _log.w('Ignoring $line', ex: exception);
