@@ -19,12 +19,19 @@ Future<AgentClient> connectToAgent() async {
     // No agent is running yet.
   }
 
-  await Process.start(
-    agent,
-    [],
-    mode: ProcessStartMode.detached,
-    environment: {'TAKA_APP': app},
-  );
+  // Through open, macOS starts the agent as an app of its own, so Taka doesn't
+  // stay in the Dock "running in the background" once this window quits.
+  if (agent.indexOf('.app/Contents/MacOS/') case final bundleEnd
+      when bundleEnd != -1) {
+    await Process.run('open', ['-g', agent.substring(0, bundleEnd + 4)]);
+  } else {
+    await Process.start(
+      agent,
+      [],
+      mode: ProcessStartMode.detached,
+      environment: {'TAKA_APP': app},
+    );
+  }
   final deadline = DateTime.now().add(const Duration(seconds: 5));
   while (true) {
     await Future<void>.delayed(const Duration(milliseconds: 100));
