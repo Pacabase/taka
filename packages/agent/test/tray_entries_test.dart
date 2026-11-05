@@ -22,6 +22,12 @@ void main() {
     localPort: 1080,
   );
   const web = Tunnel(id: 'c3', name: 'Web', sshHost: 'web', localPort: 8080);
+  const other = Tunnel(
+    id: 'd4',
+    name: 'Other',
+    sshHost: 'web',
+    localPort: 8081,
+  );
 
   List<String> menu(TunnelsSnapshot snapshot) =>
       trayEntries(snapshot).map((entry) => '$entry').toList();
@@ -43,11 +49,12 @@ void main() {
 
   test('shows each tunnel with how it is doing', () {
     const snapshot = TunnelsSnapshot(
-      tunnels: [database, proxy, web],
+      tunnels: [database, proxy, web, other],
       statuses: {
         'a1': Connected(),
         'b2': Connecting(),
         'c3': Failed('127.0.0.1:8080 is already in use'),
+        'd4': Reconnecting('Connection to bastion closed by remote host.'),
       },
     );
 
@@ -56,6 +63,8 @@ void main() {
       '☑ Proxy — connecting…',
       '☐ Web — failed',
       '    127.0.0.1:8080 is already in use',
+      '☑ Other — reconnecting…',
+      '    Connection to bastion closed by remote host.',
       '---',
       'Copy Address ▸ Production database — localhost:15432 ⧉ localhost:15432',
       'Connect All',

@@ -150,4 +150,21 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('a reconnecting tunnel says why it dropped and stays on', (
+    tester,
+  ) async {
+    await pumpTile(
+      tester,
+      status: const Reconnecting(
+        'Connection to bastion closed by remote host.',
+      ),
+    );
+
+    expect(
+      find.text('Reconnecting — Connection to bastion closed by remote host.'),
+      findsOneWidget,
+    );
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
 }

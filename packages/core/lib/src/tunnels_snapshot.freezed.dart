@@ -56,14 +56,15 @@ extension TunnelStatusPatterns on TunnelStatus {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Stopped value)?  stopped,TResult Function( Connecting value)?  connecting,TResult Function( Connected value)?  connected,TResult Function( Failed value)?  failed,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Stopped value)?  stopped,TResult Function( Connecting value)?  connecting,TResult Function( Connected value)?  connected,TResult Function( Failed value)?  failed,TResult Function( Reconnecting value)?  reconnecting,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped(_that);case Connecting() when connecting != null:
 return connecting(_that);case Connected() when connected != null:
 return connected(_that);case Failed() when failed != null:
-return failed(_that);case _:
+return failed(_that);case Reconnecting() when reconnecting != null:
+return reconnecting(_that);case _:
   return orElse();
 
 }
@@ -81,14 +82,15 @@ return failed(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Stopped value)  stopped,required TResult Function( Connecting value)  connecting,required TResult Function( Connected value)  connected,required TResult Function( Failed value)  failed,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Stopped value)  stopped,required TResult Function( Connecting value)  connecting,required TResult Function( Connected value)  connected,required TResult Function( Failed value)  failed,required TResult Function( Reconnecting value)  reconnecting,}){
 final _that = this;
 switch (_that) {
 case Stopped():
 return stopped(_that);case Connecting():
 return connecting(_that);case Connected():
 return connected(_that);case Failed():
-return failed(_that);}
+return failed(_that);case Reconnecting():
+return reconnecting(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -102,14 +104,15 @@ return failed(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Stopped value)?  stopped,TResult? Function( Connecting value)?  connecting,TResult? Function( Connected value)?  connected,TResult? Function( Failed value)?  failed,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Stopped value)?  stopped,TResult? Function( Connecting value)?  connecting,TResult? Function( Connected value)?  connected,TResult? Function( Failed value)?  failed,TResult? Function( Reconnecting value)?  reconnecting,}){
 final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped(_that);case Connecting() when connecting != null:
 return connecting(_that);case Connected() when connected != null:
 return connected(_that);case Failed() when failed != null:
-return failed(_that);case _:
+return failed(_that);case Reconnecting() when reconnecting != null:
+return reconnecting(_that);case _:
   return null;
 
 }
@@ -126,13 +129,14 @@ return failed(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  stopped,TResult Function()?  connecting,TResult Function( String warning)?  connected,TResult Function( String message)?  failed,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  stopped,TResult Function()?  connecting,TResult Function( String warning)?  connected,TResult Function( String message)?  failed,TResult Function( String reason)?  reconnecting,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped();case Connecting() when connecting != null:
 return connecting();case Connected() when connected != null:
 return connected(_that.warning);case Failed() when failed != null:
-return failed(_that.message);case _:
+return failed(_that.message);case Reconnecting() when reconnecting != null:
+return reconnecting(_that.reason);case _:
   return orElse();
 
 }
@@ -150,13 +154,14 @@ return failed(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  stopped,required TResult Function()  connecting,required TResult Function( String warning)  connected,required TResult Function( String message)  failed,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  stopped,required TResult Function()  connecting,required TResult Function( String warning)  connected,required TResult Function( String message)  failed,required TResult Function( String reason)  reconnecting,}) {final _that = this;
 switch (_that) {
 case Stopped():
 return stopped();case Connecting():
 return connecting();case Connected():
 return connected(_that.warning);case Failed():
-return failed(_that.message);}
+return failed(_that.message);case Reconnecting():
+return reconnecting(_that.reason);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -170,13 +175,14 @@ return failed(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  stopped,TResult? Function()?  connecting,TResult? Function( String warning)?  connected,TResult? Function( String message)?  failed,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  stopped,TResult? Function()?  connecting,TResult? Function( String warning)?  connected,TResult? Function( String message)?  failed,TResult? Function( String reason)?  reconnecting,}) {final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped();case Connecting() when connecting != null:
 return connecting();case Connected() when connected != null:
 return connected(_that.warning);case Failed() when failed != null:
-return failed(_that.message);case _:
+return failed(_that.message);case Reconnecting() when reconnecting != null:
+return reconnecting(_that.reason);case _:
   return null;
 
 }
@@ -377,6 +383,74 @@ class _$FailedCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') $Res call({Object? message = null,}) {
   return _then(Failed(
 null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class Reconnecting extends TunnelStatus {
+  const Reconnecting(this.reason): super._();
+  
+
+ final  String reason;
+
+/// Create a copy of TunnelStatus
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ReconnectingCopyWith<Reconnecting> get copyWith => _$ReconnectingCopyWithImpl<Reconnecting>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Reconnecting&&(identical(other.reason, reason) || other.reason == reason));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,reason);
+}
+
+@override
+String toString() {
+    return 'TunnelStatus.reconnecting(reason: $reason)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ReconnectingCopyWith<$Res> implements $TunnelStatusCopyWith<$Res> {
+  factory $ReconnectingCopyWith(Reconnecting value, $Res Function(Reconnecting) _then) = _$ReconnectingCopyWithImpl;
+@useResult
+$Res call({
+ String reason
+});
+
+
+
+
+}
+/// @nodoc
+class _$ReconnectingCopyWithImpl<$Res>
+    implements $ReconnectingCopyWith<$Res> {
+  _$ReconnectingCopyWithImpl(this._self, this._then);
+
+  final Reconnecting _self;
+  final $Res Function(Reconnecting) _then;
+
+/// Create a copy of TunnelStatus
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? reason = null,}) {
+  return _then(Reconnecting(
+null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

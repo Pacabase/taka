@@ -315,30 +315,156 @@ void main() {
     expect(manager.snapshot.statusOf('b2'), const Stopped());
   });
 
-  test('a dropped tunnel says Disconnected', () async {
-    final manager = await loaded();
-    await manager.toggle('a1');
-
-    tunnel.drop();
-    await pumpEventQueue();
-
-    expect(manager.snapshot.statusOf('a1'), const Failed('Disconnected'));
-    expect(manager.snapshot.connectedCount, 0);
-  });
-
-  test('a dropped tunnel says why ssh stopped', () async {
-    final manager = await loaded();
-    await manager.toggle('a1');
-
-    tunnel.dropWith(
-      const SshTunnelException('Connection to bastion closed by remote host.'),
+  group('a dropped tunnel', () {
+    const closed = SshTunnelException(
+      'Connection to bastion closed by remote host.',
     );
-    await pumpEventQueue();
-
-    expect(
-      manager.snapshot.statusOf('a1'),
-      const Failed('Connection to bastion closed by remote host.'),
+    const denied = SshTunnelException(
+      'deploy@bastion: Permission denied (publickey).',
+      isPermanent: true,
     );
+    const timedOut = SshTunnelException(
+      'ssh: connect to host bastion port 22: Operation timed out',
+    );
+    late List<FakeTunnel> opened;
+    late List<SshException> failures;
+
+    // Runs [body] in fake time, with database connected once; [failures] are
+    // what the next tries to open it throw.
+    void dropped(void Function(TunnelManager manager, FakeAsync time) body) =>
+        fakeAsync((time) {
+          opened = [];
+          failures = [];
+          when(openAnyTunnel).thenAnswer((_) async {
+            if (failures.isNotEmpty) throw failures.removeAt(0);
+            return (opened..add(FakeTunnel(15432))).last;
+          });
+          final manager = TunnelManager(store: store, client: client);
+          unawaited(manager.load().then((_) => manager.toggle('a1')));
+          time.flushMicrotasks();
+
+          body(manager, time);
+
+          unawaited(manager.close());
+          time.flushMicrotasks();
+        });
+
+    void drop(FakeAsync time, [Object? reason]) {
+      reason == null ? opened.last.drop() : opened.last.dropWith(reason);
+      time.flushMicrotasks();
+    }
+
+    test('says why, and connects again after a second', () {
+      dropped((manager, time) {
+        drop(time, closed);
+        expect(manager.snapshot.statusOf('a1'), Reconnecting(closed.message));
+
+        time.elapse(const Duration(seconds: 1));
+        expect(opened, hasLength(2));
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+      });
+    });
+
+    test('says Disconnected when ssh gives no reason', () {
+      dropped((manager, time) {
+        drop(time);
+
+        expect(
+          manager.snapshot.statusOf('a1'),
+          const Reconnecting('Disconnected'),
+        );
+      });
+    });
+
+    test('waits longer after each try that fails', () {
+      dropped((manager, time) {
+        failures = [timedOut, timedOut];
+        drop(time, closed);
+
+        time.elapse(const Duration(seconds: 1));
+        expect(manager.snapshot.statusOf('a1'), Reconnecting(timedOut.message));
+        time.elapse(const Duration(seconds: 2, milliseconds: 3999));
+        expect(opened, hasLength(1));
+
+        time.elapse(const Duration(milliseconds: 1));
+        expect(opened, hasLength(2));
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+      });
+    });
+
+    test('waits no longer than the last delay', () {
+      dropped((manager, time) {
+        failures = List.filled(10, timedOut, growable: true);
+        drop(time, closed);
+
+        time.elapse(const Duration(seconds: 1 + 2 + 4 + 8 + 15 + 30 * 5));
+        expect(opened, hasLength(1));
+
+        time.elapse(const Duration(seconds: 30));
+        expect(opened, hasLength(2));
+      });
+    });
+
+    test('starts over once a connection has held for a minute', () {
+      dropped((manager, time) {
+        failures = [timedOut];
+        drop(time, closed);
+        time.elapse(const Duration(seconds: 1 + 2));
+        expect(opened, hasLength(2));
+
+        time.elapse(const Duration(minutes: 1));
+        drop(time, closed);
+        time.elapse(const Duration(seconds: 1));
+
+        expect(opened, hasLength(3));
+      });
+    });
+
+    test('stops on a failure that waiting will not fix', () {
+      dropped((manager, time) {
+        failures = [denied];
+        drop(time, closed);
+
+        time.elapse(const Duration(minutes: 5));
+
+        expect(manager.snapshot.statusOf('a1'), Failed(denied.message));
+        expect(opened, hasLength(1));
+      });
+    });
+
+    test('fails at once when it drops for good', () {
+      dropped((manager, time) {
+        drop(time, denied);
+
+        time.elapse(const Duration(minutes: 5));
+
+        expect(manager.snapshot.statusOf('a1'), Failed(denied.message));
+        expect(opened, hasLength(1));
+      });
+    });
+
+    test('stays off when turned off while it waits', () {
+      dropped((manager, time) {
+        drop(time, closed);
+
+        unawaited(manager.toggle('a1'));
+        time.elapse(const Duration(minutes: 5));
+
+        expect(manager.snapshot.statusOf('a1'), const Stopped());
+        expect(opened, hasLength(1));
+      });
+    });
+
+    test('tries no more once the manager closes', () {
+      dropped((manager, time) {
+        drop(time, closed);
+
+        unawaited(manager.close());
+        time.elapse(const Duration(minutes: 5));
+
+        expect(opened, hasLength(1));
+      });
+    });
   });
 
   group('a warning from ssh', () {
@@ -486,7 +612,7 @@ void main() {
         'I/Tunnels: Stopping Production database',
         connecting,
         'I/Tunnels: Connected Production database',
-        'W/Tunnels: Production database failed: Disconnected',
+        'W/Tunnels: Production database dropped: Disconnected; reconnecting in 1s',
       ]);
     });
 

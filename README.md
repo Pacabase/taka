@@ -24,7 +24,6 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### First preview (0.1, macOS)
 
-- [ ] **Reconnect a dropped tunnel** with backoff and keepalive, and stop on a failure that won't heal (host key changed, port in use).
 - [ ] **Launch at login**, and reconnect the tunnels that were on.
 - [ ] **Name the agent in 1Password's prompt** — it reads `dart:Taka`, a name that comes from how Dart starts `ssh`; look at it with `system_ssh`.
 - [ ] **Empty and error states** — a first run that explains what a tunnel is, and a proper screen when the agent can't start.
