@@ -93,6 +93,15 @@ void main() {
   );
 
   blocTest<TunnelsBloc, TunnelsState>(
+    'only sends a move while it has no snapshot yet',
+    build: () => TunnelsBloc(agent: agent),
+    act: (bloc) =>
+        bloc.add(const TunnelsEvent.send(AgentCommand.move('b2', 0))),
+    expect: () => const <TunnelsState>[],
+    verify: (_) => expect(agent.sent, const [AgentCommand.move('b2', 0)]),
+  );
+
+  blocTest<TunnelsBloc, TunnelsState>(
     'is Closed when the agent goes away before its first snapshot',
     build: () => TunnelsBloc(agent: agent),
     act: (bloc) async {

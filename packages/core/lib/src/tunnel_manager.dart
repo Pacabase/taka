@@ -70,9 +70,12 @@ class TunnelManager({
     await _persist();
   }
 
-  Future<void> move(String id, int index) {
-    _tunnels = _tunnels.moved(id, index);
-    return _persist();
+  Future<void> move(String id, int index) async {
+    final moved = _tunnels.moved(id, index);
+    if (identical(moved, _tunnels)) return;
+
+    _tunnels = moved;
+    await _persist();
   }
 
   Future<void> toggle(String id) async {

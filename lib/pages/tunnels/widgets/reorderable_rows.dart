@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:taka/theme/taka_colors.dart';
 
 /// A column of keyed [children] that can be dragged into a new order.
@@ -22,25 +24,20 @@ class const ReorderableRows({
 class _ReorderableRowsState extends State<ReorderableRows> {
   static const _duration = Duration(milliseconds: 120);
 
-  final _rowKeys = <Key, GlobalKey>{};
+  final _column = GlobalKey();
   _Drag? _drag;
-  // Shown until the moved order arrives, so the row doesn't jump back.
-  List<Widget>? _moved;
   // Stays hovered until the pointer moves, as its own hover starts a frame late.
   Key? _dropped;
-
-  List<Widget> get _children => _moved ?? widget.children;
 
   @override
   void didUpdateWidget(ReorderableRows oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final keys = [for (final child in widget.children) child.key];
-    if (!listEquals(keys, [
-      for (final child in oldWidget.children) child.key,
-    ])) {
-      _moved = null;
+    if (!listEquals(
+      [for (final child in widget.children) child.key],
+      [for (final child in oldWidget.children) child.key],
+    )) {
+      _drag = null;
     }
-    _rowKeys.removeWhere((key, _) => !keys.contains(key));
   }
 
   @override
@@ -58,15 +55,16 @@ class _ReorderableRowsState extends State<ReorderableRows> {
               IgnorePointer(
                 ignoring: drag != null,
                 child: Column(
+                  key: _column,
                   children: [
-                    for (final (index, child) in _children.indexed)
+                    for (final (index, child) in widget.children.indexed)
                       KeyedSubtree(
-                        key: _rowKeys.putIfAbsent(child.key!, GlobalKey.new),
+                        key: child.key,
                         child: GestureDetector(
+                          supportedDevices: const {PointerDeviceKind.mouse},
                           onVerticalDragStart: (_) => _start(index),
                           onVerticalDragUpdate: _update,
                           onVerticalDragEnd: (_) => _end(),
-                          onVerticalDragCancel: _end,
                           child: TweenAnimationBuilder(
                             tween: Tween(end: drag?.shiftOf(index) ?? 0),
                             duration: drag == null ? Duration.zero : _duration,
@@ -108,7 +106,7 @@ class _ReorderableRowsState extends State<ReorderableRows> {
                     child: IgnorePointer(
                       child: _Lifted(
                         isLifted: true,
-                        child: _lifted(_children[drag.from]),
+                        child: _lifted(widget.children[drag.from]),
                       ),
                     ),
                   ),
@@ -131,17 +129,15 @@ class _ReorderableRowsState extends State<ReorderableRows> {
   );
 
   void _start(int index) {
-    if (_moved != null) return;
-
-    final heights = [
-      for (final child in _children)
-        _rowKeys[child.key]!.currentContext!.size!.height,
-    ];
-    final tops = List.generate(
-      heights.length,
-      (index) => heights.take(index).fold(0.0, (sum, height) => sum + height),
+    final column = _column.currentContext!.findRenderObject()! as RenderFlex;
+    final rows = column.getChildrenAsList();
+    setState(
+      () => _drag = _Drag(
+        index,
+        [for (final row in rows) (row.parentData! as FlexParentData).offset.dy],
+        [for (final row in rows) row.size.height],
+      ),
     );
-    setState(() => _drag = _Drag(index, tops, heights));
   }
 
   void _update(DragUpdateDetails details) {
@@ -161,12 +157,7 @@ class _ReorderableRowsState extends State<ReorderableRows> {
     if (_drag case _Drag(:final from, :final to)) {
       setState(() {
         _drag = null;
-        _dropped = _children[from].key;
-        if (to != from) {
-          _moved = [..._children]
-            ..removeAt(from)
-            ..insert(to, _children[from]);
-        }
+        _dropped = widget.children[from].key;
       });
       if (to != from) widget.onReorder(from, to);
     }
@@ -184,11 +175,9 @@ class _Drag(
 
   double get _height => heights[from];
 
-  double get slot =>
-      heights.indexed
-          .where((row) => row.$1 != from && _placeOf(row.$1) < to)
-          .fold(0.0, (sum, row) => sum + row.$2) -
-      tops[from];
+  double get slot => to <= from
+      ? tops[to] - tops[from]
+      : tops[to] + heights[to] - tops[from] - _height;
 
   void moveBy(double delta) {
     final top = tops[from];
@@ -202,14 +191,11 @@ class _Drag(
     ].length;
   }
 
-  double shiftOf(int index) => switch (_placeOf(index)) {
-    _ when index == from => 0,
-    final place when index < from && place >= to => _height,
-    final place when index > from && place < to => -_height,
+  double shiftOf(int index) => switch (index) {
+    _ when index < from && index >= to => _height,
+    _ when index > from && index <= to => -_height,
     _ => 0,
   };
-
-  int _placeOf(int index) => index < from ? index : index - 1;
 }
 
 class const _Lifted({required final bool isLifted, required super.child})

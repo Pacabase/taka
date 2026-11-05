@@ -542,6 +542,18 @@ void main() {
     expect(store.tunnels, [proxy, database]);
   });
 
+  test('move saves nothing when nothing moves', () async {
+    final manager = await loaded();
+    final changes = <TunnelsSnapshot>[];
+    manager.changes.listen(changes.add);
+
+    await manager.move('a1', 0);
+    await manager.move('gone', 1);
+
+    expect(changes, isEmpty);
+    expect(store.saveCount, 0);
+  });
+
   test('handle runs each command', () async {
     final manager = await loaded();
     const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
