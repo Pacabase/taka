@@ -9,7 +9,6 @@ import 'package:system_ssh/system_ssh.dart';
 
 void main() => runNativeApp(_run);
 
-// An uncaught error still ends the agent, but is logged first.
 void _run() => runZonedGuarded(() => unawaited(_start()), (error, stack) {
   Fimber.e('Uncaught error', ex: error, stacktrace: stack);
   Application.instance.quit(1);

@@ -9,8 +9,6 @@ class FileLogTree._({
   required final RandomAccessFile _output,
   required final DateTime Function() _clock,
 }) extends LogTree {
-  /// Starts a new `<process>-<time>.log` in [directory] and keeps the newest
-  /// [keep] of that process's files.
   static FileLogTree open(
     Directory directory, {
     required String process,

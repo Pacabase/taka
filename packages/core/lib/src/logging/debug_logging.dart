@@ -4,8 +4,6 @@ import 'package:core/src/logging/file_log_tree.dart';
 import 'package:core/src/paths.dart';
 import 'package:fimber/fimber.dart';
 
-/// Writes [process]'s logs to a file only while debug logging is on. The
-/// switch is a file both processes see, and it's off until someone turns it on.
 class DebugLogging(
   final String process, {
   final Directory? logs,
