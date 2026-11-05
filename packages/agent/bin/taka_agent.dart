@@ -75,6 +75,12 @@ Future<void> _start() async {
   AgentTray(
     manager: manager,
     debugLogging: debugLogging,
+    // macOS registers the running app, so a build outside a bundle can't.
+    launchAtLogin:
+        LaunchAtLogin.isSupported() &&
+            (agentBundle != null || !Platform.isMacOS)
+        ? LaunchAtLogin.create()
+        : null,
     assetsPath: agentAssets,
     onAbout: () {
       // On macOS, open also brings an open window to the front.

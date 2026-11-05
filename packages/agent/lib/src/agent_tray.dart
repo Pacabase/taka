@@ -9,6 +9,7 @@ import 'package:nativeapi/nativeapi.dart';
 class AgentTray({
   required final TunnelManager manager,
   required final DebugLogging debugLogging,
+  final LaunchAtLogin? launchAtLogin,
   required final String assetsPath,
   required final void Function() onAbout,
   required final void Function() onSettings,
@@ -52,7 +53,13 @@ class AgentTray({
 
   void _rebuild(TunnelsSnapshot snapshot) {
     final icon = _icon;
-    final menu = _menu(trayEntries(snapshot, isLogging: debugLogging.isOn));
+    final menu = _menu(
+      trayEntries(
+        snapshot,
+        isLogging: debugLogging.isOn,
+        launchesAtLogin: launchAtLogin?.isEnabled,
+      ),
+    );
     if (icon == null || menu == null) return;
 
     final count = snapshot.connectedCount;
@@ -129,11 +136,30 @@ class AgentTray({
     TrayAction.connectAll => _guard(manager.connectAll()),
     TrayAction.disconnectAll => _guard(manager.disconnectAll()),
     TrayAction.about => onAbout(),
+    TrayAction.launchAtLogin => _toggleLaunchAtLogin(),
     TrayAction.debugLogging => _toggleDebugLogging(),
     TrayAction.showLogs => _guard(debugLogging.reveal()),
     TrayAction.settings => onSettings(),
     TrayAction.quit => _guard(onQuit()),
   };
+
+  // macOS may want the login item approved in System Settings first.
+  void _toggleLaunchAtLogin() {
+    if (launchAtLogin case final login?) {
+      final isEnabling = !login.isEnabled;
+      if (!(isEnabling ? login.enable() : login.disable())) {
+        Fimber.w('Could not turn launch at login ${isEnabling ? 'on' : 'off'}');
+        if (isEnabling && Platform.isMacOS) {
+          _guard(
+            Process.run('open', [
+              'x-apple.systempreferences:com.apple.LoginItems-Settings.extension',
+            ]),
+          );
+        }
+      }
+      _rebuild(manager.snapshot);
+    }
+  }
 
   void _toggleDebugLogging() {
     debugLogging.turn(on: !debugLogging.isOn);

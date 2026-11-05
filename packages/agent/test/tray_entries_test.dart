@@ -131,6 +131,35 @@ void main() {
     );
   });
 
+  test('Launch at Login shows whether it is on, where it is offered', () {
+    List<String> withLaunch(bool? launches) => [
+      for (final entry in trayEntries(
+        const TunnelsSnapshot(),
+        launchesAtLogin: launches,
+      ))
+        if ('$entry'.contains('Launch at Login')) '$entry',
+    ];
+
+    expect(withLaunch(null), isEmpty);
+    expect(withLaunch(false), ['☐ Launch at Login']);
+    expect(withLaunch(true), ['☑ Launch at Login']);
+  });
+
+  test('Launch at Login comes right after About', () {
+    final labels = [
+      for (final entry in trayEntries(
+        const TunnelsSnapshot(),
+        launchesAtLogin: false,
+      ))
+        '$entry',
+    ];
+
+    expect(
+      labels.indexOf('☐ Launch at Login'),
+      labels.indexOf('About Taka') + 1,
+    );
+  });
+
   test('each tunnel line toggles its own tunnel', () {
     final entries = trayEntries(
       const TunnelsSnapshot(tunnels: [database, proxy]),
