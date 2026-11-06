@@ -19,13 +19,15 @@ Stream<LicenseEntry> bundledLicenses() async* {
       await rootBundle.loadString(file),
     );
   }
-  yield* Stream.fromIterable(
-    agentLicences(await rootBundle.loadString('assets/agent_licences.json')),
-  );
+  for (final entry in agentLicences(
+    await rootBundle.loadString('assets/agent_licences.json'),
+  )) {
+    yield entry;
+  }
 }
 
-/// The background helper's packages, from `make licences`, since Flutter
-/// collects licences for the window's packages only.
+/// Licences of the background helper's packages that Flutter doesn't list
+/// already.
 Iterable<LicenseEntry> agentLicences(String json) => [
   for (final entry in jsonDecode(json) as List<Object?>)
     if (entry case {

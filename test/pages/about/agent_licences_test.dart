@@ -1,13 +1,12 @@
 @Tags(['unit'])
 library;
 
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/about/about_page.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('reads each package and its licence', () {
     final entries = agentLicences(
       '[{"package": "nativeapi", "licence": "MIT License\\n\\nText"}]',
@@ -20,12 +19,26 @@ void main() {
     ]);
   });
 
-  test('the bundled list has the packages the helper ships', () {
-    final packages = agentLicences(
-      File('assets/agent_licences.json').readAsStringSync(),
-    ).expand((LicenseEntry entry) => entry.packages);
+  group('About', () {
+    late List<String> packages;
 
-    expect(packages, containsAll(['nativeapi', 'cnativeapi', 'process']));
-    expect(packages, isNot(contains('core')));
+    setUpAll(
+      () async => packages = await bundledLicenses()
+          .expand((entry) => entry.packages)
+          .toList(),
+    );
+
+    test("lists the helper's packages beside Taka's own", () {
+      expect(
+        packages,
+        containsAll(['Lucide', 'nativeapi', 'cnativeapi', 'process']),
+      );
+    });
+
+    test('adds none that Flutter lists for the window already', () {
+      for (final listed in ['crypto', 'file', 'glob', 'pub_semver', 'yaml']) {
+        expect(packages, isNot(contains(listed)));
+      }
+    });
   });
 }

@@ -74,7 +74,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/flutter
       - run: fvm flutter pub get --enforce-lockfile
-      - run: cd packages/agent && fvm dart pub get --enforce-lockfile
+      - run: fvm dart pub get --enforce-lockfile -C packages/agent
       # The helper's licences in About must match what it ships.
       - run: fvm dart run tool/agent_licences.dart && git diff --exit-code assets/agent_licences.json
       - run: fvm dart format --output=none --set-exit-if-changed lib test tool

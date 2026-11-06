@@ -12,7 +12,7 @@ help:
 	@echo "make macos    - Build Taka.app with its agent inside"
 	@echo "make run      - Run the app from source, with a freshly built agent"
 	@echo "make test     - Run every unit test"
-	@echo "make licences - List the background helper's package licences for About"
+	@echo "make licences - Regenerate the background helper's licences for About"
 
 agent:
 	cd packages/agent && fvm dart build cli
@@ -37,4 +37,6 @@ test:
 	cd packages/agent && fvm dart test --tags unit
 
 licences:
+	fvm flutter pub get --enforce-lockfile
+	fvm dart pub get --enforce-lockfile -C packages/agent
 	fvm dart run tool/agent_licences.dart
