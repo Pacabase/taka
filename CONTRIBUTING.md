@@ -9,7 +9,7 @@ fvm flutter run -d macos              # the app from source
 fvm flutter build macos --release     # build/macos/Build/Products/Release/Taka.app
 ```
 
-Either builds the agent (`packages/agent`, the background helper that owns the tray and the tunnels) for your Mac's chip and puts it inside the app.
+Both build `packages/agent` into the app too.
 
 ## Tests
 
