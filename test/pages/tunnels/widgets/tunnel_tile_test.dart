@@ -12,6 +12,8 @@ import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_theme.dart';
 
+import '../fake_agent.dart';
+
 void main() {
   const unnamed = Tunnel(
     id: 'a',
@@ -93,7 +95,8 @@ void main() {
     await tester.pumpWidget(
       TakaApp(
         version: '1.2.3',
-        home: Scaffold(
+        connect: () async => FakeAgent(),
+        home: (_) => Scaffold(
           body: Column(
             children: [
               TunnelTile(
@@ -108,6 +111,7 @@ void main() {
         ),
       ),
     );
+    await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pump();
     expect(find.byTooltip('Edit'), findsOneWidget);
