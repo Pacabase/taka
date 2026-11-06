@@ -4,7 +4,6 @@ library;
 import 'package:core/core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
@@ -147,46 +146,42 @@ void main() {
   ) async {
     await pumpTile(
       tester,
-      status: const Connected(warning: 'db.internal:5432: Connection refused'),
+      status: const Connected(warning: 'Connection refused'),
     );
 
     expect(
-      find.text("Can't reach db.internal:5432: Connection refused"),
+      find.text("Can't reach localhost:5432 through the server."),
       findsOneWidget,
     );
+    expect(find.byTooltip('Connection refused'), findsOneWidget);
+  });
+
+  testWidgets("a failed tunnel says why plainly, with ssh's words on hover", (
+    tester,
+  ) async {
+    const message = 'user@db: Permission denied (publickey).';
+    await pumpTile(tester, status: const Failed(message));
+
+    expect(find.text('The server refused the login.'), findsOneWidget);
+    expect(find.byTooltip(message), findsOneWidget);
+  });
+
+  testWidgets('a failure with no message has no tooltip', (tester) async {
+    await pumpTile(tester, status: const Failed(''));
+
+    expect(find.text("It couldn't connect."), findsOneWidget);
+    expect(find.byType(Tooltip), findsNothing);
   });
 
   testWidgets('a reconnecting tunnel says why it dropped and stays on', (
     tester,
   ) async {
-    await pumpTile(
-      tester,
-      status: const Reconnecting(
-        'Connection to bastion closed by remote host.',
-      ),
-    );
-
-    expect(
-      find.text('Reconnecting — Connection to bastion closed by remote host.'),
-      findsOneWidget,
-    );
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  });
-
-  testWidgets('a long reason for reconnecting is shown in full', (
-    tester,
-  ) async {
-    const reason =
-        'ssh: connect to host bastion.example.com port 22: Operation timed out';
-    await tester.binding.setSurfaceSize(const Size(320, 400));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    const reason = 'Connection to bastion closed by remote host.';
     await pumpTile(tester, status: const Reconnecting(reason));
 
-    final caption = tester.renderObject<RenderParagraph>(
-      find.text('Reconnecting — $reason'),
-    );
-    expect(caption.didExceedMaxLines, isFalse);
-    expect(caption.size.height, greaterThan(20));
+    expect(find.text('Reconnecting — The connection dropped.'), findsOneWidget);
+    expect(find.byTooltip(reason), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
   testWidgets('the copy button copies the SSH command, and says so', (

@@ -589,24 +589,24 @@ void main() {
       time.flushMicrotasks();
     });
 
-    test('keeps the tunnel connected and names the destination', () {
+    test("keeps the tunnel connected with ssh's reason", () {
       warned(database, (manager, _) {
         sshSays(refused);
 
         expect(
           manager.snapshot.statusOf('a1'),
-          const Connected(warning: 'db.internal:5432: Connection refused'),
+          const Connected(warning: 'Connection refused'),
         );
       });
     });
 
-    test('for a SOCKS proxy says a destination refused', () {
+    test("keeps a SOCKS proxy connected with ssh's reason", () {
       warned(proxy, (manager, _) {
         sshSays(refused);
 
         expect(
           manager.snapshot.statusOf('b2'),
-          const Connected(warning: 'A SOCKS destination: Connection refused'),
+          const Connected(warning: 'Connection refused'),
         );
       });
     });
@@ -622,9 +622,7 @@ void main() {
 
         expect(
           manager.snapshot.statusOf('a1'),
-          const Connected(
-            warning: 'db.internal:5432: administratively prohibited',
-          ),
+          const Connected(warning: 'administratively prohibited'),
         );
       });
     });

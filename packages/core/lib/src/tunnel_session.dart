@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:core/src/failure_reason.dart';
 import 'package:core/src/tunnel.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 import 'package:fimber/fimber.dart';
@@ -123,11 +124,6 @@ class TunnelSession({
   void _warn(String reason) {
     if (isStopped || _status is! Connected) return;
 
-    final destination = switch (tunnel) {
-      Tunnel(kind: TunnelKind.socks) => 'A SOCKS destination',
-      Tunnel(:final remoteHost, :final remotePort) => '$remoteHost:$remotePort',
-    };
-    final warning = '$destination: $reason';
     _clearWarning?.cancel();
     _clearWarning = Timer(warningLifetime, () {
       if (_status is Connected) {
@@ -135,10 +131,10 @@ class TunnelSession({
         onChange();
       }
     });
-    if (_status == Connected(warning: warning)) return;
+    if (_status == Connected(warning: reason)) return;
 
-    _log.w('${tunnel.title}: $warning');
-    _status = Connected(warning: warning);
+    _log.w('${tunnel.title}: ${forwardWarning(tunnel)} ($reason)');
+    _status = Connected(warning: reason);
     onChange();
   }
 }
