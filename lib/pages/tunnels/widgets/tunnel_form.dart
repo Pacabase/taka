@@ -10,6 +10,7 @@ import 'package:taka/theme/taka_theme.dart';
 class const TunnelForm({
   super.key,
   final Tunnel? initial,
+  final TunnelKind kind = TunnelKind.local,
   final List<String> hosts = const [],
   required final void Function(Tunnel tunnel) onSave,
   required final void Function() onCancel,
@@ -19,7 +20,7 @@ class const TunnelForm({
 }
 
 class _TunnelFormState extends State<TunnelForm> {
-  late TunnelKind _kind = widget.initial?.kind ?? TunnelKind.local;
+  late TunnelKind _kind = widget.initial?.kind ?? widget.kind;
   late final _localPort = TextEditingController(
     text: widget.initial?.localPort.toString(),
   );

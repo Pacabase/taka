@@ -148,6 +148,35 @@ void main() {
     expect(find.text('A dialog'), findsOneWidget);
     expect(find.text('Tunnels'), findsOneWidget);
   });
+
+  testWidgets('with no tunnels, asks for one and opens the form for it', (
+    tester,
+  ) async {
+    await pumpPage(tester, initialState: const Ready(TunnelsSnapshot()));
+
+    expect(find.text('No tunnels yet'), findsOneWidget);
+    expect(
+      find.text('Add the SSH host, a local port, and where it leads.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Add Tunnel'));
+    await tester.pumpAndSettle();
+    expect(find.text('New tunnel'), findsOneWidget);
+    expect(find.text('To'), findsOneWidget);
+  });
+
+  testWidgets('Add SOCKS Proxy opens the form on a SOCKS proxy', (
+    tester,
+  ) async {
+    await pumpPage(tester, initialState: const Ready(TunnelsSnapshot()));
+
+    await tester.tap(find.text('Add SOCKS Proxy'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New tunnel'), findsOneWidget);
+    expect(find.text('To'), findsNothing);
+  });
 }
 
 class _MockTunnelsBloc extends MockBloc<TunnelsEvent, TunnelsState>

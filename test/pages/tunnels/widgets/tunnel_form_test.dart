@@ -133,6 +133,30 @@ void main() {
     expect(saved.single, tunnel);
   });
 
+  testWidgets('a new form can start on a SOCKS proxy', (tester) async {
+    saved = [];
+    cancels = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: takaTheme(Brightness.light),
+        home: Scaffold(
+          body: TunnelForm(
+            kind: TunnelKind.socks,
+            onSave: saved.add,
+            onCancel: () => cancels++,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('To'), findsNothing);
+    await tester.enterText(field(0), '1080');
+    await tester.enterText(field(1), 'user@jump');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+
+    expect(saved.single.kind, TunnelKind.socks);
+  });
+
   group('the SSH host', () {
     const hosts = ['dev', 'staging', 'prod'];
 

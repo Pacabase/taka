@@ -24,6 +24,7 @@ class const TunnelsPage({
 class _TunnelsPageState extends State<TunnelsPage> {
   var _isFormOpen = false;
   Tunnel? _editing;
+  var _newKind = TunnelKind.local;
   var _hosts = const <String>[];
   late final StreamSubscription<OpenTunnel> _tunnelRequests;
 
@@ -96,8 +97,9 @@ class _TunnelsPageState extends State<TunnelsPage> {
                 ),
                 child: _isFormOpen
                     ? TunnelForm(
-                        key: ValueKey(_editing?.id ?? 'new'),
+                        key: ValueKey(_editing?.id ?? 'new ${_newKind.name}'),
                         initial: _editing,
+                        kind: _newKind,
                         hosts: _hosts,
                         onSave: (tunnel) {
                           context.read<TunnelsBloc>().add(
@@ -110,6 +112,7 @@ class _TunnelsPageState extends State<TunnelsPage> {
                     : _TunnelList(
                         key: const ValueKey('list'),
                         onEdit: _openForm,
+                        onAdd: (kind) => _openForm(null, kind),
                       ),
               ),
             ),
@@ -120,10 +123,11 @@ class _TunnelsPageState extends State<TunnelsPage> {
   }
 
   // Read on every open, so edits to ~/.ssh/config show up.
-  void _openForm([Tunnel? tunnel]) {
+  void _openForm([Tunnel? tunnel, TunnelKind kind = TunnelKind.local]) {
     setState(() {
       _isFormOpen = true;
       _editing = tunnel;
+      _newKind = kind;
     });
     unawaited(
       configuredSshHosts().then((hosts) {
@@ -138,6 +142,7 @@ class _TunnelsPageState extends State<TunnelsPage> {
 class const _TunnelList({
   super.key,
   required final void Function(Tunnel tunnel) onEdit,
+  required final void Function(TunnelKind kind) onAdd,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -147,9 +152,34 @@ class const _TunnelList({
       builder: (context, state) => switch (state) {
         Loading() || Closed() => const SizedBox.shrink(),
         Ready(:final snapshot) when snapshot.tunnels.isEmpty => Center(
-          child: Text(
-            'No tunnels yet. Add one with +.',
-            style: TextStyle(color: colors.textSecondary),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 4,
+            children: [
+              const Text(
+                'No tunnels yet',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              Text(
+                'Add the SSH host, a local port, and where it leads.',
+                style: TextStyle(fontSize: 12, color: colors.textSecondary),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 8,
+                children: [
+                  FilledButton(
+                    onPressed: () => onAdd(TunnelKind.local),
+                    child: const Text('Add Tunnel'),
+                  ),
+                  TextButton(
+                    onPressed: () => onAdd(TunnelKind.socks),
+                    child: const Text('Add SOCKS Proxy'),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
         Ready(:final snapshot) => ReorderableRows(
