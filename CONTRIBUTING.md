@@ -22,8 +22,6 @@ fvm flutter run -d linux              # the app from source
 fvm flutter build linux --release     # build/linux/x64/release/bundle/taka
 ```
 
-Either build puts the agent beside the window, in `agent/`.
-
 ## Tests
 
 The unit tests run per package:
