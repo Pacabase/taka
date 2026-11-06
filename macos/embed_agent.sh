@@ -13,7 +13,7 @@ app="$BUILT_PRODUCTS_DIR/$WRAPPER_NAME"
 helper="$app/Contents/Library/LoginItems/Taka.app"
 identity="${EXPANDED_CODE_SIGN_IDENTITY:--}"
 
-(cd "$agent" && "$FLUTTER_ROOT/bin/dart" build cli)
+(cd "$agent" && "$FLUTTER_ROOT/bin/dart" pub get && "$FLUTTER_ROOT/bin/dart" build cli)
 
 rm -rf "$helper"
 mkdir -p "$helper/Contents/MacOS" "$helper/Contents/Resources"
