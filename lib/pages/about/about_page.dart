@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,7 +19,21 @@ Stream<LicenseEntry> bundledLicenses() async* {
       await rootBundle.loadString(file),
     );
   }
+  yield* Stream.fromIterable(
+    agentLicences(await rootBundle.loadString('assets/agent_licences.json')),
+  );
 }
+
+/// The background helper's packages, from `make licences`, since Flutter
+/// collects licences for the window's packages only.
+Iterable<LicenseEntry> agentLicences(String json) => [
+  for (final entry in jsonDecode(json) as List<Object?>)
+    if (entry case {
+      'package': final String package,
+      'licence': final String licence,
+    })
+      LicenseEntryWithLineBreaks([package], licence),
+];
 
 class const AboutPage({super.key, required final String version})
     extends StatelessWidget {
