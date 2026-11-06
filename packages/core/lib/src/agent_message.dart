@@ -13,8 +13,6 @@ sealed class const AgentMessage._() with _$AgentMessage {
 
   const factory snapshot(TunnelsSnapshot snapshot) = AgentSnapshot;
 
-  const factory showAbout() = ShowAbout;
-
   /// Opens the window on tunnel [id]'s form, or a new tunnel's when null.
   const factory openTunnel([String? id]) = OpenTunnel;
 
@@ -22,7 +20,6 @@ sealed class const AgentMessage._() with _$AgentMessage {
 
   static AgentMessage fromJson(Object? json) => switch (json) {
     {'agent': final String identity} => AgentIdentity(identity),
-    {'show': 'about'} => const ShowAbout(),
     {'show': 'tunnel', 'id': final String? id} => OpenTunnel(id),
     {'settings': final settings} => SettingsChanged(
       AgentSettings.fromJson(settings),
@@ -33,7 +30,6 @@ sealed class const AgentMessage._() with _$AgentMessage {
   Map<String, Object?> toJson() => switch (this) {
     AgentIdentity(:final identity) => {'agent': identity},
     AgentSnapshot(:final snapshot) => snapshot.toJson(),
-    ShowAbout() => {'show': 'about'},
     OpenTunnel(:final id) => {'show': 'tunnel', 'id': id},
     SettingsChanged(:final settings) => {'settings': settings.toJson()},
   };

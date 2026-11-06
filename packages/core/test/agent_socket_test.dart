@@ -167,28 +167,28 @@ void main() {
     expect(File(path).existsSync(), isFalse);
   });
 
-  test('showAbout asks every open window', () async {
+  test('show asks every open window', () async {
     final server = await serve();
     final mine = await connect();
     final theirs = await connect();
     final requests = [
-      StreamQueue(mine.aboutRequests),
-      StreamQueue(theirs.aboutRequests),
+      StreamQueue(mine.tunnelRequests),
+      StreamQueue(theirs.tunnelRequests),
     ];
     await (
       StreamQueue(mine.snapshots).next,
       StreamQueue(theirs.snapshots).next,
     ).wait;
 
-    expect(server.show(const AgentMessage.showAbout()), isTrue);
+    expect(server.show(const AgentMessage.openTunnel()), isTrue);
 
     await Future.wait(requests.map((queue) => queue.next));
   });
 
-  test('showAbout with no window open asks the next one, once', () async {
+  test('show with no window open asks the next one, once', () async {
     final server = await serve();
 
-    expect(server.show(const AgentMessage.showAbout()), isFalse);
+    expect(server.show(const AgentMessage.openTunnel()), isFalse);
 
     final first = await connect();
     final second = await connect();
@@ -199,8 +199,8 @@ void main() {
     await first.close();
     await second.close();
 
-    expect(await first.aboutRequests.length, 1);
-    expect(await second.aboutRequests.length, 0);
+    expect(await first.tunnelRequests.length, 1);
+    expect(await second.tunnelRequests.length, 0);
   });
 
   test('a window can listen for About after its first snapshot', () async {
@@ -208,12 +208,12 @@ void main() {
     final agent = await connect();
     final snapshots = StreamQueue(agent.snapshots);
     await snapshots.next;
-    server.show(const AgentMessage.showAbout());
+    server.show(const AgentMessage.openTunnel());
     await manager.save(proxy);
     await snapshots.next;
     await agent.close();
 
-    expect(await agent.aboutRequests.length, 1);
+    expect(await agent.tunnelRequests.length, 1);
   });
 
   test('a tunnel request reaches an open window', () async {
@@ -248,11 +248,11 @@ void main() {
     },
   );
 
-  test('showAbout with a window open leaves none pending', () async {
+  test('show with a window open leaves none pending', () async {
     final server = await serve();
     final open = await connect();
     await StreamQueue(open.snapshots).next;
-    server.show(const AgentMessage.showAbout());
+    server.show(const AgentMessage.openTunnel());
     await open.close();
 
     final next = await connect();
@@ -262,7 +262,7 @@ void main() {
     await snapshots.next;
     await next.close();
 
-    expect(await next.aboutRequests.length, 0);
+    expect(await next.tunnelRequests.length, 0);
   });
 
   test('the client ignores bad lines and stays connected', () async {
@@ -284,7 +284,7 @@ void main() {
     final agent = await connect();
 
     expect(await agent.snapshots.toList(), [manager.snapshot]);
-    expect(await agent.aboutRequests.length, 0);
+    expect(await agent.tunnelRequests.length, 0);
   });
 
   test('a client learns which build of the agent it reached', () async {
