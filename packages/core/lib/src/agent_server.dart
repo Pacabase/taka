@@ -35,6 +35,8 @@ class AgentServer(
   }
 
   /// Listens on [path], or returns null when another agent already does.
+  /// Throws a [SocketException] when it can't listen for another reason,
+  /// such as a path too long for a socket.
   static Future<AgentServer?> bind(
     String path,
     TunnelManager manager,
@@ -43,13 +45,18 @@ class AgentServer(
   }) async {
     final address = InternetAddress(path, type: InternetAddressType.unix);
     final file = File(path);
-    if (await file.exists()) {
+    Future<bool> isAnswered() async {
       try {
         (await Socket.connect(address, 0)).destroy();
-        return null;
+        return true;
       } on SocketException {
-        await file.delete();
+        return false;
       }
+    }
+
+    if (await file.exists()) {
+      if (await isAnswered()) return null;
+      await file.delete();
     }
 
     await file.parent.create(recursive: true);
@@ -61,7 +68,9 @@ class AgentServer(
         identity,
       );
     } on SocketException {
-      return null;
+      // Another agent may have bound it a moment ago.
+      if (await isAnswered()) return null;
+      rethrow;
     }
   }
 

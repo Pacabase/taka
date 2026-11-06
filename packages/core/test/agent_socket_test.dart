@@ -347,6 +347,17 @@ void main() {
     expect(await AgentServer.bind(path, manager, preferences), isNull);
   });
 
+  test('a path too long for a socket is an error, not another agent', () {
+    expect(
+      AgentServer.bind(
+        '${directory.path}/${'x' * 200}.sock',
+        manager,
+        preferences,
+      ),
+      throwsA(isA<SocketException>()),
+    );
+  });
+
   test('a socket left behind by a dead agent is replaced', () async {
     final stale = await ServerSocket.bind(
       InternetAddress(path, type: InternetAddressType.unix),
