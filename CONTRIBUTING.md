@@ -9,8 +9,6 @@ fvm flutter run -d macos              # the app from source
 fvm flutter build macos --release     # build/macos/Build/Products/Release/Taka.app
 ```
 
-Both build `packages/agent` into the app too.
-
 ## Tests
 
 The unit tests run per package:
