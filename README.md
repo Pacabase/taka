@@ -24,7 +24,7 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### First preview (0.1, macOS)
 
-- [ ] **Releases** — a universal `.dmg` from CI on a version tag, a Homebrew tap, and signed auto-updates. The agent's packages (`nativeapi` and its C++ library, `platform`, `process`) must be in the app's licences first: a Dart command-line build collects none.
+- [ ] **Releases** — a universal `.dmg` from CI on a version tag, a Homebrew tap, and signed auto-updates.
 
 ### Daily driver (0.2, Linux)
 

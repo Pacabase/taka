@@ -1,4 +1,4 @@
-.PHONY: help agent macos run test
+.PHONY: help agent macos run test licences
 
 ARCH := $(if $(filter arm64,$(shell uname -m)),arm64,x64)
 AGENT := packages/agent/build/cli/macos_$(ARCH)/bundle
@@ -9,9 +9,10 @@ AGENT_APP := $(LOGIN_ITEMS)/Taka.app
 default: help
 
 help:
-	@echo "make macos   - Build Taka.app with its agent inside"
-	@echo "make run     - Run the app from source, with a freshly built agent"
-	@echo "make test    - Run every unit test"
+	@echo "make macos    - Build Taka.app with its agent inside"
+	@echo "make run      - Run the app from source, with a freshly built agent"
+	@echo "make test     - Run every unit test"
+	@echo "make licences - Regenerate the background helper's licences for About"
 
 agent:
 	cd packages/agent && fvm dart build cli
@@ -34,3 +35,8 @@ test:
 	fvm flutter test --tags unit
 	cd packages/core && fvm dart test --tags unit
 	cd packages/agent && fvm dart test --tags unit
+
+licences:
+	fvm flutter pub get --enforce-lockfile
+	fvm dart pub get --enforce-lockfile -C packages/agent
+	fvm dart run tool/agent_licences.dart
