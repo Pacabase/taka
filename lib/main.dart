@@ -6,10 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:taka/agent/agent_gate.dart';
 import 'package:taka/agent/agent_launcher.dart';
 import 'package:taka/pages/about/about_page.dart';
-import 'package:taka/pages/settings/settings_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_page.dart';
 import 'package:taka/taka_app.dart';
@@ -35,18 +33,13 @@ Future<void> main() async {
   Fimber.i('Taka $version on ${Platform.operatingSystemVersion}');
 
   runApp(
-    AgentGate(
+    TakaApp(
       version: version,
       connect: connectToAgent,
-      connected: (agent) => TakaApp(
-        version: version,
-        settings: SettingsBloc(agent: agent)
-          ..add(const SettingsEvent.started()),
-        home: BlocProvider(
-          create: (_) =>
-              TunnelsBloc(agent: agent)..add(const TunnelsEvent.started()),
-          child: TunnelsPage(tunnelRequests: agent.tunnelRequests),
-        ),
+      home: (agent) => BlocProvider(
+        create: (_) =>
+            TunnelsBloc(agent: agent)..add(const TunnelsEvent.started()),
+        child: TunnelsPage(tunnelRequests: agent.tunnelRequests),
       ),
     ),
   );
