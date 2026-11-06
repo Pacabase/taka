@@ -2,21 +2,17 @@
 
 A menu bar app for SSH tunnels and SOCKS proxies, built on [`system_ssh`](https://github.com/Pacabase/system_ssh). It runs your own `ssh`, so `~/.ssh/config`, `ProxyJump` and agents such as 1Password's work as in a terminal, and Taka stores no secrets.
 
+## Requirements
+
+macOS 14 (Sonoma) or later, on Apple Silicon or Intel. Linux and Windows are on the [roadmap](#roadmap).
+
 ## Mac App Store
 
 Taka isn't on the Mac App Store. The store only allows sandboxed apps, and a sandboxed app can't use your own `ssh` setup, which is what Taka is built on. If you'd use a store version with its own SSH built in, give [issue #10](https://github.com/Pacabase/taka/issues/10) a 👍.
 
-## Building
+## Building from source
 
-Install [FVM](https://fvm.app), which fetches the SDK version pinned in `.fvmrc`, then:
-
-```bash
-make run      # the app from source, with a freshly built agent
-make macos    # build/macos/Build/Products/Release/Taka.app, agent inside
-make test
-```
-
-Linux build machines need `sudo apt-get install libgtk-3-dev libx11-dev libxi-dev` for the tray icon.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Roadmap
 
@@ -24,7 +20,7 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### First preview (0.1, macOS)
 
-- [ ] **Releases** — a universal `.dmg` from CI on a version tag, a Homebrew tap, and signed auto-updates.
+- [ ] **Releases** — a `.dmg` per chip from CI on a version tag, a Homebrew tap, and signed auto-updates.
 
 ### Daily driver (0.2, Linux)
 

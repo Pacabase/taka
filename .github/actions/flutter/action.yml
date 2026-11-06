@@ -12,8 +12,8 @@ runs:
     - name: Cache Flutter SDK
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        key: ${{ runner.os }}-flutter-${{ hashFiles('.fvmrc') }}
-        restore-keys: ${{ runner.os }}-flutter-
+        key: ${{ runner.os }}-${{ runner.arch }}-flutter-${{ hashFiles('.fvmrc') }}
+        restore-keys: ${{ runner.os }}-${{ runner.arch }}-flutter-
         path: .fvm/cache
 
     - name: Install Flutter SDK

@@ -1,2 +1,7 @@
 #include "../../Flutter/Flutter-Release.xcconfig"
 #include "Warnings.xcconfig"
+
+// The agent runs only on the chip it's built on, so the app is built for that chip alone.
+OTHER_ARCH_arm64 = x86_64
+OTHER_ARCH_x86_64 = arm64
+EXCLUDED_ARCHS = $(OTHER_ARCH_$(NATIVE_ARCH_ACTUAL))
