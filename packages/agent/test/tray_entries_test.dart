@@ -61,7 +61,7 @@ void main() {
       '---',
       '☑ Production database — localhost:15432',
       '☑ Proxy — connecting…',
-      '☐ Web — failed',
+      '☐ Web — port 8080 in use',
       '☑ Other — reconnecting…',
       '---',
     ]);
