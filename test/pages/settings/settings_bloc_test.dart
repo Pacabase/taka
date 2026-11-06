@@ -17,7 +17,7 @@ void main() {
     final bloc = SettingsBloc(agent: agent);
     addTearDown(bloc.close);
 
-    expect(bloc.state, const SettingsLoading());
+    expect(bloc.state, const Loading());
     expect('$bloc', 'SettingsBloc');
   });
 
@@ -31,8 +31,8 @@ void main() {
         ..add(const AgentSettings(launchesAtLogin: true, isLogging: true));
     },
     expect: () => const [
-      SettingsReady(AgentSettings(launchesAtLogin: false)),
-      SettingsReady(AgentSettings(launchesAtLogin: true, isLogging: true)),
+      Ready(AgentSettings(launchesAtLogin: false)),
+      Ready(AgentSettings(launchesAtLogin: true, isLogging: true)),
     ],
   );
 
