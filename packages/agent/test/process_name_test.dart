@@ -1,5 +1,4 @@
 @Tags(['unit'])
-@TestOn('mac-os')
 library;
 
 import 'dart:io';
@@ -14,5 +13,17 @@ void main() {
     final info = await Process.run('lsappinfo', ['info', '#$pid']);
 
     expect('${info.stdout}', startsWith('"Taka name test" '));
-  });
+  }, testOn: 'mac-os');
+
+  test('ps shows the name it is given', () async {
+    final comm = File('/proc/self/comm');
+    final runnerName = comm.readAsStringSync().trim();
+    addTearDown(() => comm.writeAsStringSync(runnerName));
+
+    restoreProcessName('Taka name test');
+
+    final ps = await Process.run('ps', ['-o', 'comm=', '-p', '$pid']);
+
+    expect('${ps.stdout}'.trim(), 'Taka name test');
+  }, testOn: 'linux');
 }

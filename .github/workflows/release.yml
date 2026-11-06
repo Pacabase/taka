@@ -30,13 +30,13 @@ jobs:
           pattern: Taka-*
           path: dist
           merge-multiple: true
-      - name: Attach the .dmgs to the release
+      - name: Attach the builds to the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          (cd dist && sha256sum Taka-*.dmg > SHA256SUMS)
+          (cd dist && sha256sum Taka-* > SHA256SUMS)
           if ! draft=$(gh release view "$TAG" --json isDraft -q .isDraft 2>"$RUNNER_TEMP/view"); then
             grep -q "release not found" "$RUNNER_TEMP/view" || { cat "$RUNNER_TEMP/view" >&2; exit 1; }
             gh release create "$TAG" dist/* --verify-tag --draft --generate-notes --title "Taka ${TAG#v}"

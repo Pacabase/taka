@@ -9,6 +9,19 @@ fvm flutter run -d macos              # the app from source
 fvm flutter build macos --release     # build/macos/Build/Products/Release/Taka.app
 ```
 
+### Linux
+
+On Debian or Ubuntu, building or testing needs:
+
+```bash
+sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev libx11-dev libxi-dev
+```
+
+```bash
+fvm flutter run -d linux              # the app from source
+fvm flutter build linux --release     # build/linux/<x64 or arm64>/release/bundle/taka
+```
+
 ## Tests
 
 The unit tests run per package:
@@ -22,7 +35,3 @@ fvm flutter test --tags unit
 ## Licences
 
 After changing the dependencies of `packages/agent` or `packages/core`, run `fvm dart run tool/agent_licences.dart` so About lists the agent's licences; CI checks they match.
-
-## Linux
-
-Linux build machines need `sudo apt-get install libgtk-3-dev libx11-dev libxi-dev` for the tray icon.

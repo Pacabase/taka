@@ -4,7 +4,10 @@ A menu bar app for SSH tunnels and SOCKS proxies, built on [`system_ssh`](https:
 
 ## Requirements
 
-macOS 14 (Sonoma) or later, on Apple Silicon or Intel. Linux and Windows are on the [roadmap](#roadmap).
+- **macOS** 14 (Sonoma) or later, on Apple Silicon or Intel.
+- **Linux** on x64 or arm64 with glibc 2.35 or later (Ubuntu 22.04, Debian 12, Fedora 36 or newer) and GTK 3. The tray icon needs StatusNotifierItem support, which KDE, Xfce, Cinnamon and Ubuntu have; on other GNOME desktops, install the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/).
+
+Windows is on the [roadmap](#roadmap).
 
 ## Mac App Store
 

@@ -121,6 +121,23 @@ install(CODE "
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
 
+# FLUTTER_ROOT is set only in flutter/.
+function(read_flutter_root)
+  include("${FLUTTER_MANAGED_DIR}/ephemeral/generated_config.cmake")
+  set(FLUTTER_ROOT "${FLUTTER_ROOT}" PARENT_SCOPE)
+endfunction()
+read_flutter_root()
+install(CODE "
+  execute_process(
+    COMMAND sh \"${CMAKE_CURRENT_SOURCE_DIR}/embed_agent.sh\"
+      \"${FLUTTER_ROOT}\" \"${FLUTTER_TARGET_PLATFORM}\"
+      \"${CMAKE_INSTALL_PREFIX}/agent\"
+    RESULT_VARIABLE result)
+  if(NOT result EQUAL 0)
+    message(FATAL_ERROR \"Could not build the agent\")
+  endif()
+  " COMPONENT Runtime)
+
 # Install the AOT library on non-Debug builds only.
 if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"

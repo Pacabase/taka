@@ -23,7 +23,10 @@ class AgentTray({
   TrayIcon? _icon;
 
   void show() {
-    final icon = _icon = TrayIcon.create();
+    // Otherwise Linux trays know the icon by nativeapi's own application ID.
+    final icon = _icon = Platform.isLinux
+        ? TrayIcon.createWithIdentifier('com.pacabase.taka')
+        : TrayIcon.create();
     if (icon == null) return;
 
     icon
@@ -60,7 +63,8 @@ class AgentTray({
     icon
       ..setContextMenu(menu)
       ..setTooltip(trayTooltip(snapshot));
-    if (Platform.isMacOS) icon.setTitle(count == 0 ? null : '$count');
+    // GNOME's AppIndicator draws it as macOS does; other Linux trays ignore it.
+    if (!Platform.isWindows) icon.setTitle(count == 0 ? null : '$count');
   }
 
   Menu? _menu(List<TrayEntry> entries) {
