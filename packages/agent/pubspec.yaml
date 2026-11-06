@@ -12,7 +12,7 @@ dependencies:
   ffi: 2.2.0
   fimber: 0.7.0
   nativeapi: 0.5.8
-  system_ssh: 0.7.0
+  system_ssh: 0.8.0
 
 dev_dependencies:
   lints: 6.1.0

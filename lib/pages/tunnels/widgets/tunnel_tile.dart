@@ -32,8 +32,8 @@ class _TunnelTileState extends State<TunnelTile> {
     super.dispose();
   }
 
-  Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: widget.tunnel.sshCommand));
+  Future<void> _copy(String command) async {
+    await Clipboard.setData(ClipboardData(text: command));
     if (!mounted) return;
 
     _copied?.cancel();
@@ -105,16 +105,17 @@ class _TunnelTileState extends State<TunnelTile> {
                 ),
               ),
               if (isHovered || _focused) ...[
-                IconButton(
-                  tooltip: _copied == null ? 'Copy ssh command' : 'Copied',
-                  onPressed: _copy,
-                  icon: AppIcon(
-                    _copied == null ? AppIcons.copy : AppIcons.check,
-                    color: _copied == null
-                        ? colors.textSecondary
-                        : colors.green,
+                if (tunnel.sshCommand case final command?)
+                  IconButton(
+                    tooltip: _copied == null ? 'Copy ssh command' : 'Copied',
+                    onPressed: () => _copy(command),
+                    icon: AppIcon(
+                      _copied == null ? AppIcons.copy : AppIcons.check,
+                      color: _copied == null
+                          ? colors.textSecondary
+                          : colors.green,
+                    ),
                   ),
-                ),
                 IconButton(
                   tooltip: 'Edit',
                   onPressed: widget.onEdit,

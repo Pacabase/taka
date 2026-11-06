@@ -124,7 +124,8 @@ List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
     ...whyDown,
     if (whyDown.isNotEmpty) const SeparatorEntry(),
     CopyEntry('Copy Address', tunnel.address),
-    CopyEntry('Copy SSH Command', tunnel.sshCommand),
+    if (tunnel.sshCommand case final command?)
+      CopyEntry('Copy SSH Command', command),
     TunnelActionEntry(tunnel, TunnelAction.edit, 'Edit…'),
   ];
 }

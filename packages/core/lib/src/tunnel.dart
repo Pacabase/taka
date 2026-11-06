@@ -66,16 +66,23 @@ sealed class const Tunnel._() with _$Tunnel {
     TunnelKind.socks => 'socks5h://localhost:$localPort',
   };
 
-  /// The command that opens this tunnel from a terminal.
-  String get sshCommand => switch (kind) {
-    TunnelKind.local => tunnelCommand(
-      target,
-      remoteHost: remoteHost ?? '',
-      remotePort: remotePort ?? 0,
-      localPort: localPort,
-    ),
-    TunnelKind.socks => socksProxyCommand(target, localPort: localPort),
-  };
+  /// The command that opens this tunnel from a terminal, or null when ssh
+  /// can't open it, such as for a local port outside 1 to 65535.
+  String? get sshCommand {
+    try {
+      return switch (kind) {
+        TunnelKind.local => tunnelCommand(
+          target,
+          remoteHost: remoteHost ?? '',
+          remotePort: remotePort ?? 0,
+          localPort: localPort,
+        ),
+        TunnelKind.socks => socksProxyCommand(target, localPort: localPort),
+      };
+    } on ArgumentError {
+      return null;
+    }
+  }
 
   String get summary => switch (kind) {
     TunnelKind.local =>
