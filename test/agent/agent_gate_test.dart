@@ -1,6 +1,7 @@
 @Tags(['unit'])
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/agent/agent_gate.dart';
 import 'package:taka/pages/agent_error_page.dart';
+import 'package:taka/pages/settings/settings_bloc.dart';
+import 'package:taka/taka_app.dart';
 
 import '../pages/tunnels/fake_agent.dart';
 
@@ -33,6 +36,26 @@ void main() {
       agentFailure(Exception('boom')),
       'Something went wrong while starting it.',
     );
+  });
+
+  testWidgets('shows the app once the helper answers', (tester) async {
+    final agent = Completer<FakeAgent>();
+    await tester.pumpWidget(
+      AgentGate(
+        version: '1.2.3',
+        connect: () => agent.future,
+        connected: (agent) => TakaApp(
+          version: '1.2.3',
+          settings: SettingsBloc(agent: agent),
+          home: const Text('Tunnels'),
+        ),
+      ),
+    );
+
+    agent.complete(FakeAgent());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tunnels'), findsOneWidget);
   });
 
   testWidgets('shows why it failed, and Try Again opens the app once it '
