@@ -4,8 +4,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'agent_message.freezed.dart';
 
-/// A snapshot goes untagged, as it always has, so a window and an agent from
-/// different builds still understand each other.
+/// Snapshots stay untagged, so a window and an agent from other builds agree.
 @freezed
 sealed class const AgentMessage._() with _$AgentMessage {
   /// Which build the agent is.

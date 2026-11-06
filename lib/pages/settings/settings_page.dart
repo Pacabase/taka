@@ -44,8 +44,8 @@ class const SettingsPage({super.key, required final String version})
           ),
           BlocBuilder<SettingsBloc, SettingsState>(
             builder: (context, state) => switch (state) {
-              SettingsLoading() => const SizedBox.shrink(),
-              SettingsReady(
+              Loading() => const SizedBox.shrink(),
+              Ready(
                 settings: AgentSettings(
                   :final launchesAtLogin,
                   :final isLogging,

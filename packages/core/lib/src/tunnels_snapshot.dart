@@ -9,13 +9,11 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
 
   const factory connecting() = Connecting;
 
-  /// [warning] is ssh's reason it last couldn't forward a connection, such as
-  /// `Connection refused`, while the tunnel itself stays up.
+  /// [warning] is ssh's reason, such as `Connection refused`; the tunnel stays up.
   const factory connected({@Default('') String warning}) = Connected;
 
   const factory failed(String message) = Failed;
 
-  /// The tunnel dropped for [reason], and Taka is bringing it back.
   const factory reconnecting(String reason) = Reconnecting;
 
   static TunnelStatus fromJson(Object? json) => switch (json) {

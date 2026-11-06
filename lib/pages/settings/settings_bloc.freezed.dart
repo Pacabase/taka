@@ -56,11 +56,11 @@ extension SettingsEventPatterns on SettingsEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SettingsStarted value)?  started,TResult Function( SendSetting value)?  send,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Started value)?  started,TResult Function( Send value)?  send,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
-case SettingsStarted() when started != null:
-return started(_that);case SendSetting() when send != null:
+case Started() when started != null:
+return started(_that);case Send() when send != null:
 return send(_that);case _:
   return orElse();
 
@@ -79,11 +79,11 @@ return send(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SettingsStarted value)  started,required TResult Function( SendSetting value)  send,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Started value)  started,required TResult Function( Send value)  send,}){
 final _that = this;
 switch (_that) {
-case SettingsStarted():
-return started(_that);case SendSetting():
+case Started():
+return started(_that);case Send():
 return send(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
@@ -98,11 +98,11 @@ return send(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SettingsStarted value)?  started,TResult? Function( SendSetting value)?  send,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Started value)?  started,TResult? Function( Send value)?  send,}){
 final _that = this;
 switch (_that) {
-case SettingsStarted() when started != null:
-return started(_that);case SendSetting() when send != null:
+case Started() when started != null:
+return started(_that);case Send() when send != null:
 return send(_that);case _:
   return null;
 
@@ -122,8 +122,8 @@ return send(_that);case _:
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  started,TResult Function( AgentCommand command)?  send,required TResult orElse(),}) {final _that = this;
 switch (_that) {
-case SettingsStarted() when started != null:
-return started();case SendSetting() when send != null:
+case Started() when started != null:
+return started();case Send() when send != null:
 return send(_that.command);case _:
   return orElse();
 
@@ -144,8 +144,8 @@ return send(_that.command);case _:
 
 @optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  started,required TResult Function( AgentCommand command)  send,}) {final _that = this;
 switch (_that) {
-case SettingsStarted():
-return started();case SendSetting():
+case Started():
+return started();case Send():
 return send(_that.command);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -162,8 +162,8 @@ return send(_that.command);}
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  started,TResult? Function( AgentCommand command)?  send,}) {final _that = this;
 switch (_that) {
-case SettingsStarted() when started != null:
-return started();case SendSetting() when send != null:
+case Started() when started != null:
+return started();case Send() when send != null:
 return send(_that.command);case _:
   return null;
 
@@ -175,8 +175,8 @@ return send(_that.command);case _:
 /// @nodoc
 
 
-class SettingsStarted implements SettingsEvent {
-  const SettingsStarted();
+class Started implements SettingsEvent {
+  const Started();
   
 
 
@@ -186,7 +186,7 @@ class SettingsStarted implements SettingsEvent {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is SettingsStarted);
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Started);
 }
 
 
@@ -207,8 +207,8 @@ String toString() {
 /// @nodoc
 
 
-class SendSetting implements SettingsEvent {
-  const SendSetting(this.command);
+class Send implements SettingsEvent {
+  const Send(this.command);
   
 
  final  AgentCommand command;
@@ -217,13 +217,13 @@ class SendSetting implements SettingsEvent {
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$SendSettingCopyWith<SendSetting> get copyWith => _$SendSettingCopyWithImpl<SendSetting>(this, _$identity);
+$SendCopyWith<Send> get copyWith => _$SendCopyWithImpl<Send>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is SendSetting&&(identical(other.command, command) || other.command == command));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Send&&(identical(other.command, command) || other.command == command));
 }
 
 
@@ -241,8 +241,8 @@ String toString() {
 }
 
 /// @nodoc
-abstract mixin class $SendSettingCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
-  factory $SendSettingCopyWith(SendSetting value, $Res Function(SendSetting) _then) = _$SendSettingCopyWithImpl;
+abstract mixin class $SendCopyWith<$Res> implements $SettingsEventCopyWith<$Res> {
+  factory $SendCopyWith(Send value, $Res Function(Send) _then) = _$SendCopyWithImpl;
 @useResult
 $Res call({
  AgentCommand command
@@ -253,17 +253,17 @@ $AgentCommandCopyWith<$Res> get command;
 
 }
 /// @nodoc
-class _$SendSettingCopyWithImpl<$Res>
-    implements $SendSettingCopyWith<$Res> {
-  _$SendSettingCopyWithImpl(this._self, this._then);
+class _$SendCopyWithImpl<$Res>
+    implements $SendCopyWith<$Res> {
+  _$SendCopyWithImpl(this._self, this._then);
 
-  final SendSetting _self;
-  final $Res Function(SendSetting) _then;
+  final Send _self;
+  final $Res Function(Send) _then;
 
 /// Create a copy of SettingsEvent
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? command = null,}) {
-  return _then(SendSetting(
+  return _then(Send(
 null == command ? _self.command : command // ignore: cast_nullable_to_non_nullable
 as AgentCommand,
   ));
@@ -325,11 +325,11 @@ extension SettingsStatePatterns on SettingsState {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SettingsLoading value)?  loading,TResult Function( SettingsReady value)?  ready,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Loading value)?  loading,TResult Function( Ready value)?  ready,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
-case SettingsLoading() when loading != null:
-return loading(_that);case SettingsReady() when ready != null:
+case Loading() when loading != null:
+return loading(_that);case Ready() when ready != null:
 return ready(_that);case _:
   return orElse();
 
@@ -348,11 +348,11 @@ return ready(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SettingsLoading value)  loading,required TResult Function( SettingsReady value)  ready,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Loading value)  loading,required TResult Function( Ready value)  ready,}){
 final _that = this;
 switch (_that) {
-case SettingsLoading():
-return loading(_that);case SettingsReady():
+case Loading():
+return loading(_that);case Ready():
 return ready(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
@@ -367,11 +367,11 @@ return ready(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SettingsLoading value)?  loading,TResult? Function( SettingsReady value)?  ready,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Loading value)?  loading,TResult? Function( Ready value)?  ready,}){
 final _that = this;
 switch (_that) {
-case SettingsLoading() when loading != null:
-return loading(_that);case SettingsReady() when ready != null:
+case Loading() when loading != null:
+return loading(_that);case Ready() when ready != null:
 return ready(_that);case _:
   return null;
 
@@ -391,8 +391,8 @@ return ready(_that);case _:
 
 @optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  loading,TResult Function( AgentSettings settings)?  ready,required TResult orElse(),}) {final _that = this;
 switch (_that) {
-case SettingsLoading() when loading != null:
-return loading();case SettingsReady() when ready != null:
+case Loading() when loading != null:
+return loading();case Ready() when ready != null:
 return ready(_that.settings);case _:
   return orElse();
 
@@ -413,8 +413,8 @@ return ready(_that.settings);case _:
 
 @optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  loading,required TResult Function( AgentSettings settings)  ready,}) {final _that = this;
 switch (_that) {
-case SettingsLoading():
-return loading();case SettingsReady():
+case Loading():
+return loading();case Ready():
 return ready(_that.settings);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -431,8 +431,8 @@ return ready(_that.settings);}
 
 @optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  loading,TResult? Function( AgentSettings settings)?  ready,}) {final _that = this;
 switch (_that) {
-case SettingsLoading() when loading != null:
-return loading();case SettingsReady() when ready != null:
+case Loading() when loading != null:
+return loading();case Ready() when ready != null:
 return ready(_that.settings);case _:
   return null;
 
@@ -444,8 +444,8 @@ return ready(_that.settings);case _:
 /// @nodoc
 
 
-class SettingsLoading implements SettingsState {
-  const SettingsLoading();
+class Loading implements SettingsState {
+  const Loading();
   
 
 
@@ -455,7 +455,7 @@ class SettingsLoading implements SettingsState {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is SettingsLoading);
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Loading);
 }
 
 
@@ -476,8 +476,8 @@ String toString() {
 /// @nodoc
 
 
-class SettingsReady implements SettingsState {
-  const SettingsReady(this.settings);
+class Ready implements SettingsState {
+  const Ready(this.settings);
   
 
  final  AgentSettings settings;
@@ -486,13 +486,13 @@ class SettingsReady implements SettingsState {
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$SettingsReadyCopyWith<SettingsReady> get copyWith => _$SettingsReadyCopyWithImpl<SettingsReady>(this, _$identity);
+$ReadyCopyWith<Ready> get copyWith => _$ReadyCopyWithImpl<Ready>(this, _$identity);
 
 
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is SettingsReady&&(identical(other.settings, settings) || other.settings == settings));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Ready&&(identical(other.settings, settings) || other.settings == settings));
 }
 
 
@@ -510,8 +510,8 @@ String toString() {
 }
 
 /// @nodoc
-abstract mixin class $SettingsReadyCopyWith<$Res> implements $SettingsStateCopyWith<$Res> {
-  factory $SettingsReadyCopyWith(SettingsReady value, $Res Function(SettingsReady) _then) = _$SettingsReadyCopyWithImpl;
+abstract mixin class $ReadyCopyWith<$Res> implements $SettingsStateCopyWith<$Res> {
+  factory $ReadyCopyWith(Ready value, $Res Function(Ready) _then) = _$ReadyCopyWithImpl;
 @useResult
 $Res call({
  AgentSettings settings
@@ -522,17 +522,17 @@ $AgentSettingsCopyWith<$Res> get settings;
 
 }
 /// @nodoc
-class _$SettingsReadyCopyWithImpl<$Res>
-    implements $SettingsReadyCopyWith<$Res> {
-  _$SettingsReadyCopyWithImpl(this._self, this._then);
+class _$ReadyCopyWithImpl<$Res>
+    implements $ReadyCopyWith<$Res> {
+  _$ReadyCopyWithImpl(this._self, this._then);
 
-  final SettingsReady _self;
-  final $Res Function(SettingsReady) _then;
+  final Ready _self;
+  final $Res Function(Ready) _then;
 
 /// Create a copy of SettingsState
 /// with the given fields replaced by the non-null parameter values.
 @pragma('vm:prefer-inline') $Res call({Object? settings = null,}) {
-  return _then(SettingsReady(
+  return _then(Ready(
 null == settings ? _self.settings : settings // ignore: cast_nullable_to_non_nullable
 as AgentSettings,
   ));

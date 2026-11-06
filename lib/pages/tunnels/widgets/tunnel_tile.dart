@@ -118,7 +118,7 @@ class _TunnelTileState extends State<TunnelTile> {
               ),
               if (isHovered || _focused) ...[
                 IconButton(
-                  tooltip: _copied == null ? 'Copy ssh command' : 'Copied',
+                  tooltip: _copied == null ? 'Copy SSH command' : 'Copied',
                   onPressed: _copy,
                   icon: AppIcon(
                     _copied == null ? AppIcons.copy : AppIcons.check,

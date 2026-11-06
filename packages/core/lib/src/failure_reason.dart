@@ -57,18 +57,14 @@ const _reasons = [
       .firstOrNull;
 }
 
-/// A few words for why a tunnel failed, from ssh's own [message], for places
-/// too narrow for all of it; anything unknown comes back as it is.
+/// ssh's [message] in a few words for narrow places; unknown ones stay as is.
 String shortReason(String message) =>
     _reasonOf(message)?.short ?? message.trim();
 
-/// A plain sentence for why a tunnel failed, from ssh's own [message], with
-/// no ssh or exception text in it.
+/// ssh's [message] as a plain sentence, with none of ssh's own words.
 String plainReason(String message) =>
     _reasonOf(message)?.sentence ?? "It couldn't connect.";
 
-/// What a connected [tunnel] couldn't forward when ssh reports a destination
-/// it couldn't open.
 String forwardWarning(Tunnel tunnel) => switch (tunnel) {
   Tunnel(kind: TunnelKind.socks) =>
     "A site through the SOCKS proxy couldn't be reached.",

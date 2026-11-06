@@ -190,6 +190,33 @@ void main() {
       expect(calls, ['before', 'ssh']);
     });
 
+    test('fails without opening ssh when beforeConnect throws', () async {
+      StateError? failure = StateError('no window');
+      final manager = TunnelManager(
+        store: store,
+        client: client,
+        beforeConnect: () async {
+          if (failure case final failure?) throw failure;
+        },
+      );
+      addTearDown(manager.close);
+      await manager.load();
+
+      await manager.toggle('a1');
+
+      expect(
+        manager.snapshot.statusOf('a1'),
+        const Failed('Bad state: no window'),
+      );
+      expect(store.on, isEmpty);
+      verifyNever(openAnyTunnel);
+
+      failure = null;
+      await manager.toggle('a1');
+
+      expect(manager.snapshot.statusOf('a1'), const Connected());
+    });
+
     test('opens a local tunnel with its fields', () async {
       final manager = await loaded();
 
@@ -367,23 +394,29 @@ void main() {
 
     // Runs [body] in fake time, with database connected once; [failures] are
     // what the next tries to open it throw.
-    void dropped(void Function(TunnelManager manager, FakeAsync time) body) =>
-        fakeAsync((time) {
-          opened = [];
-          failures = [];
-          when(openAnyTunnel).thenAnswer((_) async {
-            if (failures.isNotEmpty) throw failures.removeAt(0);
-            return (opened..add(FakeTunnel(15432))).last;
-          });
-          final manager = TunnelManager(store: store, client: client);
-          unawaited(manager.load().then((_) => manager.toggle('a1')));
-          time.flushMicrotasks();
+    void dropped(
+      void Function(TunnelManager manager, FakeAsync time) body, {
+      Future<void> Function()? beforeConnect,
+    }) => fakeAsync((time) {
+      opened = [];
+      failures = [];
+      when(openAnyTunnel).thenAnswer((_) async {
+        if (failures.isNotEmpty) throw failures.removeAt(0);
+        return (opened..add(FakeTunnel(15432))).last;
+      });
+      final manager = TunnelManager(
+        store: store,
+        client: client,
+        beforeConnect: beforeConnect,
+      );
+      unawaited(manager.load().then((_) => manager.toggle('a1')));
+      time.flushMicrotasks();
 
-          body(manager, time);
+      body(manager, time);
 
-          unawaited(manager.close());
-          time.flushMicrotasks();
-        });
+      unawaited(manager.close());
+      time.flushMicrotasks();
+    });
 
     void drop(FakeAsync time, [Object? reason]) {
       reason == null ? opened.last.drop() : opened.last.dropWith(reason);
@@ -477,6 +510,27 @@ void main() {
         expect(manager.snapshot.statusOf('a1'), Failed(denied.message));
         expect(opened, hasLength(1));
       });
+    });
+
+    test('fails without retrying when beforeConnect throws again', () {
+      var calls = 0;
+      dropped(
+        beforeConnect: () async {
+          if (++calls > 1) throw StateError('no window');
+        },
+        (manager, time) {
+          drop(time, closed);
+
+          time.elapse(const Duration(minutes: 5));
+
+          expect(
+            manager.snapshot.statusOf('a1'),
+            const Failed('Bad state: no window'),
+          );
+          expect(calls, 2);
+          expect(opened, hasLength(1));
+        },
+      );
     });
 
     test('stays off when turned off while it waits', () {
@@ -757,6 +811,30 @@ void main() {
 
         time.elapse(const Duration(seconds: 1));
         expect(manager.snapshot.statusOf('a1'), const Connected());
+
+        unawaited(manager.close());
+        time.flushMicrotasks();
+      });
+    });
+
+    test('a restored tunnel stops when beforeConnect throws', () {
+      fakeAsync((time) {
+        store = FakeStore([database], {'a1'});
+        final manager = TunnelManager(
+          store: store,
+          client: client,
+          beforeConnect: () async => throw StateError('no window'),
+        );
+        unawaited(manager.load().then((_) => manager.restore()));
+
+        time.elapse(const Duration(minutes: 5));
+
+        expect(
+          manager.snapshot.statusOf('a1'),
+          const Failed('Bad state: no window'),
+        );
+        expect(store.on, isEmpty);
+        verifyNever(openAnyTunnel);
 
         unawaited(manager.close());
         time.flushMicrotasks();
