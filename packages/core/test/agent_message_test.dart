@@ -57,6 +57,15 @@ void main() {
       });
     });
 
+    test('settings with a malformed launchAtLogin say it is not offered', () {
+      expect(
+        AgentMessage.fromJson({
+          'settings': {'launchAtLogin': 'yes', 'debugLogging': true},
+        }),
+        const AgentMessage.settings(AgentSettings(isLogging: true)),
+      );
+    });
+
     test('openTunnel names the tunnel, or none for a new one', () {
       expect(const AgentMessage.openTunnel('a1').toJson(), {
         'show': 'tunnel',
@@ -79,6 +88,15 @@ void main() {
       {'agent': 3},
       {'show': 'settings'},
       {'tunnels': <Object?>[]},
+      {'settings': 1},
+      {'settings': null},
+      {'settings': <String, Object?>{}},
+      {
+        'settings': {'launchAtLogin': true},
+      },
+      {
+        'settings': {'debugLogging': 'yes'},
+      },
       ['agent'],
       null,
     ]) {
