@@ -46,36 +46,31 @@ class _TakaAppState extends State<TakaApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    final app = MaterialApp(
       navigatorKey: _navigator,
       title: 'Taka',
       theme: takaTheme(Brightness.light),
       darkTheme: takaTheme(Brightness.dark),
       debugShowCheckedModeBanner: false,
-      // Not around MaterialApp: gaining settings would replace it, and its
-      // navigator would keep showing the home it had.
-      builder: (context, child) {
-        final app = CallbackShortcuts(
-          bindings: {
-            const SingleActivator(LogicalKeyboardKey.escape): _unfocus,
-          },
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: _unfocus,
-            child: child,
-          ),
-        );
-        return switch (widget.settings) {
-          final settings? => BlocProvider.value(value: settings, child: app),
-          null => app,
-        };
-      },
+      builder: (context, child) => CallbackShortcuts(
+        bindings: {const SingleActivator(LogicalKeyboardKey.escape): _unfocus},
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _unfocus,
+          child: child,
+        ),
+      ),
       home: widget.home,
       routes: {
         if (widget.settings != null)
           TakaApp.settingsRoute: (_) => SettingsPage(version: widget.version),
       },
     );
+
+    return switch (widget.settings) {
+      final settings? => BlocProvider.value(value: settings, child: app),
+      null => app,
+    };
   }
 
   // Unfocusing a scope moves focus out of the navigator, where Tab finds nothing.

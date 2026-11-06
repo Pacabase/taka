@@ -8,8 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/agent/agent_gate.dart';
 import 'package:taka/pages/agent_error_page.dart';
-import 'package:taka/pages/settings/settings_bloc.dart';
-import 'package:taka/taka_app.dart';
 
 import '../pages/tunnels/fake_agent.dart';
 
@@ -52,10 +50,9 @@ void main() {
           }
           return agent;
         },
-        connected: (agent) => TakaApp(
-          version: '1.2.3',
-          settings: SettingsBloc(agent: agent),
-          home: const Text('Tunnels'),
+        connected: (_) => const Directionality(
+          textDirection: TextDirection.ltr,
+          child: Text('Tunnels'),
         ),
       ),
     );
