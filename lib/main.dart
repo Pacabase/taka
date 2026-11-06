@@ -38,7 +38,6 @@ Future<void> main() async {
     runApp(
       TakaApp(
         version: version,
-        aboutRequests: agent.aboutRequests,
         settings: SettingsBloc(agent: agent)
           ..add(const SettingsEvent.started()),
         home: BlocProvider(

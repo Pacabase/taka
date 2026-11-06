@@ -12,7 +12,6 @@ class const TakaApp({
   super.key,
   required final String version,
   required final Widget home,
-  final Stream<void> aboutRequests = const Stream.empty(),
   final SettingsBloc? settings,
 }) extends StatefulWidget {
   static const settingsRoute = '/settings';
@@ -25,12 +24,10 @@ class _TakaAppState extends State<TakaApp> {
   static const _menu = MethodChannel('taka/menu');
 
   final _navigator = GlobalKey<NavigatorState>();
-  late final StreamSubscription<void> _aboutRequests;
 
   @override
   void initState() {
     super.initState();
-    _aboutRequests = widget.aboutRequests.listen((_) => _showAbout());
     _menu.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'about':
@@ -43,7 +40,6 @@ class _TakaAppState extends State<TakaApp> {
 
   @override
   void dispose() {
-    unawaited(_aboutRequests.cancel());
     _menu.setMethodCallHandler(null);
     super.dispose();
   }

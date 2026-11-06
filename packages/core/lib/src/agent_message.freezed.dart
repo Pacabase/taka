@@ -56,13 +56,12 @@ extension AgentMessagePatterns on AgentMessage {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AgentIdentity value)?  identity,TResult Function( AgentSnapshot value)?  snapshot,TResult Function( ShowAbout value)?  showAbout,TResult Function( OpenTunnel value)?  openTunnel,TResult Function( SettingsChanged value)?  settings,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AgentIdentity value)?  identity,TResult Function( AgentSnapshot value)?  snapshot,TResult Function( OpenTunnel value)?  openTunnel,TResult Function( SettingsChanged value)?  settings,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that);case AgentSnapshot() when snapshot != null:
-return snapshot(_that);case ShowAbout() when showAbout != null:
-return showAbout(_that);case OpenTunnel() when openTunnel != null:
+return snapshot(_that);case OpenTunnel() when openTunnel != null:
 return openTunnel(_that);case SettingsChanged() when settings != null:
 return settings(_that);case _:
   return orElse();
@@ -82,13 +81,12 @@ return settings(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AgentIdentity value)  identity,required TResult Function( AgentSnapshot value)  snapshot,required TResult Function( ShowAbout value)  showAbout,required TResult Function( OpenTunnel value)  openTunnel,required TResult Function( SettingsChanged value)  settings,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AgentIdentity value)  identity,required TResult Function( AgentSnapshot value)  snapshot,required TResult Function( OpenTunnel value)  openTunnel,required TResult Function( SettingsChanged value)  settings,}){
 final _that = this;
 switch (_that) {
 case AgentIdentity():
 return identity(_that);case AgentSnapshot():
-return snapshot(_that);case ShowAbout():
-return showAbout(_that);case OpenTunnel():
+return snapshot(_that);case OpenTunnel():
 return openTunnel(_that);case SettingsChanged():
 return settings(_that);}
 }
@@ -104,13 +102,12 @@ return settings(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AgentIdentity value)?  identity,TResult? Function( AgentSnapshot value)?  snapshot,TResult? Function( ShowAbout value)?  showAbout,TResult? Function( OpenTunnel value)?  openTunnel,TResult? Function( SettingsChanged value)?  settings,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AgentIdentity value)?  identity,TResult? Function( AgentSnapshot value)?  snapshot,TResult? Function( OpenTunnel value)?  openTunnel,TResult? Function( SettingsChanged value)?  settings,}){
 final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that);case AgentSnapshot() when snapshot != null:
-return snapshot(_that);case ShowAbout() when showAbout != null:
-return showAbout(_that);case OpenTunnel() when openTunnel != null:
+return snapshot(_that);case OpenTunnel() when openTunnel != null:
 return openTunnel(_that);case SettingsChanged() when settings != null:
 return settings(_that);case _:
   return null;
@@ -129,12 +126,11 @@ return settings(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String identity)?  identity,TResult Function( TunnelsSnapshot snapshot)?  snapshot,TResult Function()?  showAbout,TResult Function( String? id)?  openTunnel,TResult Function( AgentSettings settings)?  settings,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String identity)?  identity,TResult Function( TunnelsSnapshot snapshot)?  snapshot,TResult Function( String? id)?  openTunnel,TResult Function( AgentSettings settings)?  settings,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that.identity);case AgentSnapshot() when snapshot != null:
-return snapshot(_that.snapshot);case ShowAbout() when showAbout != null:
-return showAbout();case OpenTunnel() when openTunnel != null:
+return snapshot(_that.snapshot);case OpenTunnel() when openTunnel != null:
 return openTunnel(_that.id);case SettingsChanged() when settings != null:
 return settings(_that.settings);case _:
   return orElse();
@@ -154,12 +150,11 @@ return settings(_that.settings);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String identity)  identity,required TResult Function( TunnelsSnapshot snapshot)  snapshot,required TResult Function()  showAbout,required TResult Function( String? id)  openTunnel,required TResult Function( AgentSettings settings)  settings,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String identity)  identity,required TResult Function( TunnelsSnapshot snapshot)  snapshot,required TResult Function( String? id)  openTunnel,required TResult Function( AgentSettings settings)  settings,}) {final _that = this;
 switch (_that) {
 case AgentIdentity():
 return identity(_that.identity);case AgentSnapshot():
-return snapshot(_that.snapshot);case ShowAbout():
-return showAbout();case OpenTunnel():
+return snapshot(_that.snapshot);case OpenTunnel():
 return openTunnel(_that.id);case SettingsChanged():
 return settings(_that.settings);}
 }
@@ -175,12 +170,11 @@ return settings(_that.settings);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String identity)?  identity,TResult? Function( TunnelsSnapshot snapshot)?  snapshot,TResult? Function()?  showAbout,TResult? Function( String? id)?  openTunnel,TResult? Function( AgentSettings settings)?  settings,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String identity)?  identity,TResult? Function( TunnelsSnapshot snapshot)?  snapshot,TResult? Function( String? id)?  openTunnel,TResult? Function( AgentSettings settings)?  settings,}) {final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that.identity);case AgentSnapshot() when snapshot != null:
-return snapshot(_that.snapshot);case ShowAbout() when showAbout != null:
-return showAbout();case OpenTunnel() when openTunnel != null:
+return snapshot(_that.snapshot);case OpenTunnel() when openTunnel != null:
 return openTunnel(_that.id);case SettingsChanged() when settings != null:
 return settings(_that.settings);case _:
   return null;
@@ -334,38 +328,6 @@ $TunnelsSnapshotCopyWith<$Res> get snapshot {
   });
 }
 }
-
-/// @nodoc
-
-
-class ShowAbout extends AgentMessage {
-  const ShowAbout(): super._();
-  
-
-
-
-
-
-
-@override
-bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is ShowAbout);
-}
-
-
-@override
-int get hashCode => runtimeType.hashCode;
-
-@override
-String toString() {
-    return 'AgentMessage.showAbout()';
-}
-
-
-}
-
-
-
 
 /// @nodoc
 

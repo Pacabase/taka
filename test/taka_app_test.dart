@@ -1,8 +1,6 @@
 @Tags(['unit'])
 library;
 
-import 'dart:async';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,22 +14,15 @@ import 'package:taka/taka_app.dart';
 import 'pages/tunnels/fake_agent.dart';
 
 void main() {
-  testWidgets('an About request opens About, once however often it comes', (
+  testWidgets('About in the menu opens About, once however often it comes', (
     tester,
   ) async {
-    final requests = StreamController<void>();
-    addTearDown(requests.close);
     await tester.pumpWidget(
-      TakaApp(
-        version: '1.2.3',
-        aboutRequests: requests.stream,
-        home: const Text('Tunnels'),
-      ),
+      const TakaApp(version: '1.2.3', home: Text('Tunnels')),
     );
 
-    requests
-      ..add(null)
-      ..add(null);
+    await _menuCall(tester, 'about');
+    await _menuCall(tester, 'about');
     await tester.pumpAndSettle();
 
     expect(find.byType(AboutPage), findsOneWidget);

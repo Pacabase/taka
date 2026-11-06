@@ -20,7 +20,6 @@ void main() {
       AgentMessage.identity(''),
       AgentMessage.snapshot(snapshot),
       AgentMessage.snapshot(TunnelsSnapshot()),
-      AgentMessage.showAbout(),
       AgentMessage.openTunnel('a1'),
       AgentMessage.openTunnel(),
       AgentMessage.settings(AgentSettings(launchesAtLogin: true)),
@@ -74,10 +73,6 @@ void main() {
         () => AgentMessage.fromJson({'show': 'tunnel', 'id': 5}),
         throwsFormatException,
       );
-    });
-
-    test('showAbout is show about', () {
-      expect(const AgentMessage.showAbout().toJson(), {'show': 'about'});
     });
 
     for (final json in [

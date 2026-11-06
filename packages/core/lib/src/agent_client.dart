@@ -16,8 +16,6 @@ abstract interface class AgentClient {
 
   Stream<TunnelsSnapshot> get snapshots;
 
-  Stream<void> get aboutRequests;
-
   Stream<OpenTunnel> get tunnelRequests;
 
   Stream<AgentSettings> get settings;
@@ -29,7 +27,6 @@ abstract interface class AgentClient {
 
 class SocketAgentClient(final Socket _socket) implements AgentClient {
   final _snapshots = StreamController<TunnelsSnapshot>();
-  final _aboutRequests = StreamController<void>();
   final _tunnelRequests = StreamController<OpenTunnel>();
   final _settings = StreamController<AgentSettings>();
   final _identity = Completer<String>();
@@ -47,7 +44,6 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
           onDone: () {
             _identify('');
             unawaited(_snapshots.close());
-            unawaited(_aboutRequests.close());
             unawaited(_tunnelRequests.close());
             unawaited(_settings.close());
           },
@@ -69,9 +65,6 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
   Stream<TunnelsSnapshot> get snapshots => _snapshots.stream;
 
   @override
-  Stream<void> get aboutRequests => _aboutRequests.stream;
-
-  @override
   Stream<OpenTunnel> get tunnelRequests => _tunnelRequests.stream;
 
   @override
@@ -89,8 +82,6 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
       switch (AgentMessage.fromJson(jsonDecode(line))) {
         case AgentIdentity(:final identity):
           _identify(identity);
-        case ShowAbout():
-          _aboutRequests.add(null);
         case final OpenTunnel request:
           _tunnelRequests.add(request);
         case SettingsChanged(:final settings):
