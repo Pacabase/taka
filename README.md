@@ -23,7 +23,8 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### First preview (0.1, macOS)
 
-- [ ] **Releases** — a `.dmg` per chip from CI on a version tag, a Homebrew tap, and signed auto-updates.
+- [ ] **Homebrew tap** — `brew install --cask taka`, from the release `.dmg`.
+- [ ] **Signed auto-updates**.
 
 ### Daily driver (0.2, Linux)
 
