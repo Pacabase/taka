@@ -30,7 +30,7 @@ jobs:
           pattern: Taka-*
           path: dist
           merge-multiple: true
-      - name: Draft the release
+      - name: Attach the .dmgs to the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -43,6 +43,7 @@ jobs:
           elif [ "$draft" = true ]; then
             gh release upload "$TAG" dist/* --clobber
           else
-            echo "$TAG is already published" >&2
-            exit 1
+            # A release made on GitHub's website is already published; never
+            # replace files people may have downloaded.
+            gh release upload "$TAG" dist/*
           fi
