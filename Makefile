@@ -10,6 +10,7 @@ default: help
 
 help:
 	@echo "make macos    - Build Taka.app with its agent inside"
+	@echo "make app      - Build Taka.app around an agent already built in AGENT"
 	@echo "make run      - Run the app from source, with a freshly built agent"
 	@echo "make test     - Run every unit test"
 	@echo "make licences - Regenerate the background helper's licences for About"
@@ -18,9 +19,9 @@ agent:
 	cd packages/agent && fvm dart build cli
 	cp packages/agent/assets/*.png $(AGENT)/
 
-macos: agent app
+macos: agent
+	$(MAKE) app
 
-# Builds the app around the agent in $(AGENT), such as a universal one from CI.
 app:
 	fvm flutter build macos --release
 	rm -rf $(LOGIN_ITEMS)

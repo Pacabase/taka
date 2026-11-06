@@ -6,15 +6,52 @@ on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+*']
   pull_request:
-    paths: ['.github/workflows/release.yml', 'Makefile']
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/actions/flutter/**'
+      - '.fvmrc'
+      - 'Makefile'
+      - 'macos/**'
+      - 'packages/agent/macos/**'
+      - 'packages/agent/pubspec.*'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: version
+        run: |
+          echo "version=$(sed -n 's/^version: \([^+]*\).*/\1/p' pubspec.yaml)" >> "$GITHUB_OUTPUT"
+      - name: Check the tag matches the version
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "Tag $TAG doesn't match pubspec.yaml's version $VERSION" >&2
+            exit 1
+          fi
+
   # Dart builds the agent for the Mac it runs on only, so once per chip.
   agent:
     name: agent (${{ matrix.arch }})
+    needs: version
     timeout-minutes: 20
     strategy:
       matrix:
@@ -46,25 +83,15 @@ jobs:
           if-no-files-found: error
 
   app:
-    needs: agent
+    needs: [version, agent]
     runs-on: macos-15
     timeout-minutes: 30
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Check the tag matches the version
-        if: github.ref_type == 'tag'
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          version=$(sed -n 's/^version: \([^+]*\).*/\1/p' pubspec.yaml)
-          if [ "$TAG" != "v$version" ]; then
-            echo "Tag $TAG doesn't match pubspec.yaml's version $version" >&2
-            exit 1
-          fi
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: agent-*
@@ -73,42 +100,75 @@ jobs:
         run: |
           cp -R agents/agent-arm64 agent
           cp packages/agent/assets/*.png agent/
-          for file in bin/taka_agent lib/libcnativeapi.dylib; do
-            lipo -create "agents/agent-arm64/$file" "agents/agent-x64/$file" -output "agent/$file"
+          (cd agents/agent-arm64 && find bin lib -type f) | while read -r file; do
+            if lipo -info "agents/agent-arm64/$file" >/dev/null 2>&1; then
+              lipo -create "agents/agent-arm64/$file" "agents/agent-x64/$file" -output "agent/$file"
+            fi
           done
-          chmod +x agent/bin/taka_agent
-          lipo -archs agent/bin/taka_agent
+          chmod +x agent/bin/*
       - uses: ./.github/actions/flutter
       - run: fvm flutter pub get --enforce-lockfile
       - run: make app AGENT=agent
-      - name: Check both chips are in the app
+      - name: Check the app runs on both chips and its stated macOS
         run: |
-          for file in \
-            Contents/MacOS/Taka \
-            Contents/Library/LoginItems/Taka.app/Contents/MacOS/Taka \
-            Contents/Library/LoginItems/Taka.app/Contents/lib/libcnativeapi.dylib; do
-            archs=$(lipo -archs "build/macos/Build/Products/Release/Taka.app/$file")
-            echo "$file: $archs"
+          app=build/macos/Build/Products/Release/Taka.app
+          agent=$app/Contents/Library/LoginItems/Taka.app
+          codesign --verify --deep --strict "$app"
+          minimum=$(plutil -extract LSMinimumSystemVersion raw "$app/Contents/Info.plist")
+          agent_minimum=$(plutil -extract LSMinimumSystemVersion raw "$agent/Contents/Info.plist")
+          if [ "$minimum" != "$agent_minimum" ]; then
+            echo "The app says macOS $minimum but its agent says $agent_minimum" >&2
+            exit 1
+          fi
+          find "$app" -type f | while read -r file; do
+            lipo -info "$file" >/dev/null 2>&1 || continue
+            archs=$(lipo -archs "$file")
+            needs=$(vtool -show-build "$file" | awk '/minos/ {print $2}' | sort -V | tail -1)
+            echo "${file#"$app"/}: $archs, macOS ${needs:-?}"
             case "$archs" in *x86_64*arm64*|*arm64*x86_64*) ;; *) exit 1 ;; esac
+            if [ -z "$needs" ] ||
+              [ "$(printf '%s\n%s\n' "$needs" "$minimum" | sort -V | tail -1)" != "$minimum" ]; then
+              echo "${file#"$app"/} needs macOS ${needs:-?}, but the app says $minimum" >&2
+              exit 1
+            fi
           done
       - name: Make the disk image
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          version=$(sed -n 's/^version: \([^+]*\).*/\1/p' pubspec.yaml)
           mkdir -p dmg dist
           cp -R build/macos/Build/Products/Release/Taka.app dmg/
           ln -s /Applications dmg/Applications
-          hdiutil create -volname Taka -srcfolder dmg -format UDZO -ov "dist/Taka-$version.dmg"
+          hdiutil create -volname Taka -srcfolder dmg -format ULMO -ov "dist/Taka-$VERSION.dmg"
           (cd dist && shasum -a 256 Taka-*.dmg > SHA256SUMS)
           cat dist/SHA256SUMS
-      - if: github.ref_type == 'tag'
-        name: Draft the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" dist/* --draft --generate-notes --title "Taka ${TAG#v}" --repo "$GITHUB_REPOSITORY"
-      - if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Taka
           path: dist
           if-no-files-found: error
+
+  # Its own job, so the build's tools never run with a token that can write.
+  release:
+    if: github.ref_type == 'tag'
+    needs: app
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: Taka
+          path: dist
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --verify-tag --draft --generate-notes --title "Taka ${TAG#v}"
+          fi
