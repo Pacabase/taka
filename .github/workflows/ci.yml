@@ -82,15 +82,7 @@ jobs:
       - run: fvm flutter test --tags unit
 
   macos:
-    runs-on: macos-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/flutter
-      - run: fvm flutter build macos --release
-      - run: test -x build/macos/Build/Products/Release/Taka.app/Contents/Library/LoginItems/Taka.app/Contents/MacOS/Taka
+    uses: ./.github/workflows/macos.yml
 
   # The one required check, so jobs can be added without touching branch rules.
   ci:

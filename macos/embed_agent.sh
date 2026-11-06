@@ -1,19 +1,21 @@
 #!/bin/sh
-# Builds the background helper for this Mac's chip and puts it inside the app
-# as its login item, signed like the app.
 set -eu
 
+dart="$FLUTTER_ROOT/bin/dart"
 agent="$FLUTTER_APPLICATION_PATH/packages/agent"
-case "$(uname -m)" in
-  arm64) arch=arm64 ;;
-  *) arch=x64 ;;
-esac
-bundle="$agent/build/cli/macos_$arch/bundle"
+platform=$("$dart" --version 2>&1 | sed -n 's/.*on "\(macos_[a-z0-9]*\)".*/\1/p')
+bundle="$agent/build/cli/$platform/bundle"
 app="$BUILT_PRODUCTS_DIR/$WRAPPER_NAME"
 helper="$app/Contents/Library/LoginItems/Taka.app"
 identity="${EXPANDED_CODE_SIGN_IDENTITY:--}"
 
-(cd "$agent" && "$FLUTTER_ROOT/bin/dart" pub get && "$FLUTTER_ROOT/bin/dart" build cli)
+(cd "$agent" && "$dart" pub get && "$dart" build cli)
+for arch in $ARCHS; do
+  if ! lipo "$bundle/bin/taka_agent" -verify_arch "$arch" 2>/dev/null; then
+    echo "error: the app is built for $ARCHS, but Dart built the agent in $bundle" >&2
+    exit 1
+  fi
+done
 
 rm -rf "$helper"
 mkdir -p "$helper/Contents/MacOS" "$helper/Contents/Resources"

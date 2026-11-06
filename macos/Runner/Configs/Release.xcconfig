@@ -1,2 +1,7 @@
 #include "../../Flutter/Flutter-Release.xcconfig"
 #include "Warnings.xcconfig"
+
+// Its background helper runs only on the chip it's built on, so the app too.
+OTHER_ARCH_arm64 = x86_64
+OTHER_ARCH_x86_64 = arm64
+EXCLUDED_ARCHS = $(OTHER_ARCH_$(NATIVE_ARCH_ACTUAL))

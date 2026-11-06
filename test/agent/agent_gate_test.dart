@@ -1,7 +1,6 @@
 @Tags(['unit'])
 library;
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -38,26 +37,6 @@ void main() {
     );
   });
 
-  testWidgets('shows the app once the helper answers', (tester) async {
-    final agent = Completer<FakeAgent>();
-    await tester.pumpWidget(
-      AgentGate(
-        version: '1.2.3',
-        connect: () => agent.future,
-        connected: (agent) => TakaApp(
-          version: '1.2.3',
-          settings: SettingsBloc(agent: agent),
-          home: const Text('Tunnels'),
-        ),
-      ),
-    );
-
-    agent.complete(FakeAgent());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Tunnels'), findsOneWidget);
-  });
-
   testWidgets('shows why it failed, and Try Again opens the app once it '
       'answers', (tester) async {
     final agent = FakeAgent();
@@ -73,9 +52,10 @@ void main() {
           }
           return agent;
         },
-        connected: (_) => const Directionality(
-          textDirection: TextDirection.ltr,
-          child: Text('Tunnels'),
+        connected: (agent) => TakaApp(
+          version: '1.2.3',
+          settings: SettingsBloc(agent: agent),
+          home: const Text('Tunnels'),
         ),
       ),
     );

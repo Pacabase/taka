@@ -52,8 +52,8 @@ class _TakaAppState extends State<TakaApp> {
       theme: takaTheme(Brightness.light),
       darkTheme: takaTheme(Brightness.dark),
       debugShowCheckedModeBanner: false,
-      // Around the navigator, not MaterialApp: a replaced MaterialApp leaves its
-      // navigator showing the old home.
+      // Not around MaterialApp: gaining settings would replace it, and its
+      // navigator would keep showing the home it had.
       builder: (context, child) {
         final app = CallbackShortcuts(
           bindings: {
