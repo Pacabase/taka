@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:taka/agent/agent_launcher.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
@@ -11,9 +12,7 @@ import 'package:taka/widgets/app_icon.dart';
 String agentFailure(Object error) => switch (error) {
   ProcessException(executable: 'open') => "macOS couldn't open it.",
   ProcessException() => "It couldn't be started.",
-  SocketException(message: final message)
-      when message.startsWith('no answer') =>
-    "It started but didn't answer within 5 seconds.",
+  AgentTimeoutException() => "It started but didn't answer within 5 seconds.",
   _ => 'Something went wrong while starting it.',
 };
 

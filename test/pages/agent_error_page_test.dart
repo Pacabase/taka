@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:taka/agent/agent_launcher.dart';
 import 'package:taka/pages/agent_error_page.dart';
 
 void main() {
@@ -21,9 +22,7 @@ void main() {
       "It couldn't be started.",
     );
     expect(
-      agentFailure(
-        const SocketException('no answer on its socket within 5 seconds'),
-      ),
+      agentFailure(const AgentTimeoutException()),
       "It started but didn't answer within 5 seconds.",
     );
     expect(
