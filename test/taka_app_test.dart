@@ -18,7 +18,11 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const TakaApp(version: '1.2.3', home: Text('Tunnels')),
+      TakaApp(
+        version: '1.2.3',
+        settings: SettingsBloc(agent: FakeAgent()),
+        home: const Text('Tunnels'),
+      ),
     );
 
     await _menuCall(tester, 'about');
@@ -62,24 +66,12 @@ void main() {
     expect(find.text('Tunnels'), findsOneWidget);
   });
 
-  testWidgets('Settings in the menu does nothing without settings', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const TakaApp(version: '1.2.3', home: Text('Tunnels')),
-    );
-
-    await _menuCall(tester, 'settings');
-    await tester.pumpAndSettle();
-
-    expect(find.text('Tunnels'), findsOneWidget);
-  });
-
   testWidgets('a click on empty space takes focus away', (tester) async {
     var toggles = 0;
     await tester.pumpWidget(
       TakaApp(
         version: '1.2.3',
+        settings: SettingsBloc(agent: FakeAgent()),
         home: Scaffold(
           body: Column(
             children: [
@@ -113,6 +105,7 @@ void main() {
     await tester.pumpWidget(
       TakaApp(
         version: '1.2.3',
+        settings: SettingsBloc(agent: FakeAgent()),
         home: Scaffold(
           body: NativeSwitch(
             value: false,
@@ -137,6 +130,7 @@ void main() {
     await tester.pumpWidget(
       TakaApp(
         version: '1.2.3',
+        settings: SettingsBloc(agent: FakeAgent()),
         home: Scaffold(
           body: Column(
             children: [

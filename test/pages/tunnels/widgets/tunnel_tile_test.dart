@@ -7,10 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:taka/pages/settings/settings_bloc.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_theme.dart';
+
+import '../fake_agent.dart';
 
 void main() {
   const unnamed = Tunnel(
@@ -93,6 +96,7 @@ void main() {
     await tester.pumpWidget(
       TakaApp(
         version: '1.2.3',
+        settings: SettingsBloc(agent: FakeAgent()),
         home: Scaffold(
           body: Column(
             children: [

@@ -12,7 +12,7 @@ class const TakaApp({
   super.key,
   required final String version,
   required final Widget home,
-  final SettingsBloc? settings,
+  required final SettingsBloc settings,
 }) extends StatefulWidget {
   static const settingsRoute = '/settings';
 
@@ -45,8 +45,9 @@ class _TakaAppState extends State<TakaApp> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final app = MaterialApp(
+  Widget build(BuildContext context) => BlocProvider.value(
+    value: widget.settings,
+    child: MaterialApp(
       navigatorKey: _navigator,
       title: 'Taka',
       theme: takaTheme(Brightness.light),
@@ -62,16 +63,10 @@ class _TakaAppState extends State<TakaApp> {
       ),
       home: widget.home,
       routes: {
-        if (widget.settings != null)
-          TakaApp.settingsRoute: (_) => SettingsPage(version: widget.version),
+        TakaApp.settingsRoute: (_) => SettingsPage(version: widget.version),
       },
-    );
-
-    return switch (widget.settings) {
-      final settings? => BlocProvider.value(value: settings, child: app),
-      null => app,
-    };
-  }
+    ),
+  );
 
   // Unfocusing a scope moves focus out of the navigator, where Tab finds nothing.
   void _unfocus() {
@@ -82,8 +77,6 @@ class _TakaAppState extends State<TakaApp> {
   }
 
   void _showSettings() {
-    if (widget.settings == null) return;
-
     final navigator = _navigator.currentState!;
     var isShown = false;
     navigator.popUntil((route) {

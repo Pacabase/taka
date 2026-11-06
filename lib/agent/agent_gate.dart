@@ -4,7 +4,7 @@ import 'package:core/core.dart';
 import 'package:fimber/fimber.dart';
 import 'package:flutter/material.dart';
 import 'package:taka/pages/agent_error_page.dart';
-import 'package:taka/taka_app.dart';
+import 'package:taka/theme/taka_theme.dart';
 
 /// Connects to the background helper, and shows [connected] once it answers,
 /// or why it didn't.
@@ -42,14 +42,26 @@ class _AgentGateState extends State<AgentGate> {
   @override
   Widget build(BuildContext context) => switch ((_app, _error)) {
     (final app?, _) => app,
-    (_, final error?) => TakaApp(
-      version: widget.version,
+    (_, final error?) => _Shell(
       home: AgentErrorPage(
         error: error,
         version: widget.version,
         onTryAgain: _connect,
       ),
     ),
-    _ => TakaApp(version: widget.version, home: const Scaffold()),
+    _ => const _Shell(
+      home: Scaffold(body: Center(child: CircularProgressIndicator())),
+    ),
   };
+}
+
+class const _Shell({required final Widget home}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'Taka',
+    theme: takaTheme(Brightness.light),
+    darkTheme: takaTheme(Brightness.dark),
+    debugShowCheckedModeBanner: false,
+    home: home,
+  );
 }
