@@ -56,15 +56,23 @@ Future<void> _start() async {
             'Taka',
           ),
   );
-  final server = await AgentServer.bind(
-    agentSocketPath(),
-    manager,
-    preferences,
-    identity: identity,
-  );
-  if (server == null) {
-    Fimber.i('Another Taka agent is running');
-    Application.instance.quit(0);
+  final AgentServer server;
+  try {
+    final bound = await AgentServer.bind(
+      agentSocketPath(),
+      manager,
+      preferences,
+      identity: identity,
+    );
+    if (bound == null) {
+      Fimber.i('Another Taka agent is running');
+      Application.instance.quit(0);
+      return;
+    }
+    server = bound;
+  } on SocketException catch (exception) {
+    Fimber.e('Could not listen on ${agentSocketPath()}', ex: exception);
+    Application.instance.quit(1);
     return;
   }
   // Only once this agent owns the socket, so a second one starts no ssh.
