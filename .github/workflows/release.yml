@@ -12,6 +12,11 @@ on:
       - '.fvmrc'
       - 'Makefile'
       - 'macos/**'
+      - 'pubspec.*'
+      - 'assets/**'
+      - 'fonts/**'
+      - 'packages/core/pubspec.*'
+      - 'packages/agent/assets/**'
       - 'packages/agent/macos/**'
       - 'packages/agent/pubspec.*'
   workflow_dispatch:
@@ -87,11 +92,11 @@ jobs:
             echo "The app says macOS $minimum but its agent says $agent_minimum" >&2
             exit 1
           fi
-          find "$app" -type f | while read -r file; do
+          find "$app" -type f | while IFS= read -r file; do
             lipo -info "$file" >/dev/null 2>&1 || continue
-            needs=$(vtool -show-build "$file" | awk '/minos/ {print $2}' | sort -V | tail -1)
+            needs=$( (vtool -show-build "$file" || true) | awk '/minos/ {print $2}' | sort -V | tail -1)
             echo "${file#"$app"/}: $(lipo -archs "$file"), macOS ${needs:-?}"
-            lipo "$file" -verify_arch "$ARCH"
+            lipo "$file" -verify_arch "$ARCH" || { echo "${file#"$app"/} doesn't run on $ARCH" >&2; exit 1; }
             if [ -z "$needs" ] ||
               [ "$(printf '%s\n%s\n' "$needs" "$minimum" | sort -V | tail -1)" != "$minimum" ]; then
               echo "${file#"$app"/} needs macOS ${needs:-?}, but the app says $minimum" >&2
@@ -133,8 +138,12 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           (cd dist && sha256sum Taka-*.dmg > SHA256SUMS)
-          if gh release view "$TAG" >/dev/null 2>&1; then
+          if ! draft=$(gh release view "$TAG" --json isDraft -q .isDraft 2>"$RUNNER_TEMP/view"); then
+            grep -q "release not found" "$RUNNER_TEMP/view" || { cat "$RUNNER_TEMP/view" >&2; exit 1; }
+            gh release create "$TAG" dist/* --verify-tag --draft --generate-notes --title "Taka ${TAG#v}"
+          elif [ "$draft" = true ]; then
             gh release upload "$TAG" dist/* --clobber
           else
-            gh release create "$TAG" dist/* --verify-tag --draft --generate-notes --title "Taka ${TAG#v}"
+            echo "$TAG is already published" >&2
+            exit 1
           fi
