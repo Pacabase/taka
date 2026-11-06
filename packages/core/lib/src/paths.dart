@@ -10,14 +10,24 @@ Directory takaDirectory({Map<String, String>? environment}) {
     return Directory('$home/Library/Application Support/$_appId');
   }
   if (Platform.isLinux) {
-    final data = switch (variables['XDG_DATA_HOME']) {
-      final String data when data.isNotEmpty => data,
-      _ => '$home/.local/share',
-    };
-    return Directory('$data/$_appId');
+    return Directory('${dataHome(environment: environment)}/$_appId');
   }
   throw UnsupportedError('Taka runs on macOS and Linux so far');
 }
+
+/// Where Linux keeps a user's app data, such as desktop entries.
+String dataHome({Map<String, String>? environment}) => _xdgHome(
+  environment ?? Platform.environment,
+  'XDG_DATA_HOME',
+  '.local/share',
+);
+
+// An XDG base directory: its variable when set, else [fallback] in HOME.
+String _xdgHome(Map<String, String> variables, String name, String fallback) =>
+    switch (variables[name]) {
+      final String path when path.isNotEmpty => path,
+      _ => '${variables['HOME'] ?? ''}/$fallback',
+    };
 
 String agentSocketPath({Map<String, String>? environment}) =>
     '${takaDirectory(environment: environment).path}/agent.sock';
@@ -33,9 +43,7 @@ Directory logDirectory({Map<String, String>? environment}) {
 
   if (Platform.isMacOS) return Directory('$home/Library/Logs/Taka');
 
-  final state = switch (variables['XDG_STATE_HOME']) {
-    final String state when state.isNotEmpty => state,
-    _ => '$home/.local/state',
-  };
-  return Directory('$state/taka/logs');
+  return Directory(
+    '${_xdgHome(variables, 'XDG_STATE_HOME', '.local/state')}/taka/logs',
+  );
 }

@@ -43,8 +43,7 @@ external final Pointer<Void> _displayNameKey;
 void restoreProcessName(String name) {
   if (Platform.isLinux) {
     try {
-      // Linux keeps only the first 15 bytes.
-      File('/proc/self/task/$pid/comm').writeAsStringSync(name);
+      File('/proc/self/comm').writeAsStringSync(name);
     } on FileSystemException catch (exception) {
       Fimber.w('Could not set the process name', ex: exception);
     }

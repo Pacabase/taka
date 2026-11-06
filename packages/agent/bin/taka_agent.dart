@@ -99,7 +99,8 @@ Future<void> _start() async {
     assetsPath: agentAssets,
     onManageTunnels: () => unawaited(_open(app)),
     onOpenTunnel: (id) {
-      // On macOS and Linux, opening the app brings an open window to the front.
+      // On macOS and Linux, opening the app again presents its open window;
+      // Wayland may only flag it as wanting attention.
       final isOpen = server.show(AgentMessage.openTunnel(id));
       if (!isOpen || !Platform.isWindows) unawaited(_open(app));
     },

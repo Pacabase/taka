@@ -10,6 +10,8 @@ destination="$3"
 agent="$(dirname "$0")/../packages/agent"
 bundle="$agent/build/cli/$platform/bundle"
 
+# Without the old builds, one for another chip can't pass the check below.
+rm -rf "$agent/build/cli"
 (cd "$agent" && "$dart" pub get && "$dart" build cli)
 test -x "$bundle/bin/taka_agent" || {
   echo "error: the app is built for $2, but Dart builds the agent only for this machine" >&2

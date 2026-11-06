@@ -11,15 +11,15 @@ fvm flutter build macos --release     # build/macos/Build/Products/Release/Taka.
 
 ### Linux
 
-On Debian or Ubuntu, install the build tools and libraries first:
+On Debian or Ubuntu, building or testing needs:
 
 ```bash
-sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev libx11-dev libxi-dev
+sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev libx11-dev libxi-dev
 ```
 
 ```bash
 fvm flutter run -d linux              # the app from source
-fvm flutter build linux --release     # build/linux/x64/release/bundle/taka
+fvm flutter build linux --release     # build/linux/<x64 or arm64>/release/bundle/taka
 ```
 
 ## Tests

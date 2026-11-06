@@ -16,6 +16,10 @@ void main() {
   }, testOn: 'mac-os');
 
   test('ps shows the name it is given', () async {
+    final comm = File('/proc/self/comm');
+    final runnerName = comm.readAsStringSync().trim();
+    addTearDown(() => comm.writeAsStringSync(runnerName));
+
     restoreProcessName('Taka name test');
 
     final ps = await Process.run('ps', ['-o', 'comm=', '-p', '$pid']);

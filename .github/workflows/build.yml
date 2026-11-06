@@ -44,7 +44,7 @@ jobs:
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libx11-dev libxi-dev
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev libx11-dev libxi-dev
       - uses: ./.github/actions/flutter
       - run: fvm flutter pub get --enforce-lockfile
       - run: fvm dart pub get --enforce-lockfile -C packages/agent
@@ -75,13 +75,14 @@ jobs:
       - name: Make the archive
         if: runner.os == 'Linux'
         env:
-          ARCH: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
+          TARGET: ${{ matrix.target }}
           TARBALL: Taka-${{ env.VERSION }}-${{ matrix.target }}.tar.gz
         run: |
-          bundle=build/linux/$ARCH/release/bundle
-          test -x "$bundle/taka" && test -x "$bundle/agent/bin/taka_agent"
+          # The targets name Flutter's build folders: linux-x64 builds in x64.
+          release=build/linux/${TARGET#linux-}/release
+          test -x "$release/bundle/taka" && test -x "$release/bundle/agent/bin/taka_agent"
           mkdir -p dist
-          tar -czf "dist/$TARBALL" -C "$bundle" --transform 's,^\.,taka,' .
+          tar -czf "dist/$TARBALL" -C "$release" --transform 's,^bundle,taka,' bundle
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Taka-${{ matrix.target }}
