@@ -26,8 +26,6 @@ Stream<LicenseEntry> bundledLicenses() async* {
   }
 }
 
-/// Licences of the background helper's packages that Flutter doesn't list
-/// already.
 Iterable<LicenseEntry> agentLicences(String json) => [
   for (final entry in jsonDecode(json) as List<Object?>)
     if (entry case {

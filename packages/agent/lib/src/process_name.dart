@@ -36,8 +36,7 @@ external int _setInformation(
 @Native<Pointer<Void>>(symbol: '_kLSDisplayNameKey')
 external final Pointer<Void> _displayNameKey;
 
-/// Undoes the Dart runtime's `dart:<executable>` name: in LaunchServices on
-/// macOS, which 1Password's prompt shows, and in /proc on Linux, for ps.
+/// Replaces Dart's `dart:<executable>` name, shown by 1Password's prompt and ps.
 void restoreProcessName(String name) {
   if (Platform.isLinux) {
     try {

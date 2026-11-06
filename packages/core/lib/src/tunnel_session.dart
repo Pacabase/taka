@@ -85,8 +85,7 @@ class TunnelSession({
     };
   }
 
-  // A tunnel that has connected, or was restored, retries; a first try the
-  // user is watching that fails stays failed.
+  // A first try the user is watching stays failed; others retry.
   void _drop(Object? exception) {
     if (isStopped) return;
 
@@ -120,8 +119,7 @@ class TunnelSession({
     onChange();
   }
 
-  // A stopping session is already out of the manager's sessions but still
-  // Connected.
+  // A stopping session has left the manager's sessions but is still Connected.
   void _warn(String reason) {
     if (isStopped || _status is! Connected) return;
 

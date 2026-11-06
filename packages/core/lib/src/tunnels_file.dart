@@ -4,7 +4,6 @@ import 'package:core/src/tunnel.dart';
 
 const _version = 1;
 
-/// The tunnels as Taka saves and exports them, with the ids of those in [on].
 String encodeTunnels(List<Tunnel> tunnels, {Set<String> on = const {}}) =>
     const JsonEncoder.withIndent('  ').convert({
       'version': _version,

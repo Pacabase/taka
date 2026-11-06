@@ -32,8 +32,7 @@ Future<void> _start() async {
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
     client: const SystemSshClient(loginShell: true),
-    // 1Password shows its approval prompt only while the app asking is in
-    // front, and open brings the running agent there.
+    // 1Password prompts only while the asking app is in front; open brings it.
     beforeConnect: agentBundle == null
         ? null
         : () => Process.run('open', [agentBundle]),
