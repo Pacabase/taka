@@ -6,12 +6,13 @@ on:
       targets:
         description: The targets to build, as a JSON list; all of them by default.
         type: string
-        default: '["macos-apple-silicon", "macos-intel"]'
+        default: '["macos-apple-silicon", "macos-intel", "linux-x64", "linux-arm64"]'
 
 permissions: {}
 
 jobs:
   # Dart can't build the agent for another chip, nor run it as a universal binary.
+  # Linux builds on the oldest Ubuntu runner, so its glibc suits more systems.
   build:
     name: ${{ matrix.target }}
     timeout-minutes: 30
@@ -22,7 +23,9 @@ jobs:
     runs-on: >-
       ${{ fromJSON('{
         "macos-apple-silicon": "macos-15",
-        "macos-intel": "macos-15-intel"
+        "macos-intel": "macos-15-intel",
+        "linux-x64": "ubuntu-22.04",
+        "linux-arm64": "ubuntu-22.04-arm"
       }')[matrix.target] }}
     permissions:
       contents: read
@@ -40,13 +43,20 @@ jobs:
             exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libx11-dev libxi-dev
       - uses: ./.github/actions/flutter
       - run: fvm flutter pub get --enforce-lockfile
       - run: fvm dart pub get --enforce-lockfile -C packages/agent
-      - run: fvm flutter build macos --release
-      - run: test -x build/macos/Build/Products/Release/Taka.app/Contents/Library/LoginItems/Taka.app/Contents/MacOS/Taka
-      - run: codesign --verify --deep --strict build/macos/Build/Products/Release/Taka.app
+
+      - if: runner.os == 'macOS'
+        run: fvm flutter build macos --release
+      - if: runner.os == 'macOS'
+        run: test -x build/macos/Build/Products/Release/Taka.app/Contents/Library/LoginItems/Taka.app/Contents/MacOS/Taka
+      - if: runner.os == 'macOS'
+        run: codesign --verify --deep --strict build/macos/Build/Products/Release/Taka.app
       - name: Make the disk image
+        if: runner.os == 'macOS'
         env:
           DMG: Taka-${{ env.VERSION }}-${{ matrix.target }}.dmg
         run: |
@@ -59,6 +69,19 @@ jobs:
             [ "$attempt" = 5 ] && exit 1
             sleep $((attempt * 5))
           done
+
+      - if: runner.os == 'Linux'
+        run: fvm flutter build linux --release
+      - name: Make the archive
+        if: runner.os == 'Linux'
+        env:
+          ARCH: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
+          TARBALL: Taka-${{ env.VERSION }}-${{ matrix.target }}.tar.gz
+        run: |
+          bundle=build/linux/$ARCH/release/bundle
+          test -x "$bundle/taka" && test -x "$bundle/agent/bin/taka_agent"
+          mkdir -p dist
+          tar -czf "dist/$TARBALL" -C "$bundle" --transform 's,^\.,taka,' .
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Taka-${{ matrix.target }}

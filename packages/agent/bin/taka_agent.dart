@@ -25,7 +25,7 @@ Future<void> _start() async {
 
   if (agentBundle == null) Fimber.plantTree(DebugTree());
   final debugLogging = DebugLogging('agent')..start();
-  if (Platform.isMacOS) restoreProcessName('Taka');
+  restoreProcessName('Taka');
   final identity = agentIdentity(Platform.resolvedExecutable);
   Fimber.i('Agent $identity on ${Platform.operatingSystemVersion}');
 
@@ -99,9 +99,9 @@ Future<void> _start() async {
     assetsPath: agentAssets,
     onManageTunnels: () => unawaited(_open(app)),
     onOpenTunnel: (id) {
-      // On macOS, open also brings an open window to the front.
+      // On macOS and Linux, opening the app brings an open window to the front.
       final isOpen = server.show(AgentMessage.openTunnel(id));
-      if (!isOpen || Platform.isMacOS) unawaited(_open(app));
+      if (!isOpen || !Platform.isWindows) unawaited(_open(app));
     },
     onQuit: manager.close,
   ).show();

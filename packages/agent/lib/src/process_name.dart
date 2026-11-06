@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 import 'package:fimber/fimber.dart';
@@ -35,9 +36,24 @@ external int _setInformation(
 @Native<Pointer<Void>>(symbol: '_kLSDisplayNameKey')
 external final Pointer<Void> _displayNameKey;
 
-/// Gives this process [name] in LaunchServices, which 1Password's prompt
-/// shows; the Dart runtime renames it `dart:<executable>` at startup.
+/// Gives this process [name], which the Dart runtime renames
+/// `dart:<executable>` at startup: in LaunchServices on macOS, which
+/// 1Password's prompt shows, and as the main thread's name on Linux, which
+/// ps and system monitors show.
 void restoreProcessName(String name) {
+  if (Platform.isLinux) {
+    try {
+      // Linux keeps only the first 15 bytes.
+      File('/proc/self/task/$pid/comm').writeAsStringSync(name);
+    } on FileSystemException catch (exception) {
+      Fimber.w('Could not set the process name', ex: exception);
+    }
+  } else if (Platform.isMacOS) {
+    _restoreLaunchServicesName(name);
+  }
+}
+
+void _restoreLaunchServicesName(String name) {
   const defaultSession = -2;
   const utf8Encoding = 0x08000100;
 
