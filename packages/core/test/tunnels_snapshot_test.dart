@@ -16,7 +16,7 @@ void main() {
       Stopped(),
       Connecting(),
       Connected(),
-      Connected(warning: 'db.internal:5432: Connection refused'),
+      Connected(warning: 'Connection refused'),
       Reconnecting('Connection to bastion closed by remote host.'),
       Failed('127.0.0.1:5432 is already in use'),
     ]) {

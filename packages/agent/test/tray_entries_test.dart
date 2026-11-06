@@ -85,14 +85,14 @@ void main() {
       'ssh -N -L 127.0.0.1:15432:db.internal:5432 bastion | '
       'Edit… | '
       'Web ▸ '
-      '127.0.0.1:8080 is already in use | '
+      'Port 8080 is already in use. | '
       'Try Again | '
       '--- | '
       'Copy Address ⧉ localhost:8080 | '
       'Copy SSH Command ⧉ ssh -N -L 127.0.0.1:8080::0 web | '
       'Edit… | '
       'Other ▸ '
-      'Connection to bastion closed by remote host. | '
+      'The connection dropped. | '
       '--- | '
       'Copy Address ⧉ localhost:8081 | '
       'Copy SSH Command ⧉ ssh -N -L 127.0.0.1:8081::0 web | '
@@ -100,18 +100,24 @@ void main() {
     );
   });
 
-  test('a tunnel down for no stated reason starts its actions plainly', () {
+  test("says plainly why a tunnel is down, never in ssh's words", () {
     String actionsWhen(TunnelStatus status) => tunnelActions(
       TunnelsSnapshot(tunnels: [web], statuses: {'c3': status}),
     );
 
     expect(
-      actionsWhen(const Reconnecting('')),
-      startsWith('Tunnel Actions ▸ Web ▸ Copy Address'),
+      actionsWhen(const Failed('Bad state: boom')),
+      startsWith("Tunnel Actions ▸ Web ▸ It couldn't connect. | Try Again"),
     );
     expect(
       actionsWhen(const Failed('')),
-      startsWith('Tunnel Actions ▸ Web ▸ Try Again | --- | Copy Address'),
+      startsWith("Tunnel Actions ▸ Web ▸ It couldn't connect. | Try Again"),
+    );
+    expect(
+      actionsWhen(const Reconnecting('Timeout, server web not responding.')),
+      startsWith(
+        'Tunnel Actions ▸ Web ▸ The server stopped answering. | --- | Copy',
+      ),
     );
   });
 
@@ -140,14 +146,13 @@ void main() {
     );
   });
 
-  test('cuts a long title to fit, and wraps a long reason', () {
+  test('cuts a long title to fit', () {
     const long = Tunnel(
       id: 'e5',
       name: 'A very long tunnel name that would make the menu wide',
       sshHost: 'web',
       localPort: 8082,
     );
-    final line = List.filled(10, 'word').join(' ');
 
     final snapshot = TunnelsSnapshot(
       tunnels: [long],
@@ -162,23 +167,7 @@ void main() {
       tunnelActions(snapshot),
       startsWith(
         'Tunnel Actions ▸ A very long tunnel name that would make the menu… ▸ '
-        '$line | $line | $line | Try Again',
-      ),
-    );
-  });
-
-  test('splits a word too long for a line, rather than cutting it', () {
-    final host = 'a' * 60;
-
-    expect(
-      tunnelActions(
-        TunnelsSnapshot(
-          tunnels: [web],
-          statuses: {'c3': Failed('Could not resolve $host')},
-        ),
-      ),
-      startsWith(
-        'Tunnel Actions ▸ Web ▸ Could not resolve | ${'a' * 50} | ${'a' * 10} |',
+        "It couldn't connect. | Try Again",
       ),
     );
   });
