@@ -29,7 +29,6 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### Daily driver (0.2, Linux)
 
-- [ ] **Notifications** when a tunnel connects, drops or gives up.
 - [ ] **Activity log** per tunnel.
 - [ ] **Groups and tags**, as tray submenus too.
 - [ ] **A colour per tunnel**, picked from the app theme's palette and shown on its row, so tunnels tell apart at a glance. In the tray, a coloured square beside the name: the nearest emoji square (🟥 🟧 🟨 🟩 🟦 🟪) on macOS and Linux, and a real icon on Windows, where menus can't draw emoji in colour.
@@ -53,6 +52,7 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### Beyond (0.6 and 1.0)
 
+- [ ] **Notifications** when a tunnel drops or gives up, saying why, and opening it in the window when clicked. nativeapi has no notifications on macOS or Linux yet, so it means Apple's UserNotifications through `objective_c` and D-Bus's `org.freedesktop.Notifications`, or adding them to nativeapi.
 - [ ] **Health checks** that show a tunnel as connected only once the service behind it answers.
 - [ ] **Network rules** — connect on a given Wi-Fi or VPN, pause while offline.
 - [ ] **On-demand tunnels** that start ssh on the first connection and stop when idle.

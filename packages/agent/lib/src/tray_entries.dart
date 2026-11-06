@@ -106,7 +106,7 @@ TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
     Stopped() => tunnel.title,
     Connecting() => '${tunnel.title} — connecting…',
     Connected() => '${tunnel.title} — ${tunnel.address}',
-    Failed() => '${tunnel.title} — failed',
+    Failed(:final message) => '${tunnel.title} — ${shortReason(message)}',
     Reconnecting() => '${tunnel.title} — reconnecting…',
   }),
   isChecked: status.isOn,
