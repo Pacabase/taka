@@ -1,7 +1,7 @@
 name: Release
 
-# A v* tag drafts a GitHub Release with the .dmg. Run by hand, or on a pull
-# request that changes how it's built, it uploads the same files instead.
+# A v* tag drafts a GitHub Release with a .dmg per chip. Run by hand, or on a
+# pull request that changes how they're built, it uploads the same files.
 on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+*']
@@ -48,68 +48,35 @@ jobs:
             exit 1
           fi
 
-  # Dart builds the agent for the Mac it runs on only, so once per chip.
-  agent:
-    name: agent (${{ matrix.arch }})
+  # Dart can only build the agent for the Mac it runs on, and its runtime can't
+  # find the program inside a universal binary, so each chip gets its own app.
+  macos:
+    name: macos (${{ matrix.chip }})
     needs: version
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       matrix:
         include:
-          - arch: arm64
+          - chip: apple-silicon
+            arch: arm64
             os: macos-15
-          - arch: x64
+          - chip: intel
+            arch: x86_64
             os: macos-15-intel
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: packages/agent
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
-        with:
-          # The Dart that ships with the Flutter in .fvmrc.
-          sdk: 3.13.7
-      - run: dart pub get --enforce-lockfile
-      - run: dart build cli
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: agent-${{ matrix.arch }}
-          path: packages/agent/build/cli/macos_${{ matrix.arch }}/bundle
-          if-no-files-found: error
-
-  app:
-    needs: [version, agent]
-    runs-on: macos-15
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: agent-*
-          path: agents
-      - name: Join the agents into one universal agent
-        run: |
-          cp -R agents/agent-arm64 agent
-          cp packages/agent/assets/*.png agent/
-          (cd agents/agent-arm64 && find bin lib -type f) | while read -r file; do
-            if lipo -info "agents/agent-arm64/$file" >/dev/null 2>&1; then
-              lipo -create "agents/agent-arm64/$file" "agents/agent-x64/$file" -output "agent/$file"
-            fi
-          done
-          chmod +x agent/bin/*
       - uses: ./.github/actions/flutter
       - run: fvm flutter pub get --enforce-lockfile
-      - run: make app AGENT=agent
-      - name: Check the app runs on both chips and its stated macOS
+      - run: fvm dart pub get --enforce-lockfile -C packages/agent
+      - run: make macos
+      - name: Check the app runs on this chip and its stated macOS
+        env:
+          ARCH: ${{ matrix.arch }}
         run: |
           app=build/macos/Build/Products/Release/Taka.app
           agent=$app/Contents/Library/LoginItems/Taka.app
@@ -122,10 +89,9 @@ jobs:
           fi
           find "$app" -type f | while read -r file; do
             lipo -info "$file" >/dev/null 2>&1 || continue
-            archs=$(lipo -archs "$file")
             needs=$(vtool -show-build "$file" | awk '/minos/ {print $2}' | sort -V | tail -1)
-            echo "${file#"$app"/}: $archs, macOS ${needs:-?}"
-            case "$archs" in *x86_64*arm64*|*arm64*x86_64*) ;; *) exit 1 ;; esac
+            echo "${file#"$app"/}: $(lipo -archs "$file"), macOS ${needs:-?}"
+            lipo "$file" -verify_arch "$ARCH"
             if [ -z "$needs" ] ||
               [ "$(printf '%s\n%s\n' "$needs" "$minimum" | sort -V | tail -1)" != "$minimum" ]; then
               echo "${file#"$app"/} needs macOS ${needs:-?}, but the app says $minimum" >&2
@@ -134,24 +100,22 @@ jobs:
           done
       - name: Make the disk image
         env:
-          VERSION: ${{ needs.version.outputs.version }}
+          DMG: Taka-${{ needs.version.outputs.version }}-${{ matrix.chip }}.dmg
         run: |
           mkdir -p dmg dist
           cp -R build/macos/Build/Products/Release/Taka.app dmg/
           ln -s /Applications dmg/Applications
-          hdiutil create -volname Taka -srcfolder dmg -format ULMO -ov "dist/Taka-$VERSION.dmg"
-          (cd dist && shasum -a 256 Taka-*.dmg > SHA256SUMS)
-          cat dist/SHA256SUMS
+          hdiutil create -volname Taka -srcfolder dmg -format ULMO -ov "dist/$DMG"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: Taka
+          name: Taka-${{ matrix.chip }}
           path: dist
           if-no-files-found: error
 
   # Its own job, so the build's tools never run with a token that can write.
   release:
     if: github.ref_type == 'tag'
-    needs: app
+    needs: macos
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -159,14 +123,16 @@ jobs:
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: Taka
+          pattern: Taka-*
           path: dist
+          merge-multiple: true
       - name: Draft the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
+          (cd dist && sha256sum Taka-*.dmg > SHA256SUMS)
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --clobber
           else
