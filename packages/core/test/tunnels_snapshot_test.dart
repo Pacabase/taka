@@ -30,9 +30,19 @@ void main() {
       });
     }
 
-    test('an unknown status reads as stopped', () {
-      expect(TunnelStatus.fromJson({'status': 'paused'}), const Stopped());
-    });
+    for (final (json, status) in [
+      ({'status': 'paused'}, const Stopped()),
+      ({'status': 'failed'}, const Failed('')),
+      ({'status': 'failed', 'message': 3}, const Failed('')),
+      ({'status': 'connected', 'warning': 3}, const Connected()),
+      ({'status': 'reconnecting'}, const Stopped()),
+      (<String, Object?>{}, const Stopped()),
+      (null, const Stopped()),
+    ]) {
+      test('$json reads as $status', () {
+        expect(TunnelStatus.fromJson(json), status);
+      });
+    }
 
     test('isOn while connecting or connected', () {
       expect(
