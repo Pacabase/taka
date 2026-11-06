@@ -18,8 +18,7 @@ const _reasons = [
   ),
 ];
 
-/// A few words for why a tunnel failed, from ssh's own [message], for places
-/// too narrow for all of it; anything unknown comes back as it is.
+/// ssh's [message] in a few words for narrow places; unknown ones stay as is.
 String shortReason(String message) {
   if (_portInUse.firstMatch(message)?[1] case final port?) {
     return 'port $port in use';

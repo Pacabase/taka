@@ -11,10 +11,8 @@ sealed class const AgentCommand._() with _$AgentCommand {
 
   const factory toggle(String id) = ToggleTunnel;
 
-  /// Puts tunnel [id] at [index] among the others.
   const factory move(String id, int index) = MoveTunnel;
 
-  /// Adds [tunnels] after the others, skipping those already saved.
   const factory importTunnels(List<Tunnel> tunnels) = ImportTunnels;
 
   const factory exportTunnels(String path) = ExportTunnels;

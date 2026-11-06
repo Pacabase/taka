@@ -189,7 +189,7 @@ void main() {
     expect(caption.size.height, greaterThan(20));
   });
 
-  testWidgets('the copy button copies the ssh command, and says so', (
+  testWidgets('the copy button copies the SSH command, and says so', (
     tester,
   ) async {
     final copied = <Object?>[];
@@ -205,7 +205,7 @@ void main() {
     await mouse.addPointer(location: tester.getCenter(find.byType(TunnelTile)));
     await tester.pump();
 
-    await tester.tap(find.byTooltip('Copy ssh command'));
+    await tester.tap(find.byTooltip('Copy SSH command'));
     await tester.pump();
 
     expect(copied, [
@@ -214,7 +214,7 @@ void main() {
     expect(find.byTooltip('Copied'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 1500));
-    expect(find.byTooltip('Copy ssh command'), findsOneWidget);
+    expect(find.byTooltip('Copy SSH command'), findsOneWidget);
   });
 
   testWidgets('offers no copy button for a tunnel ssh cannot open', (
@@ -226,6 +226,6 @@ void main() {
     await tester.pump();
 
     expect(find.byTooltip('Edit'), findsOneWidget);
-    expect(find.byTooltip('Copy ssh command'), findsNothing);
+    expect(find.byTooltip('Copy SSH command'), findsNothing);
   });
 }

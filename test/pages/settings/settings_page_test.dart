@@ -27,7 +27,7 @@ void main() {
     whenListen(
       bloc,
       const Stream<SettingsState>.empty(),
-      initialState: SettingsReady(settings),
+      initialState: Ready(settings),
     );
     await tester.pumpWidget(
       MaterialApp(

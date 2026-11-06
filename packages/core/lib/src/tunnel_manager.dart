@@ -46,9 +46,7 @@ class TunnelManager({
     _emit();
   }
 
-  /// Turns back on the tunnels that were on when Taka last stopped. Unlike a
-  /// tunnel the user just turned on, one that fails to connect tries again:
-  /// at login, the network may not be up yet.
+  /// Restored tunnels retry on failure: at login, the network may not be up yet.
   Future<void> restore() {
     final wasOn = _wasOn;
     _wasOn = const {};
@@ -78,19 +76,18 @@ class TunnelManager({
     }
   }
 
-  /// Adds [tunnels] after the others, skipping any already saved under
-  /// another id, and giving a new id to one whose id is taken.
   Future<void> import(List<Tunnel> tunnels) async {
     final imported = [..._tunnels];
+    final ids = {for (final saved in imported) saved.id};
     for (final tunnel in tunnels) {
       if (imported.any((saved) => tunnel.copyWith(id: saved.id) == saved)) {
         continue;
       }
-      final ids = {for (final saved in imported) saved.id};
       var id = tunnel.id;
       for (var copy = 2; ids.contains(id); copy++) {
         id = '${tunnel.id}-$copy';
       }
+      ids.add(id);
       imported.add(tunnel.copyWith(id: id));
     }
     if (imported.length == _tunnels.length) return;
@@ -134,8 +131,7 @@ class TunnelManager({
   Future<void> disconnectAll() =>
       Future.wait([..._sessions.keys].where(_isOn).map(toggle));
 
-  // A listener of changes may call close again from inside the first call,
-  // and waits for the same tunnels to stop.
+  // A changes listener may call close again from inside this call.
   Future<void> close() async {
     if (!_changes.isClosed) {
       final changesClosed = _changes.close();

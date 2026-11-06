@@ -1,5 +1,4 @@
-// Flutter lists licences for the window's packages only, so this writes those
-// of the ones only the background helper ships to assets/agent_licences.json.
+// Flutter lists only the window's packages' licences, so this adds the agent's.
 import 'dart:convert';
 import 'dart:io';
 
@@ -15,8 +14,7 @@ const _licenceFiles = [
 
 Future<void> main() async {
   final agentPackages = _packageRoots('packages/agent');
-  // Flutter lists each package in the window's config, dev ones too, that has
-  // a NOTICES or LICENSE file.
+  // As Flutter does: any with a NOTICES or LICENSE, dev packages included.
   final windowPackages = {
     for (final MapEntry(key: name, value: root) in _packageRoots('.').entries)
       if ([

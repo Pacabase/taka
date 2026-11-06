@@ -107,7 +107,7 @@ class _TunnelTileState extends State<TunnelTile> {
               if (isHovered || _focused) ...[
                 if (tunnel.sshCommand case final command?)
                   IconButton(
-                    tooltip: _copied == null ? 'Copy ssh command' : 'Copied',
+                    tooltip: _copied == null ? 'Copy SSH command' : 'Copied',
                     onPressed: () => _copy(command),
                     icon: AppIcon(
                       _copied == null ? AppIcons.copy : AppIcons.check,

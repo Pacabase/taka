@@ -66,8 +66,7 @@ sealed class const Tunnel._() with _$Tunnel {
     TunnelKind.socks => 'socks5h://localhost:$localPort',
   };
 
-  /// The command that opens this tunnel from a terminal, or null when ssh
-  /// can't open it, such as for a local port outside 1 to 65535.
+  /// Null for a tunnel ssh can't open, such as a local port outside 1 to 65535.
   String? get sshCommand {
     try {
       return switch (kind) {
@@ -95,7 +94,6 @@ sealed class const Tunnel._() with _$Tunnel {
 }
 
 extension TunnelOrder on List<Tunnel> {
-  /// Puts tunnel [id] at [index] among the others.
   List<Tunnel> moved(String id, int index) {
     final from = indexWhere((tunnel) => tunnel.id == id);
     final to = index.clamp(0, length - 1);
