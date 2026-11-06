@@ -1,4 +1,5 @@
-name: 'Install Flutter'
+name: 'Install Flutter and the packages'
+description: 'The Flutter in .fvmrc, and the app and agent packages from their lockfiles.'
 
 runs:
   using: 'composite'
@@ -19,3 +20,9 @@ runs:
     - name: Install Flutter SDK
       shell: bash
       run: fvm config --cache-path .fvm/cache && fvm install
+
+    - name: Get the packages
+      shell: bash
+      run: |
+        fvm flutter pub get --enforce-lockfile
+        fvm dart pub get --enforce-lockfile -C packages/agent

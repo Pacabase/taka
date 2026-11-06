@@ -3,37 +3,32 @@ name: Build
 on:
   workflow_call:
     inputs:
-      targets:
-        description: The targets to build, as a JSON list; all of them by default.
+      macos-targets:
+        description: The macOS targets to build, as a JSON list; both by default.
         type: string
-        default: '["macos-apple-silicon", "macos-intel", "linux-x64", "linux-arm64"]'
+        default: '["macos-apple-silicon", "macos-intel"]'
+      linux-targets:
+        description: The Linux targets to build, as a JSON list; both by default.
+        type: string
+        default: '["linux-x64", "linux-arm64"]'
 
 permissions: {}
 
+# Dart can't build the agent for another chip, nor run it as a universal binary,
+# so each chip builds on its own runner.
 jobs:
-  # Dart can't build the agent for another chip, nor run it as a universal binary.
-  # Linux builds on the oldest Ubuntu runner, so its glibc suits more systems.
-  build:
-    name: ${{ matrix.target }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        target: ${{ fromJSON(inputs.targets) }}
-    runs-on: >-
-      ${{ fromJSON('{
-        "macos-apple-silicon": "macos-15",
-        "macos-intel": "macos-15-intel",
-        "linux-x64": "ubuntu-22.04",
-        "linux-arm64": "ubuntu-22.04-arm"
-      }')[matrix.target] }}
+  version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
+    outputs:
+      version: ${{ steps.read.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Read the version
+      - id: read
         env:
           TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
@@ -42,23 +37,34 @@ jobs:
             echo "Tag $TAG doesn't match pubspec.yaml's version $version" >&2
             exit 1
           fi
-          echo "VERSION=$version" >> "$GITHUB_ENV"
-      - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev libx11-dev libxi-dev
-      - uses: ./.github/actions/flutter
-      - run: fvm flutter pub get --enforce-lockfile
-      - run: fvm dart pub get --enforce-lockfile -C packages/agent
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - if: runner.os == 'macOS'
-        run: fvm flutter build macos --release
-      - if: runner.os == 'macOS'
-        run: test -x build/macos/Build/Products/Release/Taka.app/Contents/Library/LoginItems/Taka.app/Contents/MacOS/Taka
-      - if: runner.os == 'macOS'
-        run: codesign --verify --deep --strict build/macos/Build/Products/Release/Taka.app
+  macos:
+    name: ${{ matrix.target }}
+    needs: version
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.macos-targets) }}
+    runs-on: >-
+      ${{ fromJSON('{
+        "macos-apple-silicon": "macos-15",
+        "macos-intel": "macos-15-intel"
+      }')[matrix.target] }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/flutter
+      - run: fvm flutter build macos --release
+      - run: test -x build/macos/Build/Products/Release/Taka.app/Contents/Library/LoginItems/Taka.app/Contents/MacOS/Taka
+      - run: codesign --verify --deep --strict build/macos/Build/Products/Release/Taka.app
       - name: Make the disk image
-        if: runner.os == 'macOS'
         env:
-          DMG: Taka-${{ env.VERSION }}-${{ matrix.target }}.dmg
+          DMG: Taka-${{ needs.version.outputs.version }}-${{ matrix.target }}.dmg
         run: |
           mkdir -p dmg dist
           cp -R build/macos/Build/Products/Release/Taka.app dmg/
@@ -69,14 +75,40 @@ jobs:
             [ "$attempt" = 5 ] && exit 1
             sleep $((attempt * 5))
           done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Taka-${{ matrix.target }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 14
 
-      - if: runner.os == 'Linux'
-        run: fvm flutter build linux --release
+  linux:
+    name: ${{ matrix.target }}
+    needs: version
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.linux-targets) }}
+    # The oldest Ubuntu runner, so the build's glibc suits more systems.
+    runs-on: >-
+      ${{ fromJSON('{
+        "linux-x64": "ubuntu-22.04",
+        "linux-arm64": "ubuntu-22.04-arm"
+      }')[matrix.target] }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev libx11-dev libxi-dev
+      - uses: ./.github/actions/flutter
+      - run: fvm flutter build linux --release
       - name: Make the archive
-        if: runner.os == 'Linux'
         env:
           TARGET: ${{ matrix.target }}
-          TARBALL: Taka-${{ env.VERSION }}-${{ matrix.target }}.tar.gz
+          TARBALL: Taka-${{ needs.version.outputs.version }}-${{ matrix.target }}.tar.gz
         run: |
           release=build/linux/${TARGET#linux-}/release
           test -x "$release/bundle/taka" && test -x "$release/bundle/agent/bin/taka_agent"
