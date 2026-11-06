@@ -7,7 +7,6 @@ import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
 
-/// In plain words, what went wrong starting the background helper.
 String agentFailure(Object error) => switch (error) {
   ProcessException(executable: 'open') => "macOS couldn't open it.",
   ProcessException() => "It couldn't be started.",

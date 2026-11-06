@@ -12,8 +12,6 @@ import 'package:fimber/fimber.dart';
 
 final _log = FimberLog('Socket');
 
-/// One JSON object per line each way: the agent's identity, snapshots,
-/// settings and About requests out, commands in.
 class AgentServer(
   final ServerSocket _server,
   final TunnelManager _manager,
@@ -35,9 +33,6 @@ class AgentServer(
     _server.listen(_accept);
   }
 
-  /// Listens on [path], or returns null when another agent already does.
-  /// Throws a [SocketException] when it can't listen for another reason,
-  /// such as a path too long for a socket.
   static Future<AgentServer?> bind(
     String path,
     TunnelManager manager,
@@ -75,9 +70,6 @@ class AgentServer(
     }
   }
 
-  /// Sends a request such as [AgentMessage.openTunnel] to every open window,
-  /// or to the next one to connect when none is open; returns whether one was
-  /// open.
   bool show(AgentMessage request) {
     if (_clients.isEmpty) {
       _pending = request;

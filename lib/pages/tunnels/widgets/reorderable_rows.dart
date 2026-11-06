@@ -4,16 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:taka/theme/taka_colors.dart';
 
-/// A column of keyed [children] that can be dragged into a new order.
-///
-/// ReorderableListView's animations take a fixed 250ms, which feels slow for
-/// a short list. [onReorder] gets the index a row moved to among the others.
+/// ReorderableListView's fixed 250ms animations feel slow for a short list.
+/// [onReorder]'s `to` is the row's index among the others.
 class const ReorderableRows({
   super.key,
   required final List<Widget> children,
   required final void Function(int from, int to) onReorder,
 }) extends StatefulWidget {
-  /// Whether [context] is in the row being dragged, which shows as hovered.
   static bool isLifted(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_Lifted>()?.isLifted ?? false;
 

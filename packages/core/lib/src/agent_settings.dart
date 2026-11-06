@@ -4,8 +4,7 @@ part 'agent_settings.freezed.dart';
 
 @freezed
 sealed class const AgentSettings._() with _$AgentSettings {
-  /// [launchesAtLogin] is null where the agent can't launch at login, such
-  /// as a development build outside an app bundle.
+  /// [launchesAtLogin] is null where it's unsupported, as outside an app bundle.
   const factory({bool? launchesAtLogin, @Default(false) bool isLogging}) =
       _AgentSettings;
 

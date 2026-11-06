@@ -21,8 +21,7 @@ Future<AgentClient> connectToAgent() async {
     await running.close();
   }
 
-  // Through open, macOS starts the agent as an app of its own, so Taka doesn't
-  // stay in the Dock "running in the background" once this window quits.
+  // Started by open, the agent is its own app, so Taka leaves the Dock on quit.
   if (agentBundle case final bundle?) {
     final result = await Process.run('open', ['-n', '-g', bundle]);
     if (result.exitCode != 0) {
