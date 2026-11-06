@@ -11,8 +11,7 @@ on:
 permissions: {}
 
 jobs:
-  # Dart builds the agent only for the Mac it runs on, and its runtime can't
-  # find the program inside a universal binary, so each chip gets its own app.
+  # Dart can't build the agent for another chip, nor run it as a universal binary.
   build:
     name: ${{ matrix.target }}
     timeout-minutes: 30

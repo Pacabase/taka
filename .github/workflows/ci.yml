@@ -81,7 +81,6 @@ jobs:
       - run: fvm flutter analyze
       - run: fvm flutter test --tags unit
 
-  # One build per platform; releases build every target.
   build:
     uses: ./.github/workflows/build.yml
     with:
