@@ -81,13 +81,16 @@ jobs:
       - run: fvm flutter analyze
       - run: fvm flutter test --tags unit
 
-  macos:
-    uses: ./.github/workflows/macos.yml
+  # One build per platform; releases build every target.
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      targets: '["macos-apple-silicon"]'
 
   # The one required check, so jobs can be added without touching branch rules.
   ci:
     if: always()
-    needs: [core, agent, app, macos]
+    needs: [core, agent, app, build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

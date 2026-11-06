@@ -11,15 +11,15 @@ concurrency:
 permissions: {}
 
 jobs:
-  macos:
-    uses: ./.github/workflows/macos.yml
+  build:
+    uses: ./.github/workflows/build.yml
     permissions:
       contents: read
 
   # Its own job, so the build's tools never run with a token that can write.
   release:
     if: github.ref_type == 'tag'
-    needs: macos
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
