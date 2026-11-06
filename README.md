@@ -11,10 +11,12 @@ Taka isn't on the Mac App Store. The store only allows sandboxed apps, and a san
 Install [FVM](https://fvm.app), which fetches the SDK version pinned in `.fvmrc`, then:
 
 ```bash
-make run      # the app from source, with a freshly built agent
-make macos    # build/macos/Build/Products/Release/Taka.app, agent inside
+fvm flutter run -d macos              # the app from source
+fvm flutter build macos --release     # build/macos/Build/Products/Release/Taka.app
 make test
 ```
+
+Either builds the background helper for your Mac's chip and puts it inside the app.
 
 Linux build machines need `sudo apt-get install libgtk-3-dev libx11-dev libxi-dev` for the tray icon.
 
@@ -24,7 +26,7 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### First preview (0.1, macOS)
 
-- [ ] **Releases** — a universal `.dmg` from CI on a version tag, a Homebrew tap, and signed auto-updates.
+- [ ] **Releases** — a `.dmg` per chip from CI on a version tag, a Homebrew tap, and signed auto-updates.
 
 ### Daily driver (0.2, Linux)
 
