@@ -2,13 +2,13 @@
 library;
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:core/core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:taka/agent/agent_launcher.dart';
 import 'package:taka/pages/about/about_page.dart';
 import 'package:taka/pages/settings/settings_page.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
@@ -45,9 +45,7 @@ void main() {
         version: '1.2.3',
         connect: () async {
           if (++tries == 1) {
-            throw const SocketException(
-              'no answer on its socket within 5 seconds',
-            );
+            throw const AgentTimeoutException();
           }
           return FakeAgent();
         },
