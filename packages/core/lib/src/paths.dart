@@ -15,14 +15,12 @@ Directory takaDirectory({Map<String, String>? environment}) {
   throw UnsupportedError('Taka runs on macOS and Linux so far');
 }
 
-/// Where Linux keeps a user's app data, such as desktop entries.
 String dataHome({Map<String, String>? environment}) => _xdgHome(
   environment ?? Platform.environment,
   'XDG_DATA_HOME',
   '.local/share',
 );
 
-// An XDG base directory: its variable when set, else [fallback] in HOME.
 String _xdgHome(Map<String, String> variables, String name, String fallback) =>
     switch (variables[name]) {
       final String path when path.isNotEmpty => path,

@@ -1,7 +1,5 @@
 #!/bin/sh
-# Builds Taka's background agent and puts it in the window's bundle as
-# agent/bin/taka_agent, with its libraries in agent/lib and its tray icons in
-# agent/. Usage: embed_agent.sh <flutter root> <target platform> <destination>
+# Usage: embed_agent.sh <flutter root> <target platform> <destination>
 set -eu
 
 dart="$1/bin/dart"

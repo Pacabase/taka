@@ -6,10 +6,7 @@ import 'package:fimber/fimber.dart';
 const _fileName = 'com.pacabase.taka.desktop';
 const _mark = '# Written by Taka, which rewrites it when Taka moves.';
 
-/// Linux docks and app grids name and draw a window from the desktop entry
-/// named after its app ID. A package installs one; an unpacked download
-/// writes its own, pointing at [executable], unless a package's is there.
-/// An entry Taka didn't write is the user's, and stays as it is.
+/// GNOME's dock names and draws a window from the entry named after its app ID.
 Future<void> writeDesktopEntry(
   String executable, {
   Map<String, String>? environment,
@@ -18,7 +15,9 @@ Future<void> writeDesktopEntry(
   final userData = dataHome(environment: variables);
   final file = File('$userData/applications/$_fileName');
   final systemDirectories = switch (variables['XDG_DATA_DIRS']) {
-    final String dirs when dirs.isNotEmpty => dirs.split(':'),
+    final String directories when directories.isNotEmpty => directories.split(
+      ':',
+    ),
     _ => ['/usr/local/share', '/usr/share'],
   };
 
@@ -66,14 +65,13 @@ StartupWMClass=com.pacabase.taka
 StartupNotify=true
 ''';
 
-// The desktop entry spec's escaping for a string value.
 String _escape(String value) => value
     .replaceAll(r'\', r'\\')
     .replaceAll('\n', r'\n')
     .replaceAll('\t', r'\t')
     .replaceAll('\r', r'\r');
 
-// Its quoting for an Exec argument, before that escaping; % starts a field code.
+// % starts a field code in Exec.
 String _quote(String path) {
   final quoted = path.replaceAllMapped(
     RegExp(r'["`$\\]'),

@@ -22,8 +22,7 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
-  // Taka has one window: opening it again, as the tray does, presents that
-  // one, once Flutter's first frame has shown it.
+  // Presenting the window before Flutter's first frame shows it flashes black.
   GList* windows = gtk_application_get_windows(GTK_APPLICATION(application));
   if (windows != nullptr) {
     GtkWindow* window = GTK_WINDOW(windows->data);
@@ -151,8 +150,7 @@ MyApplication* my_application_new() {
   // the application to be recognized beyond its binary name.
   g_set_prgname(APPLICATION_ID);
 
-  // A release build is single-instance; a debug one isn't, so `flutter run`
-  // still starts while a release Taka is open.
+  // Not single-instance in debug, so `flutter run` starts beside a release Taka.
 #ifdef NDEBUG
   const GApplicationFlags flags = static_cast<GApplicationFlags>(0);
 #else

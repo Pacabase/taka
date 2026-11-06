@@ -36,10 +36,8 @@ external int _setInformation(
 @Native<Pointer<Void>>(symbol: '_kLSDisplayNameKey')
 external final Pointer<Void> _displayNameKey;
 
-/// Gives this process [name], which the Dart runtime renames
-/// `dart:<executable>` at startup: in LaunchServices on macOS, which
-/// 1Password's prompt shows, and as the main thread's name on Linux, which
-/// ps and system monitors show.
+/// Undoes the Dart runtime's `dart:<executable>` name: in LaunchServices on
+/// macOS, which 1Password's prompt shows, and in /proc on Linux, for ps.
 void restoreProcessName(String name) {
   if (Platform.isLinux) {
     try {

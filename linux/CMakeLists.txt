@@ -121,8 +121,7 @@ install(CODE "
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
 
-# The background agent, which runs the tunnels and the tray icon, beside the
-# window as agent/; see packages/agent. FLUTTER_ROOT is set only in flutter/.
+# FLUTTER_ROOT is set only in flutter/.
 function(read_flutter_root)
   include("${FLUTTER_MANAGED_DIR}/ephemeral/generated_config.cmake")
   set(FLUTTER_ROOT "${FLUTTER_ROOT}" PARENT_SCOPE)

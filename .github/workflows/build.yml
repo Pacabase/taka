@@ -78,7 +78,6 @@ jobs:
           TARGET: ${{ matrix.target }}
           TARBALL: Taka-${{ env.VERSION }}-${{ matrix.target }}.tar.gz
         run: |
-          # The targets name Flutter's build folders: linux-x64 builds in x64.
           release=build/linux/${TARGET#linux-}/release
           test -x "$release/bundle/taka" && test -x "$release/bundle/agent/bin/taka_agent"
           mkdir -p dist
