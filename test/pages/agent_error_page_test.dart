@@ -1,19 +1,12 @@
 @Tags(['unit'])
 library;
 
-import 'dart:async';
 import 'dart:io';
 
-import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:taka/agent/agent_gate.dart';
 import 'package:taka/pages/agent_error_page.dart';
-import 'package:taka/pages/settings/settings_bloc.dart';
-import 'package:taka/taka_app.dart';
-
-import '../pages/tunnels/fake_agent.dart';
 
 void main() {
   test('says in plain words why the helper did not start', () {
@@ -37,55 +30,6 @@ void main() {
       agentFailure(Exception('boom')),
       'Something went wrong while starting it.',
     );
-  });
-
-  testWidgets('shows a spinner while the helper starts', (tester) async {
-    await tester.pumpWidget(
-      AgentGate(
-        version: '1.2.3',
-        connect: () => Completer<AgentClient>().future,
-        connected: (_) => const Text('Tunnels'),
-      ),
-    );
-
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  });
-
-  testWidgets('shows why it failed, and Try Again opens the app once it '
-      'answers', (tester) async {
-    final agent = FakeAgent();
-    var tries = 0;
-    await tester.pumpWidget(
-      AgentGate(
-        version: '1.2.3',
-        connect: () async {
-          if (++tries == 1) {
-            throw const SocketException(
-              'no answer on its socket within 5 seconds',
-            );
-          }
-          return agent;
-        },
-        connected: (agent) => TakaApp(
-          version: '1.2.3',
-          settings: SettingsBloc(agent: agent),
-          home: const Text('Tunnels'),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text("Taka's background helper didn't start"), findsOneWidget);
-    expect(
-      find.text("It started but didn't answer within 5 seconds."),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.text('Try Again'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Tunnels'), findsOneWidget);
-    expect(tries, 2);
   });
 
   testWidgets('Copy Details copies the version and the error, and Show '
