@@ -1,7 +1,7 @@
-.PHONY: help agent macos run test licences
+.PHONY: help agent macos app run test licences
 
 ARCH := $(if $(filter arm64,$(shell uname -m)),arm64,x64)
-AGENT := packages/agent/build/cli/macos_$(ARCH)/bundle
+AGENT ?= packages/agent/build/cli/macos_$(ARCH)/bundle
 APP := build/macos/Build/Products/Release/Taka.app
 LOGIN_ITEMS := $(APP)/Contents/Library/LoginItems
 AGENT_APP := $(LOGIN_ITEMS)/Taka.app
@@ -18,7 +18,10 @@ agent:
 	cd packages/agent && fvm dart build cli
 	cp packages/agent/assets/*.png $(AGENT)/
 
-macos: agent
+macos: agent app
+
+# Builds the app around the agent in $(AGENT), such as a universal one from CI.
+app:
 	fvm flutter build macos --release
 	rm -rf $(LOGIN_ITEMS)
 	mkdir -p $(AGENT_APP)/Contents/MacOS $(AGENT_APP)/Contents/Resources
