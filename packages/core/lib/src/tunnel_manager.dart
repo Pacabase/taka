@@ -82,15 +82,16 @@ class TunnelManager({
   /// another id, and giving a new id to one whose id is taken.
   Future<void> import(List<Tunnel> tunnels) async {
     final imported = [..._tunnels];
+    final ids = {for (final saved in imported) saved.id};
     for (final tunnel in tunnels) {
       if (imported.any((saved) => tunnel.copyWith(id: saved.id) == saved)) {
         continue;
       }
-      final ids = {for (final saved in imported) saved.id};
       var id = tunnel.id;
       for (var copy = 2; ids.contains(id); copy++) {
         id = '${tunnel.id}-$copy';
       }
+      ids.add(id);
       imported.add(tunnel.copyWith(id: id));
     }
     if (imported.length == _tunnels.length) return;
