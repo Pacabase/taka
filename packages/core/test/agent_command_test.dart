@@ -18,6 +18,8 @@ void main() {
       AgentCommand.setLaunchAtLogin(on: true),
       AgentCommand.setDebugLogging(on: false),
       AgentCommand.showLogs(),
+      AgentCommand.importTunnels([database, proxy]),
+      AgentCommand.exportTunnels('/Users/me/tunnels.json'),
       AgentCommand.quit(),
     ]) {
       test('$command round-trips', () {
@@ -34,6 +36,8 @@ void main() {
       {'command': 'toggle', 'id': 3},
       {'command': 'move', 'id': 'b2'},
       {'command': 'debugLogging'},
+      {'command': 'import', 'tunnels': 'all'},
+      {'command': 'export'},
       {
         'command': 'save',
         'tunnel': {'id': 'a1'},

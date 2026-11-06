@@ -87,6 +87,21 @@ void main() {
     expect((await snapshots.next).statusOf('c3'), isNot(const Stopped()));
   });
 
+  test('export writes every tunnel, and import adds the new ones', () async {
+    await serve();
+    final agent = await connect();
+    final snapshots = StreamQueue(agent.snapshots);
+    await snapshots.next;
+    final file = File('${directory.path}/exported.json');
+
+    agent
+      ..send(AgentCommand.exportTunnels(file.path))
+      ..send(const AgentCommand.importTunnels([database, proxy]));
+
+    expect((await snapshots.next).tunnels, [database, proxy]);
+    expect(decodeTunnels(await file.readAsString()).tunnels, [database]);
+  });
+
   test(
     'a client gets the settings when it connects, and each change',
     () async {

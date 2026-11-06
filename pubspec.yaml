@@ -13,6 +13,7 @@ dependencies:
   bloc: 9.2.1
   core:
     path: packages/core
+  file_selector: ^1.1.0
   fimber: 0.7.0
   flutter:
     sdk: flutter
@@ -24,12 +25,14 @@ dependencies:
 dev_dependencies:
   bloc_test: 10.0.0
   build_runner: 2.16.1
+  file_selector_platform_interface: ^2.7.0
   flutter_launcher_icons: 0.14.4
   flutter_lints: 6.0.0
   flutter_test:
     sdk: flutter
   freezed: 4.0.1
   mocktail: 1.0.5
+  plugin_platform_interface: ^2.1.8
 
 flutter:
   uses-material-design: true

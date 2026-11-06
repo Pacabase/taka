@@ -14,6 +14,11 @@ sealed class const AgentCommand._() with _$AgentCommand {
   /// Puts tunnel [id] at [index] among the others.
   const factory move(String id, int index) = MoveTunnel;
 
+  /// Adds [tunnels] after the others, skipping those already saved.
+  const factory importTunnels(List<Tunnel> tunnels) = ImportTunnels;
+
+  const factory exportTunnels(String path) = ExportTunnels;
+
   const factory quit() = QuitAgent;
 
   const factory setLaunchAtLogin({required bool on}) = SetLaunchAtLogin;
@@ -30,6 +35,9 @@ sealed class const AgentCommand._() with _$AgentCommand {
     {'command': 'toggle', 'id': final String id} => ToggleTunnel(id),
     {'command': 'move', 'id': final String id, 'index': final int index} =>
       MoveTunnel(id, index),
+    {'command': 'import', 'tunnels': final List<Object?> tunnels} =>
+      ImportTunnels(tunnels.map(Tunnel.fromJson).toList()),
+    {'command': 'export', 'path': final String path} => ExportTunnels(path),
     {'command': 'quit'} => const QuitAgent(),
     {'command': 'launchAtLogin', 'on': final bool on} => SetLaunchAtLogin(
       on: on,
@@ -48,6 +56,11 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'id': id,
       'index': index,
     },
+    ImportTunnels(:final tunnels) => {
+      'command': 'import',
+      'tunnels': tunnels.map((tunnel) => tunnel.toJson()).toList(),
+    },
+    ExportTunnels(:final path) => {'command': 'export', 'path': path},
     QuitAgent() => {'command': 'quit'},
     SetLaunchAtLogin(:final on) => {'command': 'launchAtLogin', 'on': on},
     SetDebugLogging(:final on) => {'command': 'debugLogging', 'on': on},

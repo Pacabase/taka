@@ -6,6 +6,7 @@ import 'package:core/src/agent_command.dart';
 import 'package:core/src/agent_message.dart';
 import 'package:core/src/agent_settings.dart';
 import 'package:core/src/tunnel_manager.dart';
+import 'package:core/src/tunnels_file.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 import 'package:fimber/fimber.dart';
 
@@ -130,6 +131,10 @@ class AgentServer(
     RemoveTunnel(:final id) => await _manager.remove(id),
     ToggleTunnel(:final id) => await _manager.toggle(id),
     MoveTunnel(:final id, :final index) => await _manager.move(id, index),
+    ImportTunnels(:final tunnels) => await _manager.import(tunnels),
+    ExportTunnels(:final path) => await File(
+      path,
+    ).writeAsString(encodeTunnels(_manager.snapshot.tunnels)),
     QuitAgent() => await _manager.close(),
     SetLaunchAtLogin(:final on) => _preferences.setLaunchAtLogin(on: on),
     SetDebugLogging(:final on) => _preferences.setDebugLogging(on: on),
