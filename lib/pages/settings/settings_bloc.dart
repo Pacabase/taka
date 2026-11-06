@@ -11,11 +11,11 @@ class SettingsBloc({required AgentClient agent})
   @override
   String toString() => 'SettingsBloc';
 
-  this : super(const SettingsLoading()) {
-    on<SettingsStarted>(
-      (event, emit) => emit.forEach(agent.settings, onData: SettingsReady.new),
+  this : super(const Loading()) {
+    on<Started>(
+      (event, emit) => emit.forEach(agent.settings, onData: Ready.new),
     );
 
-    on<SendSetting>((event, emit) => agent.send(event.command));
+    on<Send>((event, emit) => agent.send(event.command));
   }
 }
