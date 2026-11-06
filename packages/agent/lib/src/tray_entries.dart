@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:core/core.dart';
 
 /// `toString` reads like the menu, so tests can compare whole menus.
@@ -116,7 +114,7 @@ List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
   final whyDown = [
     if (status
         case Failed(message: final reason) || Reconnecting(:final reason))
-      for (final line in _wrapped(reason)) InfoEntry(line),
+      InfoEntry(plainReason(reason)),
     if (status is Failed)
       TunnelActionEntry(tunnel, TunnelAction.tryAgain, 'Try Again'),
   ];
@@ -136,21 +134,6 @@ const _width = 50;
 String _shortened(String label) => label.length <= _width
     ? label
     : '${label.substring(0, _width - 1).trimRight()}…';
-
-List<String> _wrapped(String text) => text
-    .split(RegExp(r'\s+'))
-    .expand(
-      (word) => [
-        for (var start = 0; start < word.length; start += _width)
-          word.substring(start, min(start + _width, word.length)),
-      ],
-    )
-    .fold([], (lines, word) {
-      final last = lines.lastOrNull;
-      return last != null && last.length + 1 + word.length <= _width
-          ? [...lines.take(lines.length - 1), '$last $word']
-          : [...lines, word];
-    });
 
 String trayTooltip(TunnelsSnapshot snapshot) =>
     switch (snapshot.connectedCount) {

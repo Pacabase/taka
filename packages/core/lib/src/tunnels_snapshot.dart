@@ -9,7 +9,7 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
 
   const factory connecting() = Connecting;
 
-  /// [warning] is what ssh last couldn't forward; the tunnel itself stays up.
+  /// [warning] is ssh's reason, such as `Connection refused`; the tunnel stays up.
   const factory connected({@Default('') String warning}) = Connected;
 
   const factory failed(String message) = Failed;

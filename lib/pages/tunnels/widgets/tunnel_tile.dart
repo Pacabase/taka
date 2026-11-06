@@ -50,17 +50,29 @@ class _TunnelTileState extends State<TunnelTile> {
     final colors = TakaColors.of(context);
     final TunnelTile(:tunnel, :status) = widget;
     final isHovered = _hovered || ReorderableRows.isLifted(context);
-    Text orange(String text) =>
-        Text(text, style: TextStyle(fontSize: 12, color: colors.orange));
+    Widget captioned(String text, Color color, {String details = ''}) {
+      final label = Text(text, style: TextStyle(fontSize: 12, color: color));
+      return details.trim().isEmpty
+          ? label
+          : Tooltip(message: details.trim(), child: label);
+    }
+
     final caption = switch (status) {
-      Failed(:final message) => Text(
-        message,
-        style: TextStyle(fontSize: 12, color: colors.red),
+      Failed(:final message) => captioned(
+        plainReason(message),
+        colors.red,
+        details: message,
       ),
-      Connecting() => orange('Connecting…'),
-      Reconnecting(:final reason) => orange('Reconnecting — $reason'),
-      Connected(:final warning) when warning.isNotEmpty => orange(
-        "Can't reach $warning",
+      Connecting() => captioned('Connecting…', colors.orange),
+      Reconnecting(:final reason) => captioned(
+        'Reconnecting — ${plainReason(reason)}',
+        colors.orange,
+        details: reason,
+      ),
+      Connected(:final warning) when warning.isNotEmpty => captioned(
+        forwardWarning(tunnel),
+        colors.orange,
+        details: warning,
       ),
       Stopped() || Connected() when tunnel.name.isEmpty => null,
       Stopped() || Connected() => Text(
