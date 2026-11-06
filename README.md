@@ -43,7 +43,7 @@ Ordered roughly by priority; each line is about one pull request.
 
 - [ ] **Every action is a command**, with shortcuts and a command palette.
 - [ ] **A `taka` command line** — `up`, `down`, `status --json`, and `run <tunnel> -- <command>`.
-- [ ] **Export, import and a shareable tunnels file** — safe to commit, since Taka stores no secrets.
+- [ ] **A shareable tunnels file** that Taka keeps in sync, safe to commit since Taka stores no secrets.
 
 ### Beyond (0.6 and 1.0)
 

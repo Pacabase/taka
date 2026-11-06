@@ -135,6 +135,41 @@ void main() {
     });
   });
 
+  group('import', () {
+    test('adds new tunnels after the others and saves them', () async {
+      final manager = await loaded();
+      const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
+
+      await manager.import([added]);
+
+      expect(manager.snapshot.tunnels, [database, proxy, added]);
+      expect(store.tunnels, [database, proxy, added]);
+    });
+
+    test('skips a tunnel already saved, whatever its id', () async {
+      final manager = await loaded();
+
+      await manager.import([database.copyWith(id: 'z9'), proxy]);
+
+      expect(manager.snapshot.tunnels, [database, proxy]);
+      expect(store.saveCount, 0);
+    });
+
+    test('gives a new id to a tunnel whose id is taken', () async {
+      final manager = await loaded();
+      final other = database.copyWith(localPort: 15433);
+
+      await manager.import([other, other.copyWith(localPort: 15434)]);
+
+      expect(manager.snapshot.tunnels.map((tunnel) => tunnel.id), [
+        'a1',
+        'b2',
+        'a1-2',
+        'a1-3',
+      ]);
+    });
+  });
+
   group('toggle', () {
     test('runs beforeConnect before ssh starts', () async {
       final calls = <String>[];

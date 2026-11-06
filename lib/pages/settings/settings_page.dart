@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/pages/about/about_page.dart';
@@ -93,6 +94,24 @@ class const SettingsPage({super.key, required final String version})
                 ),
             },
           ),
+          _SettingRow(
+            title: 'Tunnels',
+            detail: 'Move them to another computer.',
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 8,
+              children: [
+                TextButton(
+                  onPressed: () => _import(context, send),
+                  child: const Text('Import…'),
+                ),
+                TextButton(
+                  onPressed: () => _export(send),
+                  child: const Text('Export…'),
+                ),
+              ],
+            ),
+          ),
           Divider(height: 1, indent: 6, endIndent: 6, color: colors.background),
           InkWell(
             onTap: () => Navigator.push(
@@ -111,6 +130,38 @@ class const SettingsPage({super.key, required final String version})
           ),
         ],
       ),
+    );
+  }
+}
+
+const _tunnelsFile = XTypeGroup(
+  label: 'Taka tunnels',
+  extensions: ['json'],
+  uniformTypeIdentifiers: ['public.json'],
+);
+
+Future<void> _export(void Function(AgentCommand) send) async {
+  final location = await getSaveLocation(
+    suggestedName: 'Taka tunnels.json',
+    acceptedTypeGroups: const [_tunnelsFile],
+  );
+  if (location != null) send(AgentCommand.exportTunnels(location.path));
+}
+
+Future<void> _import(
+  BuildContext context,
+  void Function(AgentCommand) send,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final file = await openFile(acceptedTypeGroups: const [_tunnelsFile]);
+  if (file == null) return;
+
+  try {
+    final (:tunnels, on: _) = decodeTunnels(await file.readAsString());
+    send(AgentCommand.importTunnels(tunnels));
+  } on FormatException {
+    messenger.showSnackBar(
+      SnackBar(content: Text("${file.name} isn't a file of Taka tunnels.")),
     );
   }
 }

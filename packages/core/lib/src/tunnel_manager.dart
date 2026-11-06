@@ -78,6 +78,27 @@ class TunnelManager({
     }
   }
 
+  /// Adds [tunnels] after the others, skipping any already saved under
+  /// another id, and giving a new id to one whose id is taken.
+  Future<void> import(List<Tunnel> tunnels) async {
+    final imported = [..._tunnels];
+    for (final tunnel in tunnels) {
+      if (imported.any((saved) => tunnel.copyWith(id: saved.id) == saved)) {
+        continue;
+      }
+      final ids = {for (final saved in imported) saved.id};
+      var id = tunnel.id;
+      for (var copy = 2; ids.contains(id); copy++) {
+        id = '${tunnel.id}-$copy';
+      }
+      imported.add(tunnel.copyWith(id: id));
+    }
+    if (imported.length == _tunnels.length) return;
+
+    _tunnels = imported;
+    await _persist();
+  }
+
   Future<void> remove(String id) async {
     await _sessions.remove(id)?.stop();
     _tunnels = _tunnels.where((tunnel) => tunnel.id != id).toList();

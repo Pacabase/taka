@@ -1,12 +1,16 @@
 @Tags(['unit'])
 library;
 
+import 'dart:convert';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:taka/pages/about/about_page.dart';
 import 'package:taka/pages/settings/settings_bloc.dart';
 import 'package:taka/pages/settings/settings_page.dart';
@@ -15,6 +19,8 @@ import 'package:taka/theme/taka_theme.dart';
 
 void main() {
   late _MockSettingsBloc bloc;
+
+  setUpAll(() => registerFallbackValue(const SettingsEvent.started()));
 
   Future<void> pumpPage(WidgetTester tester, AgentSettings settings) async {
     bloc = _MockSettingsBloc();
@@ -36,6 +42,52 @@ void main() {
 
   void sends(AgentCommand command) =>
       verify(() => bloc.add(SettingsEvent.send(command))).called(1);
+
+  _FakeFileSelector pickFiles() =>
+      FileSelectorPlatform.instance = _FakeFileSelector();
+
+  testWidgets('Export saves the tunnels to the chosen file', (tester) async {
+    pickFiles().savePath = '/Users/me/Taka tunnels.json';
+    await pumpPage(tester, const AgentSettings());
+
+    await tester.tap(find.text('Export…'));
+    await tester.pump();
+
+    sends(const AgentCommand.exportTunnels('/Users/me/Taka tunnels.json'));
+  });
+
+  testWidgets('Import adds the tunnels in the chosen file', (tester) async {
+    const tunnel = Tunnel(id: 'a1', sshHost: 'bastion', localPort: 1080);
+    pickFiles().opened = XFile.fromData(
+      utf8.encode(encodeTunnels([tunnel])),
+      path: '/Users/me/Taka tunnels.json',
+    );
+    await pumpPage(tester, const AgentSettings());
+
+    await tester.tap(find.text('Import…'));
+    await tester.pump();
+
+    sends(const AgentCommand.importTunnels([tunnel]));
+  });
+
+  testWidgets('Import of another file says so, and adds nothing', (
+    tester,
+  ) async {
+    pickFiles().opened = XFile.fromData(
+      utf8.encode('{"name": "taka"}'),
+      path: '/Users/me/package.json',
+    );
+    await pumpPage(tester, const AgentSettings());
+
+    await tester.tap(find.text('Import…'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text("package.json isn't a file of Taka tunnels."),
+      findsOneWidget,
+    );
+    verifyNever(() => bloc.add(any()));
+  });
 
   testWidgets('switching Launch at Login and Debug Logging asks the agent', (
     tester,
@@ -97,3 +149,25 @@ void main() {
 
 class _MockSettingsBloc extends MockBloc<SettingsEvent, SettingsState>
     implements SettingsBloc {}
+
+class _FakeFileSelector extends FileSelectorPlatform
+    with MockPlatformInterfaceMixin {
+  String? savePath;
+  XFile? opened;
+
+  @override
+  Future<FileSaveLocation?> getSaveLocation({
+    List<XTypeGroup>? acceptedTypeGroups,
+    SaveDialogOptions options = const SaveDialogOptions(),
+  }) async => switch (savePath) {
+    final path? => FileSaveLocation(path),
+    null => null,
+  };
+
+  @override
+  Future<XFile?> openFile({
+    List<XTypeGroup>? acceptedTypeGroups,
+    String? initialDirectory,
+    String? confirmButtonText,
+  }) async => opened;
+}

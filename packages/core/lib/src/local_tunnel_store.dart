@@ -1,13 +1,11 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:core/src/paths.dart';
 import 'package:core/src/tunnel.dart';
 import 'package:core/src/tunnel_store.dart';
+import 'package:core/src/tunnels_file.dart';
 
 class LocalTunnelStore({required final File file}) implements TunnelStore {
-  static const _version = 1;
-
   Future<void> _lastSave = Future.value();
   bool _isUnreadable = false;
 
@@ -19,21 +17,7 @@ class LocalTunnelStore({required final File file}) implements TunnelStore {
     if (!await file.exists()) return (tunnels: <Tunnel>[], on: <String>{});
 
     try {
-      return switch (jsonDecode(await file.readAsString())) {
-        {'version': _version, 'tunnels': final List<Object?> tunnels} &&
-            final Map<Object?, Object?> saved =>
-          (
-            tunnels: tunnels.map(Tunnel.fromJson).toList(),
-            on: switch (saved['on']) {
-              final List<Object?> on => on.whereType<String>().toSet(),
-              _ => <String>{},
-            },
-          ),
-        {'version': final version} => throw FormatException(
-          'Unsupported tunnels file version: $version',
-        ),
-        _ => throw const FormatException('Not a tunnels file'),
-      };
+      return decodeTunnels(await file.readAsString());
     } on FormatException {
       _isUnreadable = true;
       rethrow;
@@ -59,17 +43,7 @@ class LocalTunnelStore({required final File file}) implements TunnelStore {
 
     await file.parent.create(recursive: true);
     final temporary = File('${file.path}.tmp');
-    await temporary.writeAsString(
-      const JsonEncoder.withIndent('  ').convert({
-        'version': _version,
-        'tunnels': tunnels.map((tunnel) => tunnel.toJson()).toList(),
-        'on': [
-          for (final tunnel in tunnels)
-            if (on.contains(tunnel.id)) tunnel.id,
-        ],
-      }),
-      flush: true,
-    );
+    await temporary.writeAsString(encodeTunnels(tunnels, on: on), flush: true);
     await temporary.rename(file.path);
   }
 }
