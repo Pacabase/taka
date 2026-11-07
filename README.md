@@ -32,6 +32,7 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### First preview (0.1, macOS)
 
+- [ ] **Signed and notarized builds**, so macOS opens Taka without a warning.
 - [ ] **Homebrew tap** — `brew install --cask taka`, from the release `.dmg`.
 - [ ] **Signed auto-updates**.
 
