@@ -35,7 +35,8 @@ void main() {
       ({'status': 'failed'}, const Failed('')),
       ({'status': 'failed', 'message': 3}, const Failed('')),
       ({'status': 'connected', 'warning': 3}, const Connected()),
-      ({'status': 'reconnecting'}, const Stopped()),
+      ({'status': 'reconnecting'}, const Reconnecting('')),
+      ({'status': 'reconnecting', 'reason': 3}, const Reconnecting('')),
       (<String, Object?>{}, const Stopped()),
       (null, const Stopped()),
     ]) {

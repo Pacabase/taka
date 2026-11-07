@@ -27,6 +27,7 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
     {'status': 'reconnecting', 'reason': final String reason} => Reconnecting(
       reason,
     ),
+    {'status': 'reconnecting'} => const Reconnecting(''),
     _ => const Stopped(),
   };
 
