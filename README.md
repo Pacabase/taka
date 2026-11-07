@@ -11,6 +11,30 @@ Get the latest build from [Releases](https://github.com/Pacabase/taka/releases):
 
 Each release lists the files' checksums in `SHA256SUMS`.
 
+### If Taka doesn't start on Linux
+
+Most desktops already have the libraries Taka needs. If yours doesn't, Taka fails to open with no message, or its window says *Taka's background helper didn't start*. To see why, run it from a terminal:
+
+```sh
+taka/taka                  # the window
+taka/agent/bin/taka_agent  # the background helper behind the tray icon
+```
+
+An error such as `libgtk-3.so.0: cannot open shared object file` means GTK 3 is missing:
+
+- **Debian, Ubuntu:** `sudo apt install libgtk-3-0`
+- **Fedora:** `sudo dnf install gtk3`
+- **Arch:** `sudo pacman -S gtk3`
+- **NixOS:** downloaded programs don't run on NixOS out of the box. Turn on [nix-ld](https://github.com/nix-community/nix-ld) with the libraries Taka uses, then rebuild:
+
+  ```nix
+  programs.nix-ld.enable = true;
+  programs.nix-ld.libraries = with pkgs; [
+    gtk3 glib pango cairo atk gdk-pixbuf harfbuzz fontconfig libepoxy
+    xorg.libX11 xorg.libXi stdenv.cc.cc.lib
+  ];
+  ```
+
 ## Requirements
 
 - **macOS** 14 (Sonoma) or later, on Apple Silicon or Intel.
