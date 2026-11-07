@@ -2,6 +2,15 @@
 
 A menu bar app for SSH tunnels and SOCKS proxies, built on [`system_ssh`](https://github.com/Pacabase/system_ssh). It runs your own `ssh`, so `~/.ssh/config`, `ProxyJump` and agents such as 1Password's work as in a terminal, and Taka stores no secrets.
 
+## Download
+
+Get the latest build from [Releases](https://github.com/Pacabase/taka/releases):
+
+- **macOS:** `Taka-<version>-macos-apple-silicon.dmg` or `Taka-<version>-macos-intel.dmg`. Open it and drag Taka to Applications. The builds aren't notarized yet, so the first time macOS says it can't check Taka: click **Done**, then **Open Anyway** in System Settings → Privacy & Security.
+- **Linux:** `Taka-<version>-linux-x64.tar.gz` or `Taka-<version>-linux-arm64.tar.gz`. Extract it and run `taka/taka`.
+
+Each release lists the files' checksums in `SHA256SUMS`.
+
 ## Requirements
 
 - **macOS** 14 (Sonoma) or later, on Apple Silicon or Intel.
