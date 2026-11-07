@@ -34,9 +34,15 @@ class TunnelSession({
   bool get isStopped => _abort.isCompleted;
 
   Future<void> connect() async {
-    final SshTunnel opened;
     try {
       await beforeConnect?.call();
+    } on Object catch (exception) {
+      _log.w(
+        '${tunnel.title}: beforeConnect failed, connecting anyway ($exception)',
+      );
+    }
+    final SshTunnel opened;
+    try {
       opened = _opened = await _open();
     } on Object catch (exception) {
       return _drop(exception);

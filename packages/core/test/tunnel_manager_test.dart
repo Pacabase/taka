@@ -190,31 +190,20 @@ void main() {
       expect(calls, ['before', 'ssh']);
     });
 
-    test('fails without opening ssh when beforeConnect throws', () async {
-      StateError? failure = StateError('no window');
+    test('connects anyway when beforeConnect throws', () async {
       final manager = TunnelManager(
         store: store,
         client: client,
-        beforeConnect: () async {
-          if (failure case final failure?) throw failure;
-        },
+        beforeConnect: () async => throw StateError('no window'),
       );
       addTearDown(manager.close);
       await manager.load();
 
       await manager.toggle('a1');
 
-      expect(
-        manager.snapshot.statusOf('a1'),
-        const Failed('Bad state: no window'),
-      );
-      expect(store.on, isEmpty);
-      verifyNever(openAnyTunnel);
-
-      failure = null;
-      await manager.toggle('a1');
-
       expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(store.on, {'a1'});
+      verify(openAnyTunnel).called(1);
     });
 
     test('opens a local tunnel with its fields', () async {
@@ -512,7 +501,7 @@ void main() {
       });
     });
 
-    test('fails without retrying when beforeConnect throws again', () {
+    test('reconnects when beforeConnect throws on the next try', () {
       var calls = 0;
       dropped(
         beforeConnect: () async {
@@ -521,14 +510,11 @@ void main() {
         (manager, time) {
           drop(time, closed);
 
-          time.elapse(const Duration(minutes: 5));
+          time.elapse(const Duration(seconds: 1));
 
-          expect(
-            manager.snapshot.statusOf('a1'),
-            const Failed('Bad state: no window'),
-          );
+          expect(manager.snapshot.statusOf('a1'), const Connected());
           expect(calls, 2);
-          expect(opened, hasLength(1));
+          expect(opened, hasLength(2));
         },
       );
     });
@@ -817,28 +803,20 @@ void main() {
       });
     });
 
-    test('a restored tunnel stops when beforeConnect throws', () {
-      fakeAsync((time) {
-        store = FakeStore([database], {'a1'});
-        final manager = TunnelManager(
-          store: store,
-          client: client,
-          beforeConnect: () async => throw StateError('no window'),
-        );
-        unawaited(manager.load().then((_) => manager.restore()));
+    test('a restored tunnel connects when beforeConnect throws', () async {
+      store = FakeStore([database], {'a1'});
+      final manager = TunnelManager(
+        store: store,
+        client: client,
+        beforeConnect: () async => throw StateError('no window'),
+      );
+      addTearDown(manager.close);
+      await manager.load();
 
-        time.elapse(const Duration(minutes: 5));
+      await manager.restore();
 
-        expect(
-          manager.snapshot.statusOf('a1'),
-          const Failed('Bad state: no window'),
-        );
-        expect(store.on, isEmpty);
-        verifyNever(openAnyTunnel);
-
-        unawaited(manager.close());
-        time.flushMicrotasks();
-      });
+      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(store.on, {'a1'});
     });
 
     test('a restored tunnel still stops on a permanent failure', () async {
@@ -890,6 +868,27 @@ void main() {
         connecting,
         'I/Tunnels: Connected Production database',
         'W/Tunnels: Production database dropped: Disconnected; reconnecting in 1s',
+      ]);
+    });
+
+    test('why beforeConnect failed, before connecting anyway', () async {
+      final manager = TunnelManager(
+        store: store,
+        client: client,
+        beforeConnect: () async => throw StateError('no window'),
+      );
+      addTearDown(manager.close);
+      await manager.load();
+
+      await manager.toggle('a1');
+
+      const warning =
+          'W/Tunnels: Production database: beforeConnect failed, '
+          'connecting anyway (Bad state: no window)';
+      expect(lines, [
+        connecting,
+        warning,
+        'I/Tunnels: Connected Production database',
       ]);
     });
 
