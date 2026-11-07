@@ -130,5 +130,11 @@ void main() {
     test('serves a SOCKS proxy through the SSH host', () {
       expect(proxy.sshCommand, 'ssh -N -D 127.0.0.1:1080 bastion');
     });
+
+    test('is null for a tunnel ssh cannot open', () {
+      expect(proxy.copyWith(localPort: 0).sshCommand, isNull);
+      expect(database.copyWith(localPort: 65536).sshCommand, isNull);
+      expect(proxy.copyWith(sshHost: '-oProxyCommand=x').sshCommand, isNull);
+    });
   });
 }

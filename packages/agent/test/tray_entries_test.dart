@@ -121,6 +121,17 @@ void main() {
     );
   });
 
+  test('offers no ssh command for a tunnel ssh cannot open', () {
+    const snapshot = TunnelsSnapshot(
+      tunnels: [Tunnel(id: 'd4', name: 'Broken', sshHost: 'web', localPort: 0)],
+    );
+
+    expect(
+      tunnelActions(snapshot),
+      'Tunnel Actions ▸ Broken ▸ Copy Address ⧉ localhost:0 | Edit…',
+    );
+  });
+
   test('ends with Disconnect All while any is on, and the window', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [database, proxy],

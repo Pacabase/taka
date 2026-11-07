@@ -211,4 +211,16 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1500));
     expect(find.byTooltip('Copy SSH command'), findsOneWidget);
   });
+
+  testWidgets('offers no copy button for a tunnel ssh cannot open', (
+    tester,
+  ) async {
+    await pumpTile(tester, tunnel: unnamed.copyWith(localPort: 0));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(find.byType(TunnelTile)));
+    await tester.pump();
+
+    expect(find.byTooltip('Edit'), findsOneWidget);
+    expect(find.byTooltip('Copy SSH command'), findsNothing);
+  });
 }

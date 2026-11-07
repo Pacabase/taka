@@ -768,10 +768,10 @@ packages:
     dependency: transitive
     description:
       name: system_ssh
-      sha256: b5463d4d437eab5eaed2fa0dd5ea3b85dca5a8b7ddb1a7d926838eb1552f8d33
+      sha256: "8a19147d7692268dec49725488dc4f21ecc0e8eabda3988050ee33d1b3ff912e"
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.0"
+    version: "0.8.0"
   term_glyph:
     dependency: transitive
     description:
