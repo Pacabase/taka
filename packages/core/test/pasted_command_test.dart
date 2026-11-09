@@ -20,148 +20,184 @@ void main() {
     localPort: 1080,
   );
 
-  Tunnel? tunnelOf(String command) => parseSshCommand(command)?.tunnel;
-
-  List<String>? leftOutOf(String command) => parseSshCommand(command)?.leftOut;
-
-  void expectClean(String command, Tunnel tunnel) {
-    expect(tunnelOf(command), tunnel);
-    expect(leftOutOf(command), isEmpty);
-  }
-
   group('reads back what Taka copies', () {
     test('a local forward', () {
-      final command = tunnelCommand(
-        const SshTarget('bastion', user: 'deploy'),
-        remoteHost: 'db',
-        remotePort: 5432,
-        localPort: 15432,
+      final pasted = parseSshCommand(
+        tunnelCommand(
+          const SshTarget('bastion', user: 'deploy'),
+          remoteHost: 'db',
+          remotePort: 5432,
+          localPort: 15432,
+        ),
       );
 
-      expectClean(command, database);
+      expect(pasted?.tunnel, database);
+      expect(pasted?.leftOut, isEmpty);
     });
 
     test('a SOCKS proxy', () {
-      final command = socksProxyCommand(
-        const SshTarget('bastion'),
-        localPort: 1080,
+      final pasted = parseSshCommand(
+        socksProxyCommand(const SshTarget('bastion'), localPort: 1080),
       );
 
-      expectClean(command, proxy);
+      expect(pasted?.tunnel, proxy);
+      expect(pasted?.leftOut, isEmpty);
     });
 
     test('an IPv6 destination', () {
-      final command = tunnelCommand(
-        const SshTarget('bastion'),
-        remoteHost: '::1',
-        remotePort: 5432,
-        localPort: 15432,
+      final pasted = parseSshCommand(
+        tunnelCommand(
+          const SshTarget('bastion'),
+          remoteHost: '::1',
+          remotePort: 5432,
+          localPort: 15432,
+        ),
       );
 
-      expect(tunnelOf(command)?.remoteHost, '::1');
+      expect(pasted?.tunnel.remoteHost, '::1');
     });
 
     test('a server port, which a tunnel cannot keep', () {
-      final command = tunnelCommand(
-        const SshTarget('bastion', port: 2222),
-        remoteHost: 'db',
-        remotePort: 5432,
-        localPort: 15432,
+      final pasted = parseSshCommand(
+        tunnelCommand(
+          const SshTarget('bastion', port: 2222),
+          remoteHost: 'db',
+          remotePort: 5432,
+          localPort: 15432,
+        ),
       );
 
-      expect(tunnelOf(command)?.sshHost, 'bastion');
-      expect(leftOutOf(command), ['-p 2222']);
+      expect(pasted?.tunnel.sshHost, 'bastion');
+      expect(pasted?.leftOut, ['-p 2222']);
     });
   });
 
   group('reads a command written by hand', () {
-    test('without a bind address', () {
-      expect(tunnelOf('ssh -L 15432:db:5432 deploy@bastion'), database);
-    });
-
-    test('with the value against its flag', () {
-      expect(tunnelOf('ssh -L15432:db:5432 deploy@bastion'), database);
-    });
-
-    test('with flags grouped before the forward', () {
-      expectClean('ssh -fNT -L 15432:db:5432 deploy@bastion', database);
-      expect(tunnelOf('ssh -NfL 15432:db:5432 deploy@bastion'), database);
-    });
-
-    test('with options after the host', () {
-      expect(tunnelOf('ssh deploy@bastion -N -L 15432:db:5432'), database);
-    });
-
-    test('with the user from -l', () {
-      expect(tunnelOf('ssh -l deploy -L 15432:db:5432 bastion'), database);
-    });
-
-    test('preferring the user in the host over -l', () {
-      expect(
-        tunnelOf('ssh -l root -L 15432:db:5432 deploy@bastion')?.sshHost,
-        'deploy@bastion',
-      );
-    });
-
-    test('with an ssh:// destination', () {
-      final pasted = parseSshCommand(
-        'ssh -L 15432:db:5432 ssh://deploy@bastion:2222',
-      );
-
-      expect(pasted?.tunnel, database);
-      expect(pasted?.leftOut, ['-p 2222']);
-    });
-
-    test('with port 22, which needs nothing kept', () {
-      expect(leftOutOf('ssh -p 22 -L 15432:db:5432 deploy@bastion'), isEmpty);
-    });
-
-    test('from a prompt, a path or across lines', () {
-      expect(tunnelOf(r'$ ssh -L 15432:db:5432 deploy@bastion'), database);
-      expect(
-        tunnelOf('/usr/bin/ssh -L 15432:db:5432 deploy@bastion'),
+    for (final (reason, command, tunnel) in [
+      (
+        'without a bind address',
+        'ssh -L 15432:db:5432 deploy@bastion',
         database,
-      );
-      expect(
-        tunnelOf('ssh -N \\\n  -L 15432:db:5432 \\\r\n  deploy@bastion\n'),
+      ),
+      (
+        'with the value against its flag',
+        'ssh -L15432:db:5432 deploy@bastion',
         database,
-      );
-    });
-
-    test('in quotes', () {
-      expect(tunnelOf("ssh -L '15432:db:5432' \"deploy@bastion\""), database);
-    });
-
-    test('ending in a shell operator', () {
-      expect(tunnelOf('ssh -fN -L 15432:db:5432 deploy@bastion &'), database);
-      expect(
-        tunnelOf('ssh -fN -L 15432:db:5432 deploy@bastion && psql'),
+      ),
+      (
+        'with flags grouped',
+        'ssh -fNT -L 15432:db:5432 deploy@bastion',
         database,
-      );
-    });
+      ),
+      (
+        'with the forward in a group',
+        'ssh -NfL 15432:db:5432 deploy@bastion',
+        database,
+      ),
+      (
+        'with options after the host',
+        'ssh deploy@bastion -N -L 15432:db:5432',
+        database,
+      ),
+      (
+        'with a group after the host',
+        'ssh deploy@bastion -NfL 15432:db:5432',
+        database,
+      ),
+      (
+        'with the user from -l',
+        'ssh -l deploy -L 15432:db:5432 bastion',
+        database,
+      ),
+      (
+        'with the user in the host before -l',
+        'ssh deploy@bastion -l root -L 15432:db:5432',
+        database,
+      ),
+      (
+        'with -l before the user in the host',
+        'ssh -l deploy -L 15432:db:5432 root@bastion',
+        database,
+      ),
+      (
+        'before a redirection',
+        'ssh -fN -L 15432:db:5432 deploy@bastion > /dev/null 2>&1',
+        database,
+      ),
+      ('with port 22', 'ssh -p 22 -L 15432:db:5432 deploy@bastion', database),
+      ('after a prompt', r'$ ssh -L 15432:db:5432 deploy@bastion', database),
+      ('from a path', '/usr/bin/ssh -L 15432:db:5432 deploy@bastion', database),
+      (
+        'across lines',
+        'ssh -N \\\n  -L 15432:db:5432 \\\r\n  deploy@bastion\n',
+        database,
+      ),
+      ('in quotes', "ssh -L '15432:db:5432' \"deploy@bastion\"", database),
+      (
+        'in the background',
+        'ssh -fN -L 15432:db:5432 deploy@bastion &',
+        database,
+      ),
+      (
+        'before another command',
+        'ssh -fN -L 15432:db:5432 deploy@bastion && psql',
+        database,
+      ),
+      (
+        'before an operator with no space',
+        'ssh -L 15432:db:5432 deploy@bastion;ls',
+        database,
+      ),
+      (
+        'on another address, kept local',
+        'ssh -L 0.0.0.0:15432:db:5432 deploy@bastion',
+        database,
+      ),
+      (
+        'on every address, kept local',
+        'ssh -L *:15432:db:5432 deploy@bastion',
+        database,
+      ),
+      ('a SOCKS proxy', 'ssh -D 1080 bastion', proxy),
+      (
+        'a SOCKS proxy with a bind address',
+        'ssh -D localhost:1080 bastion',
+        proxy,
+      ),
+    ]) {
+      test(reason, () {
+        final pasted = parseSshCommand(command);
 
-    test('a SOCKS proxy with a bind address', () {
-      expect(tunnelOf('ssh -D localhost:1080 bastion'), proxy);
-    });
+        expect(pasted?.tunnel, tunnel);
+        expect(pasted?.leftOut, isEmpty);
+      });
+    }
 
-    test('a forward on another address, which Taka keeps local', () {
-      expect(tunnelOf('ssh -L 0.0.0.0:15432:db:5432 deploy@bastion'), database);
-      expect(tunnelOf('ssh -L *:15432:db:5432 deploy@bastion'), database);
+    test('IPv6 addresses in brackets', () {
       expect(
-        tunnelOf('ssh -L [::1]:15432:[fd00::5]:5432 deploy@bastion')
-            ?.remoteHost,
+        parseSshCommand('ssh -L [::1]:15432:[fd00::5]:5432 deploy@bastion')
+            ?.tunnel
+            .remoteHost,
         'fd00::5',
+      );
+    });
+
+    test('an escape in double quotes', () {
+      expect(
+        parseSshCommand(r'ssh -L 15432:db:5432 "dep\"loy@bastion"')
+            ?.tunnel
+            .sshHost,
+        'dep"loy@bastion',
       );
     });
   });
 
   group('says what it leaves out', () {
-    test('options a tunnel cannot keep', () {
-      expect(
-        leftOutOf(
-          'ssh -i ~/.ssh/key.pem -J jump -o ServerAliveInterval=30 -A -g '
-          '-L 15432:db:5432 deploy@bastion',
-        ),
+    for (final (reason, command, leftOut) in [
+      (
+        'options a tunnel cannot keep',
+        'ssh -i ~/.ssh/key.pem -J jump -o ServerAliveInterval=30 -A -g '
+            '-L 15432:db:5432 deploy@bastion',
         [
           '-i ~/.ssh/key.pem',
           '-J jump',
@@ -169,29 +205,52 @@ void main() {
           '-A',
           '-g',
         ],
-      );
-    });
-
-    test('a second forward', () {
-      final pasted = parseSshCommand(
+      ),
+      (
+        'a server port against its flag',
+        'ssh -p2222 -L 15432:db:5432 deploy@bastion',
+        ['-p 2222'],
+      ),
+      (
+        'a flag it does not know',
+        'ssh -Z -L 15432:db:5432 deploy@bastion',
+        ['-Z'],
+      ),
+      (
+        'a second forward',
         'ssh -L 15432:db:5432 -L 16379:cache:6379 deploy@bastion',
-      );
-
-      expect(pasted?.tunnel, database);
-      expect(pasted?.leftOut, ['-L 16379:cache:6379']);
-    });
-
-    test('a remote forward next to a local one', () {
-      expect(
-        leftOutOf('ssh -R 8080:localhost:3000 -L 15432:db:5432 deploy@bastion'),
+        ['-L 16379:cache:6379'],
+      ),
+      ('a second SOCKS proxy', 'ssh -D 1080 -D 1081 bastion', ['-D 1081']),
+      (
+        'a remote forward',
+        'ssh -R 8080:localhost:3000 -L 15432:db:5432 deploy@bastion',
         ['-R 8080:localhost:3000'],
-      );
-    });
+      ),
+      (
+        'a command to run on the server',
+        'ssh -L 15432:db:5432 deploy@bastion sleep 60',
+        ['sleep 60'],
+      ),
+      (
+        'a command after --',
+        'ssh -L 15432:db:5432 -- deploy@bastion ls -l',
+        ['ls -l'],
+      ),
+      (
+        'a quoted operator, which is no operator',
+        "ssh -L 15432:db:5432 deploy@bastion '&' ls",
+        ['& ls'],
+      ),
+    ]) {
+      test(reason, () => expect(parseSshCommand(command)?.leftOut, leftOut));
+    }
 
-    test('a command to run on the server', () {
-      expect(leftOutOf('ssh -L 15432:db:5432 deploy@bastion sleep 60'), [
-        'sleep 60',
-      ]);
+    test('the first forward, keeping it', () {
+      expect(
+        parseSshCommand('ssh -D 1080 -L 15432:db:5432 bastion')?.tunnel,
+        proxy,
+      );
     });
   });
 
@@ -205,14 +264,14 @@ void main() {
       ('only a remote forward', 'ssh -R 8080:localhost:3000 bastion'),
       ('no host', 'ssh -L 15432:db:5432'),
       ('a flag with no value', 'ssh bastion -L'),
-      ('an unknown flag', 'ssh -Z -L 15432:db:5432 bastion'),
       ('an unclosed quote', "ssh -L '15432:db:5432 bastion"),
       ('a forward to a socket', 'ssh -L 15432:/run/db.sock bastion'),
       ('a forward with no host', 'ssh -L 15432::5432 bastion'),
       ('a port out of range', 'ssh -L 70000:db:5432 bastion'),
+      ('port 0', 'ssh -D 0 bastion'),
       ('a port that is not a number', 'ssh -D socks bastion'),
       ('an unclosed bracket', 'ssh -L 15432:[::1:5432 bastion'),
-      ('an ssh:// with no host', 'ssh -L 15432:db:5432 ssh://'),
+      ('an ssh:// destination', 'ssh -L 15432:db:5432 ssh://deploy@bastion'),
     ]) {
       test(reason, () => expect(parseSshCommand(command), isNull));
     }

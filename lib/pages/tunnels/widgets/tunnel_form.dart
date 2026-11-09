@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,7 +33,8 @@ class _TunnelFormState extends State<TunnelForm> {
   );
   late final _name = TextEditingController(text: widget.initial?.name);
   late final _fields = [_localPort, _sshHost, _remoteHost, _remotePort, _name];
-  List<String> _leftOut = const [];
+  ({String host, List<String> leftOut})? _pasted;
+  late final _pasteCommand = _PasteCommandAction(onText: _fill);
 
   bool get _isLocal => _kind == TunnelKind.local;
 
@@ -45,14 +44,6 @@ class _TunnelFormState extends State<TunnelForm> {
       (!_isLocal ||
           _remoteHost.text.trim().isNotEmpty &&
               _port(_remotePort.text) != null);
-
-  @override
-  void initState() {
-    super.initState();
-    for (final field in _fields) {
-      field.addListener(() => _fillFrom(field));
-    }
-  }
 
   @override
   void dispose() {
@@ -77,6 +68,7 @@ class _TunnelFormState extends State<TunnelForm> {
           DismissIntent: CallbackAction<DismissIntent>(
             onInvoke: (_) => widget.onCancel(),
           ),
+          PasteTextIntent: _pasteCommand,
         },
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -158,15 +150,25 @@ class _TunnelFormState extends State<TunnelForm> {
                   child: _input(_name, hint: 'Optional'),
                 ),
               ),
-              if (_leftOut.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(left: RouteStep.indent),
-                  child: Text(
-                    'Not copied: ${_leftOut.join(', ')}. '
-                    'Set these for the host in ~/.ssh/config.',
-                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
-                  ),
-                ),
+              ListenableBuilder(
+                listenable: _sshHost,
+                builder: (context, _) => switch (_pasted) {
+                  (:final host, :final leftOut)
+                      when leftOut.isNotEmpty && _sshHost.text.trim() == host =>
+                    Padding(
+                      padding: const EdgeInsets.only(left: RouteStep.indent),
+                      child: Text(
+                        'Not copied: ${leftOut.join(', ')}. '
+                        'Set these for the host in ~/.ssh/config.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  _ => const SizedBox.shrink(),
+                },
+              ),
               const Spacer(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -205,23 +207,27 @@ class _TunnelFormState extends State<TunnelForm> {
     onSubmitted: _save,
   );
 
-  // Waits, so the field the command went into finishes taking it first.
-  void _fillFrom(TextEditingController field) {
-    if (parseSshCommand(field.text) case (:final tunnel, :final leftOut)) {
-      scheduleMicrotask(() {
-        if (!mounted) return;
-
-        setState(() {
-          _kind = tunnel.kind;
-          _leftOut = leftOut;
-        });
-        if (field == _name) _name.clear();
-        _localPort.text = '${tunnel.localPort}';
-        _sshHost.text = tunnel.sshHost;
-        _remoteHost.text = tunnel.remoteHost ?? '';
-        _remotePort.text = '${tunnel.remotePort ?? ''}';
+  bool _fill(String text) {
+    if (!mounted) return false;
+    if (parseSshCommand(text) case (:final tunnel, :final leftOut)) {
+      setState(() {
+        _kind = tunnel.kind;
+        _pasted = (host: tunnel.sshHost, leftOut: leftOut);
       });
+      for (final (field, value) in [
+        (_localPort, '${tunnel.localPort}'),
+        (_sshHost, tunnel.sshHost),
+        (_remoteHost, tunnel.remoteHost ?? ''),
+        (_remotePort, '${tunnel.remotePort ?? ''}'),
+      ]) {
+        field.value = TextEditingValue(
+          text: value,
+          selection: TextSelection.collapsed(offset: value.length),
+        );
+      }
+      return true;
     }
+    return false;
   }
 
   int? _port(String text) => switch (int.tryParse(text.trim(), radix: 10)) {
@@ -245,6 +251,20 @@ class _TunnelFormState extends State<TunnelForm> {
         remotePort: _isLocal ? _port(_remotePort.text) : null,
       ),
     );
+  }
+}
+
+// Reads the clipboard itself: a field is one line, so it would drop the
+// newlines of a command split over lines.
+class _PasteCommandAction({required final bool Function(String text) onText})
+    extends Action<PasteTextIntent> {
+  @override
+  Future<void> invoke(PasteTextIntent intent) async {
+    final paste = callingAction;
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text case final text? when onText(text)) return;
+
+    paste?.invoke(intent);
   }
 }
 
