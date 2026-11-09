@@ -114,6 +114,44 @@ jobs:
           test -x "$release/bundle/taka" && test -x "$release/bundle/agent/bin/taka_agent"
           mkdir -p dist
           tar -czf "dist/$TARBALL" -C "$release" --transform 's,^bundle,taka,' bundle
+      - name: Make the .deb and .rpm
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ needs.version.outputs.version }}
+          NFPM: 2.48.0
+        run: |
+          case "$TARGET" in
+            linux-x64) ARCH=amd64 nfpm=x86_64 sum=6d7f9a28b2f397934403950fcbba83f598b08d02edbe79a0815b3b4897341750 ;;
+            linux-arm64) ARCH=arm64 nfpm=arm64 sum=a9a75213763783b7669719e505474c748c5ad7dc66591a195619deb50f85c2f4 ;;
+          esac
+          curl -fsSLo "$RUNNER_TEMP/nfpm.tar.gz" "https://github.com/goreleaser/nfpm/releases/download/v$NFPM/nfpm_${NFPM}_Linux_$nfpm.tar.gz"
+          echo "$sum  $RUNNER_TEMP/nfpm.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/nfpm.tar.gz" -C "$RUNNER_TEMP" nfpm
+          export ARCH
+          mkdir -p build/package
+          cp -R "build/linux/${TARGET#linux-}/release/bundle" build/package/taka
+          for packager in deb rpm; do
+            "$RUNNER_TEMP/nfpm" package --config linux/packaging/nfpm.yaml --packager "$packager" \
+              --target "dist/Taka-$VERSION-$TARGET.$packager"
+          done
+      # A clean system gets every library the app and its helper load. The
+      # plugins find Flutter's own library only once the app has loaded it.
+      - name: Install the packages on clean systems
+        run: |
+          check='
+            missing=$(ldd /opt/taka/taka /opt/taka/lib/*.so /opt/taka/agent/bin/taka_agent /opt/taka/agent/lib/*.so |
+              grep "not found" | grep -v libflutter_linux_gtk.so || true)
+            [ -z "$missing" ] || { echo "$missing" >&2; exit 1; }
+            test -x /usr/bin/taka && command -v ssh'
+          for image in ubuntu:22.04 ubuntu:24.04 debian:12; do
+            echo "::group::$image"
+            docker run --rm -v "$PWD/dist:/dist:ro" -e DEBIAN_FRONTEND=noninteractive "$image" sh -ec \
+              "apt-get update -qq && apt-get install -y -qq /dist/*.deb >/dev/null && $check"
+            echo "::endgroup::"
+          done
+          echo "::group::fedora:latest"
+          docker run --rm -v "$PWD/dist:/dist:ro" fedora:latest sh -ec "dnf install -y -q /dist/*.rpm && $check"
+          echo "::endgroup::"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Taka-${{ matrix.target }}
