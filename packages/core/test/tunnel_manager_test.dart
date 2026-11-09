@@ -386,6 +386,7 @@ void main() {
     void dropped(
       void Function(TunnelManager manager, FakeAsync time) body, {
       Future<void> Function()? beforeConnect,
+      Future<bool> Function()? isLocked,
     }) => fakeAsync((time) {
       opened = [];
       failures = [];
@@ -397,6 +398,7 @@ void main() {
         store: store,
         client: client,
         beforeConnect: beforeConnect,
+        isLocked: isLocked,
       );
       unawaited(manager.load().then((_) => manager.toggle('a1')));
       time.flushMicrotasks();
@@ -450,16 +452,98 @@ void main() {
       });
     });
 
-    test('waits no longer than the last delay', () {
+    test('gives up after the last delay', () {
       dropped((manager, time) {
         failures = List.filled(10, timedOut, growable: true);
         drop(time, closed);
 
-        time.elapse(const Duration(seconds: 1 + 2 + 4 + 8 + 15 + 30 * 5));
-        expect(opened, hasLength(1));
+        time.elapse(const Duration(seconds: 1 + 2 + 4 + 8 + 15 + 30 + 60));
+        expect(manager.snapshot.statusOf('a1'), Reconnecting(timedOut.message));
 
-        time.elapse(const Duration(seconds: 30));
+        time.elapse(const Duration(minutes: 2));
+        expect(manager.snapshot.statusOf('a1'), Failed(timedOut.message));
+        expect(failures, hasLength(2));
+
+        time.elapse(const Duration(hours: 8));
+        expect(failures, hasLength(2));
+        expect(opened, hasLength(1));
+      });
+    });
+
+    test('connects again when turned on after giving up', () {
+      dropped((manager, time) {
+        failures = List.filled(8, timedOut, growable: true);
+        drop(time, closed);
+        time.elapse(const Duration(minutes: 5));
+        expect(manager.snapshot.statusOf('a1'), Failed(timedOut.message));
+
+        unawaited(manager.toggle('a1'));
+        time.flushMicrotasks();
+
+        expect(manager.snapshot.statusOf('a1'), const Connected());
         expect(opened, hasLength(2));
+      });
+    });
+
+    test('waits while the screen is locked, then connects once', () {
+      var locked = true;
+      dropped(isLocked: () async => locked, (manager, time) {
+        failures = [timedOut];
+        drop(time, closed);
+
+        time.elapse(const Duration(hours: 8));
+        expect(manager.snapshot.statusOf('a1'), Reconnecting(closed.message));
+        expect(failures, hasLength(1));
+
+        locked = false;
+        time.elapse(const Duration(seconds: 5));
+        expect(failures, isEmpty);
+
+        time.elapse(const Duration(seconds: 2));
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(opened, hasLength(2));
+      });
+    });
+
+    test('uses no tries while the screen is locked', () {
+      var locked = true;
+      dropped(isLocked: () async => locked, (manager, time) {
+        failures = List.filled(7, timedOut, growable: true);
+        drop(time, closed);
+        time.elapse(const Duration(hours: 8));
+
+        locked = false;
+        time.elapse(const Duration(minutes: 5));
+
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(opened, hasLength(2));
+      });
+    });
+
+    test('connects when it cannot tell whether the screen is locked', () {
+      dropped(isLocked: () async => throw StateError('no session'), (
+        manager,
+        time,
+      ) {
+        drop(time, closed);
+
+        time.elapse(const Duration(seconds: 1));
+
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(opened, hasLength(2));
+      });
+    });
+
+    test('stays off when turned off while the screen is locked', () {
+      dropped(isLocked: () async => true, (manager, time) {
+        drop(time, closed);
+        time.elapse(const Duration(minutes: 1));
+
+        unawaited(manager.toggle('a1'));
+        time.elapse(const Duration(hours: 1));
+
+        expect(manager.snapshot.statusOf('a1'), const Stopped());
+        expect(opened, hasLength(1));
       });
     });
 

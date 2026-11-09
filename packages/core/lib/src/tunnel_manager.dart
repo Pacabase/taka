@@ -14,7 +14,10 @@ class TunnelManager({
   required final TunnelStore store,
   required final SshClient client,
   final Future<void> Function()? beforeConnect,
+  final Future<bool> Function()? isLocked,
   final Duration warningLifetime = const Duration(seconds: 30),
+
+  /// A dropped tunnel fails once a try after the last delay fails too.
   final List<Duration> retryDelays = const [
     Duration(seconds: 1),
     Duration(seconds: 2),
@@ -22,7 +25,10 @@ class TunnelManager({
     Duration(seconds: 8),
     Duration(seconds: 15),
     Duration(seconds: 30),
+    Duration(minutes: 1),
+    Duration(minutes: 2),
   ],
+  final Duration lockedRecheck = const Duration(seconds: 5),
   final Duration stableAfter = const Duration(minutes: 1),
 }) {
   final _changes = StreamController<TunnelsSnapshot>.broadcast(sync: true);
@@ -150,8 +156,10 @@ class TunnelManager({
       client: client,
       onChange: _emit,
       beforeConnect: beforeConnect,
+      isLocked: isLocked,
       warningLifetime: warningLifetime,
       retryDelays: retryDelays,
+      lockedRecheck: lockedRecheck,
       stableAfter: stableAfter,
       isRestored: isRestored,
     );

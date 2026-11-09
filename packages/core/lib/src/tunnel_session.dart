@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:core/src/failure_reason.dart';
 import 'package:core/src/tunnel.dart';
@@ -15,8 +14,10 @@ class TunnelSession({
   required final SshClient client,
   required final void Function() onChange,
   required final Future<void> Function()? beforeConnect,
+  required final Future<bool> Function()? isLocked,
   required final Duration warningLifetime,
   required final List<Duration> retryDelays,
+  required final Duration lockedRecheck,
   required final Duration stableAfter,
   final bool isRestored = false,
 }) {
@@ -28,6 +29,7 @@ class TunnelSession({
   Timer? _stable;
   late bool _retries = isRestored;
   int _attempts = 0;
+  bool _waitsForUnlock = false;
 
   TunnelStatus get status => _status;
 
@@ -104,14 +106,44 @@ class TunnelSession({
       _ => true,
     };
     if (!_retries || isPermanent) return _fail(message);
+    if (_attempts == retryDelays.length) {
+      _log.w('${tunnel.title}: giving up after $_attempts tries');
+      return _fail(message);
+    }
 
-    final delay = retryDelays[min(_attempts++, retryDelays.length - 1)];
+    final delay = retryDelays[_attempts++];
     _log.w(
       '${tunnel.title} dropped: $message; reconnecting in ${delay.inSeconds}s',
     );
     _status = Reconnecting(message);
-    _retry = Timer(delay, () => unawaited(connect()));
+    _retry = Timer(delay, () => unawaited(_reconnect()));
     onChange();
+  }
+
+  // A login prompt, such as a browser sign-in, needs someone at the screen.
+  Future<void> _reconnect() async {
+    final locked = await _isLocked();
+    if (isStopped) return;
+    if (locked) {
+      if (!_waitsForUnlock) {
+        _log.i('${tunnel.title}: waiting for the screen to unlock');
+      }
+      _waitsForUnlock = true;
+      _retry = Timer(lockedRecheck, () => unawaited(_reconnect()));
+      return;
+    }
+
+    _waitsForUnlock = false;
+    await connect();
+  }
+
+  Future<bool> _isLocked() async {
+    try {
+      return await isLocked?.call() ?? false;
+    } on Object catch (exception) {
+      _log.w('Could not tell whether the screen is locked ($exception)');
+      return false;
+    }
   }
 
   String _messageOf(Object exception) => switch (exception) {
