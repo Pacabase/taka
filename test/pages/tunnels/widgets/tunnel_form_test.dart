@@ -157,6 +157,81 @@ void main() {
     expect(saved.single.kind, TunnelKind.socks);
   });
 
+  group('a pasted ssh command', () {
+    Future<void> paste(WidgetTester tester, int index, String command) async {
+      await tester.enterText(field(index), command);
+      await tester.pump();
+    }
+
+    testWidgets('fills every field from the first one', (tester) async {
+      await pumpForm(tester);
+
+      await paste(tester, 0, 'ssh -N -L 15432:db:5432 deploy@bastion');
+      await tester.tap(find.text('Add'));
+
+      expect(
+        saved.single,
+        isA<Tunnel>()
+            .having((tunnel) => tunnel.kind, 'kind', TunnelKind.local)
+            .having((tunnel) => tunnel.localPort, 'localPort', 15432)
+            .having((tunnel) => tunnel.sshHost, 'sshHost', 'deploy@bastion')
+            .having((tunnel) => tunnel.remoteHost, 'remoteHost', 'db')
+            .having((tunnel) => tunnel.remotePort, 'remotePort', 5432)
+            .having((tunnel) => tunnel.name, 'name', ''),
+      );
+      expect(find.textContaining('Not copied'), findsNothing);
+    });
+
+    testWidgets('switches to a SOCKS proxy', (tester) async {
+      await pumpForm(tester);
+
+      await paste(tester, 1, 'ssh -D 1080 bastion');
+
+      expect(find.text('To'), findsNothing);
+      await tester.tap(find.text('Add'));
+      expect(saved.single.kind, TunnelKind.socks);
+      expect(saved.single.sshHost, 'bastion');
+      expect(saved.single.localPort, 1080);
+    });
+
+    testWidgets('says which options it left out', (tester) async {
+      await pumpForm(tester);
+
+      await paste(tester, 1, 'ssh -i key.pem -L 15432:db:5432 deploy@bastion');
+
+      expect(
+        find.text(
+          'Not copied: -i key.pem. Set these for the host in ~/.ssh/config.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('leaves no command in the name', (tester) async {
+      await pumpForm(tester);
+
+      await paste(tester, 4, 'ssh -L 15432:db:5432 deploy@bastion');
+      await tester.tap(find.text('Add'));
+
+      expect(saved.single.name, '');
+      expect(saved.single.sshHost, 'deploy@bastion');
+    });
+
+    testWidgets('replaces what an edited tunnel had', (tester) async {
+      await pumpForm(
+        tester,
+        initial: const Tunnel(id: 'a', name: 'Prod', localPort: 1080),
+      );
+
+      await paste(tester, 2, 'ssh -L 15432:db:5432 deploy@bastion');
+      await tester.tap(find.text('Save'));
+
+      expect(saved.single.id, 'a');
+      expect(saved.single.name, 'Prod');
+      expect(saved.single.localPort, 15432);
+    });
+  });
+
   group('the SSH host', () {
     const hosts = ['dev', 'staging', 'prod'];
 

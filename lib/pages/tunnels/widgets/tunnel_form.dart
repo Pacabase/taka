@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -33,6 +35,7 @@ class _TunnelFormState extends State<TunnelForm> {
   );
   late final _name = TextEditingController(text: widget.initial?.name);
   late final _fields = [_localPort, _sshHost, _remoteHost, _remotePort, _name];
+  List<String> _leftOut = const [];
 
   bool get _isLocal => _kind == TunnelKind.local;
 
@@ -42,6 +45,14 @@ class _TunnelFormState extends State<TunnelForm> {
       (!_isLocal ||
           _remoteHost.text.trim().isNotEmpty &&
               _port(_remotePort.text) != null);
+
+  @override
+  void initState() {
+    super.initState();
+    for (final field in _fields) {
+      field.addListener(() => _fillFrom(field));
+    }
+  }
 
   @override
   void dispose() {
@@ -113,7 +124,7 @@ class _TunnelFormState extends State<TunnelForm> {
                 child: HostInput(
                   controller: _sshHost,
                   hosts: widget.hosts,
-                  hint: 'Host from ~/.ssh/config, or user@host',
+                  hint: 'Host from ~/.ssh/config, user@host, or an ssh command',
                   style: mono,
                   onSubmitted: _save,
                 ),
@@ -147,6 +158,15 @@ class _TunnelFormState extends State<TunnelForm> {
                   child: _input(_name, hint: 'Optional'),
                 ),
               ),
+              if (_leftOut.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(left: RouteStep.indent),
+                  child: Text(
+                    'Not copied: ${_leftOut.join(', ')}. '
+                    'Set these for the host in ~/.ssh/config.',
+                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                  ),
+                ),
               const Spacer(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -184,6 +204,25 @@ class _TunnelFormState extends State<TunnelForm> {
     autofocus: autofocus,
     onSubmitted: _save,
   );
+
+  // Waits, so the field the command went into finishes taking it first.
+  void _fillFrom(TextEditingController field) {
+    if (parseSshCommand(field.text) case (:final tunnel, :final leftOut)) {
+      scheduleMicrotask(() {
+        if (!mounted) return;
+
+        setState(() {
+          _kind = tunnel.kind;
+          _leftOut = leftOut;
+        });
+        if (field == _name) _name.clear();
+        _localPort.text = '${tunnel.localPort}';
+        _sshHost.text = tunnel.sshHost;
+        _remoteHost.text = tunnel.remoteHost ?? '';
+        _remotePort.text = '${tunnel.remotePort ?? ''}';
+      });
+    }
+  }
 
   int? _port(String text) => switch (int.tryParse(text.trim(), radix: 10)) {
     final port? when port >= 1 && port <= 65535 => port,

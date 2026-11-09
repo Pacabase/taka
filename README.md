@@ -65,7 +65,7 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Activity log** per tunnel.
 - [ ] **Groups and tags**, as tray submenus too.
 - [ ] **A colour per tunnel**, picked from the app theme's palette and shown on its row, so tunnels tell apart at a glance. In the tray, a coloured square beside the name: the nearest emoji square (🟥 🟧 🟨 🟩 🟦 🟪) on macOS and Linux, and a real icon on Windows, where menus can't draw emoji in colour.
-- [ ] **Import** hosts from `~/.ssh/config`, or a tunnel from a pasted `ssh -L` command.
+- [ ] **Import** hosts from `~/.ssh/config`.
 - [ ] **Linux packages** — AppImage, `.deb`, `.rpm` and the AUR.
 
 ### Windows (0.3)
