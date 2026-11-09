@@ -14,6 +14,7 @@ void main() {
   late File agent;
   late TakaInstall install;
   late List<String> events;
+  late File errors;
 
   setUp(() async {
     directory = await Directory.systemTemp.createTemp('taka_launcher');
@@ -26,6 +27,7 @@ void main() {
       agentAssets: directory.path,
     );
     events = [];
+    errors = File('${directory.path}/logs/helper-errors.log');
   });
 
   tearDown(() => directory.delete(recursive: true));
@@ -76,6 +78,7 @@ void main() {
       answerTimeout: const Duration(milliseconds: 500),
       quitTimeout: const Duration(milliseconds: 500),
       identityTimeout: const Duration(milliseconds: 200),
+      errors: errors,
     );
     addTearDown(client.close);
     return client;
@@ -96,7 +99,10 @@ void main() {
     final client = await connect(opens(identity: agentIdentity(agent.path)));
 
     expect(await client.identity, agentIdentity(agent.path));
-    expect(events, ['quit', 'open -n -g ${install.agentBundle}']);
+    expect(events, [
+      'quit',
+      'open -n -g --stderr ${errors.path} ${install.agentBundle}',
+    ]);
   });
 
   test(
@@ -105,12 +111,89 @@ void main() {
       final client = await connect(opens(identity: agentIdentity(agent.path)));
 
       expect(await client.identity, agentIdentity(agent.path));
-      expect(events, ['open -n -g ${install.agentBundle}']);
+      expect(events, [
+        'open -n -g --stderr ${errors.path} ${install.agentBundle}',
+      ]);
     },
   );
 
   test('throws a timeout when the started agent never answers', () async {
-    await expectLater(connect(opens()), throwsA(isA<AgentTimeoutException>()));
+    await expectLater(
+      connect(opens()),
+      throwsA(
+        isA<AgentTimeoutException>().having((e) => e.output, 'output', ''),
+      ),
+    );
+  });
+
+  test('says what an agent that never answers wrote to stderr', () async {
+    Future<ProcessResult> crashes(String executable, List<String> arguments) {
+      final path = arguments[arguments.indexOf('--stderr') + 1];
+      File(path).writeAsStringSync('dlopen failed: libX11.so.6\n\n');
+      return opens()(executable, arguments);
+    }
+
+    await expectLater(
+      connect(crashes),
+      throwsA(
+        isA<AgentTimeoutException>().having(
+          (exception) => exception.output,
+          'output',
+          'dlopen failed: libX11.so.6',
+        ),
+      ),
+    );
+  });
+
+  test('keeps the last 20 lines of what the agent wrote', () async {
+    Future<ProcessResult> chatters(String executable, List<String> arguments) {
+      final path = arguments[arguments.indexOf('--stderr') + 1];
+      File(path).writeAsStringSync(
+        [for (var line = 1; line <= 30; line++) 'line $line'].join('\n'),
+      );
+      return opens()(executable, arguments);
+    }
+
+    await expectLater(
+      connect(chatters),
+      throwsA(
+        isA<AgentTimeoutException>().having(
+          (exception) => exception.output.split('\n'),
+          'lines',
+          [for (var line = 11; line <= 30; line++) 'line $line'],
+        ),
+      ),
+    );
+  });
+
+  test('keeps the stderr of an agent started without a bundle', () async {
+    await agent.writeAsString(
+      '#!/bin/sh\n'
+      'echo "taka_agent: libX11.so.6: cannot open shared object file" >&2\n'
+      'exit 127\n',
+    );
+    await Process.run('chmod', ['+x', agent.path]);
+    final bare = TakaInstall(
+      app: install.app,
+      agent: agent.path,
+      agentAssets: directory.path,
+    );
+
+    await expectLater(
+      connectToAgent(
+        socketPath: path,
+        install: bare,
+        answerTimeout: const Duration(milliseconds: 500),
+        errors: errors,
+      ),
+      throwsA(
+        isA<AgentTimeoutException>().having(
+          (exception) => exception.output,
+          'output',
+          'taka_agent: libX11.so.6: cannot open shared object file',
+        ),
+      ),
+    );
   });
 
   test('reports open failing', () async {
