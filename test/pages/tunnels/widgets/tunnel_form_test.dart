@@ -157,6 +157,130 @@ void main() {
     expect(saved.single.kind, TunnelKind.socks);
   });
 
+  group('a pasted ssh command', () {
+    final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
+
+    Future<void> paste(WidgetTester tester, int index, String text) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async =>
+            call.method == 'Clipboard.getData' ? {'text': text} : null,
+      );
+      await tester.showKeyboard(field(index));
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.meta);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyV);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.meta);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('fills every field, even across lines', (tester) async {
+      await pumpForm(tester);
+
+      await paste(
+        tester,
+        0,
+        'ssh -N \\\n  -L 15432:db:5432 \\\n  deploy@bastion',
+      );
+      await tester.tap(find.text('Add'));
+
+      expect(
+        saved.single,
+        isA<Tunnel>()
+            .having((tunnel) => tunnel.kind, 'kind', TunnelKind.local)
+            .having((tunnel) => tunnel.localPort, 'localPort', 15432)
+            .having((tunnel) => tunnel.sshHost, 'sshHost', 'deploy@bastion')
+            .having((tunnel) => tunnel.remoteHost, 'remoteHost', 'db')
+            .having((tunnel) => tunnel.remotePort, 'remotePort', 5432)
+            .having((tunnel) => tunnel.name, 'name', ''),
+      );
+    }, variant: macOS);
+
+    testWidgets('switches to a SOCKS proxy', (tester) async {
+      await pumpForm(tester);
+
+      await paste(tester, 1, 'ssh -D 1080 bastion');
+
+      expect(find.text('To'), findsNothing);
+      await tester.tap(find.text('Add'));
+      expect(saved.single.kind, TunnelKind.socks);
+      expect(saved.single.sshHost, 'bastion');
+      expect(saved.single.localPort, 1080);
+    }, variant: macOS);
+
+    testWidgets('replaces what an edited SOCKS proxy had', (tester) async {
+      await pumpForm(
+        tester,
+        initial: const Tunnel(
+          id: 'a',
+          name: 'Prod',
+          kind: TunnelKind.socks,
+          sshHost: 'jump',
+          localPort: 1080,
+        ),
+      );
+
+      await paste(tester, 1, 'ssh -L 15432:db:5432 deploy@bastion');
+      await tester.tap(find.text('Save'));
+
+      expect(
+        saved.single,
+        const Tunnel(
+          id: 'a',
+          name: 'Prod',
+          sshHost: 'deploy@bastion',
+          localPort: 15432,
+          remoteHost: 'db',
+          remotePort: 5432,
+        ),
+      );
+    }, variant: macOS);
+
+    testWidgets('pastes other text as usual', (tester) async {
+      await pumpForm(tester);
+
+      await paste(tester, 4, 'ssh to prod');
+
+      expect(
+        tester.widget<TextField>(field(4)).controller!.text,
+        'ssh to prod',
+      );
+      expect(tester.widget<TextField>(field(1)).controller!.text, isEmpty);
+    }, variant: macOS);
+
+    testWidgets('is not filled in while typed', (tester) async {
+      await pumpForm(tester);
+
+      await tester.enterText(field(1), 'ssh -L 15432:db:5432 deploy@bastion');
+      await tester.pump();
+
+      expect(tester.widget<TextField>(field(0)).controller!.text, isEmpty);
+    });
+
+    testWidgets('says what it left out while the host stays', (tester) async {
+      await pumpForm(tester);
+      const note =
+          'Not copied: -i key.pem. Set these for the host in ~/.ssh/config.';
+
+      await paste(tester, 1, 'ssh -i key.pem -L 15432:db:5432 deploy@bastion');
+      expect(find.text(note), findsOneWidget);
+
+      await tester.enterText(field(1), 'prod');
+      await tester.pump();
+      expect(find.text(note), findsNothing);
+    }, variant: macOS);
+
+    testWidgets('drops the note after a command with nothing left out', (
+      tester,
+    ) async {
+      await pumpForm(tester);
+
+      await paste(tester, 1, 'ssh -i key.pem -L 15432:db:5432 deploy@bastion');
+      await paste(tester, 1, 'ssh -L 15432:db:5432 deploy@bastion');
+
+      expect(find.textContaining('Not copied'), findsNothing);
+    }, variant: macOS);
+  });
+
   group('the SSH host', () {
     const hosts = ['dev', 'staging', 'prod'];
 

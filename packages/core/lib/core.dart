@@ -6,6 +6,7 @@ export 'src/agent_settings.dart';
 export 'src/failure_reason.dart';
 export 'src/local_tunnel_store.dart';
 export 'src/logging/debug_logging.dart';
+export 'src/pasted_command.dart';
 export 'src/paths.dart';
 export 'src/ssh_hosts.dart';
 export 'src/taka_install.dart';
