@@ -11,7 +11,10 @@ import 'package:taka/widgets/app_icon.dart';
 String agentFailure(Object error) => switch (error) {
   ProcessException(executable: 'open') => "macOS couldn't open it.",
   ProcessException() => "It couldn't be started.",
-  AgentTimeoutException() => "It started but didn't answer within 5 seconds.",
+  AgentTimeoutException(output: '') =>
+    "It started but didn't answer within 5 seconds.",
+  AgentTimeoutException() =>
+    "It didn't answer within 5 seconds, and left an error under Show Details.",
   _ => 'Something went wrong while starting it.',
 };
 

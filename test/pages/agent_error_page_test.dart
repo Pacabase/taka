@@ -26,6 +26,10 @@ void main() {
       "It started but didn't answer within 5 seconds.",
     );
     expect(
+      agentFailure(const AgentTimeoutException(output: 'libX11.so.6')),
+      "It didn't answer within 5 seconds, and left an error under Show Details.",
+    );
+    expect(
       agentFailure(Exception('boom')),
       'Something went wrong while starting it.',
     );
