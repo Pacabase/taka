@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:agent/src/agent_tray.dart';
 import 'package:agent/src/local_preferences.dart';
 import 'package:agent/src/process_name.dart';
+import 'package:agent/src/screen_lock.dart';
 import 'package:core/core.dart';
 import 'package:fimber/fimber.dart';
 import 'package:nativeapi/nativeapi.dart';
@@ -36,6 +37,7 @@ Future<void> _start() async {
     beforeConnect: agentBundle == null
         ? null
         : () => Process.run('open', [agentBundle]),
+    isLocked: isScreenLocked,
   );
   try {
     await manager.load();
