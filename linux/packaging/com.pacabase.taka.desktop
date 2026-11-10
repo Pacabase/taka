@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Taka
+Comment=SSH tunnels and SOCKS proxies in the menu bar
+Exec=taka
+Icon=com.pacabase.taka
+Terminal=false
+Categories=Network;Utility;
+Keywords=ssh;tunnel;socks;proxy;port;forward;
+StartupWMClass=com.pacabase.taka

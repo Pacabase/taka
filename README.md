@@ -7,13 +7,15 @@ A menu bar app for SSH tunnels and SOCKS proxies, built on [`system_ssh`](https:
 Get the latest build from [Releases](https://github.com/Pacabase/taka/releases):
 
 - **macOS:** `Taka-<version>-macos-apple-silicon.dmg` or `Taka-<version>-macos-intel.dmg`. Open it and drag Taka to Applications. The builds aren't notarized yet, so the first time macOS says it can't check Taka: click **Done**, then **Open Anyway** in System Settings → Privacy & Security.
-- **Linux:** `Taka-<version>-linux-x64.tar.gz` or `Taka-<version>-linux-arm64.tar.gz`. Extract it and run `taka/taka`.
+- **Debian, Ubuntu:** `sudo apt install ./Taka-<version>-linux-x64.deb` (or `-linux-arm64.deb`), which brings the libraries Taka needs. Then open Taka from your applications, or run `taka`.
+- **Fedora:** `sudo dnf install ./Taka-<version>-linux-x64.rpm` (or `-linux-arm64.rpm`).
+- **Other Linux:** `Taka-<version>-linux-x64.tar.gz` or `Taka-<version>-linux-arm64.tar.gz`. Extract it and run `taka/taka`.
 
 Each release lists the files' checksums in `SHA256SUMS`.
 
 ### If Taka doesn't start on Linux
 
-Most desktops already have the libraries Taka needs. If yours doesn't, Taka fails to open with no message, or its window says *Taka's background helper didn't start*. To see why, run it from a terminal:
+The `.deb` and `.rpm` install the libraries Taka needs. With the tarball, most desktops already have them; if yours doesn't, Taka fails to open with no message, or its window says *Taka's background helper didn't start*. To see why, run it from a terminal:
 
 ```sh
 taka/taka                  # the window
@@ -66,7 +68,7 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Groups and tags**, as tray submenus too.
 - [ ] **A colour per tunnel**, picked from the app theme's palette and shown on its row, so tunnels tell apart at a glance. In the tray, a coloured square beside the name: the nearest emoji square (🟥 🟧 🟨 🟩 🟦 🟪) on macOS and Linux, and a real icon on Windows, where menus can't draw emoji in colour.
 - [ ] **Import** hosts from `~/.ssh/config`.
-- [ ] **Linux packages** — AppImage, `.deb`, `.rpm` and the AUR.
+- [ ] **More Linux packages** — AppImage and the AUR.
 
 ### Windows (0.3)
 
