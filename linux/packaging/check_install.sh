@@ -3,12 +3,14 @@
 # Installs Taka's package on this clean system, as root, and checks that it
 # brought every library the app and its helper load.
 set -eu
+# apt reads a relative dist/x.deb as package dist from release x.deb.
+packages=$(cd "$1" && pwd)
 
 if command -v apt-get >/dev/null; then
   apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$1"/*.deb >/dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$packages"/*.deb >/dev/null
 else
-  dnf install -y -q "$1"/*.rpm
+  dnf install -y -q "$packages"/*.rpm
 fi
 
 # The plugins find Flutter's own library only once the app has loaded it.
