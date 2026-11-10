@@ -123,6 +123,7 @@ jobs:
           case "$TARGET" in
             linux-x64) ARCH=amd64 nfpm=x86_64 sum=6d7f9a28b2f397934403950fcbba83f598b08d02edbe79a0815b3b4897341750 ;;
             linux-arm64) ARCH=arm64 nfpm=arm64 sum=a9a75213763783b7669719e505474c748c5ad7dc66591a195619deb50f85c2f4 ;;
+            *) echo "No package architecture for $TARGET" >&2; exit 1 ;;
           esac
           curl -fsSLo "$RUNNER_TEMP/nfpm.tar.gz" "https://github.com/goreleaser/nfpm/releases/download/v$NFPM/nfpm_${NFPM}_Linux_$nfpm.tar.gz"
           echo "$sum  $RUNNER_TEMP/nfpm.tar.gz" | sha256sum -c -
