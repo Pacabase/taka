@@ -32,7 +32,7 @@ Future<void> _start() async {
 
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
-    client: const SystemSshClient(loginShell: true),
+    client: const SystemSshClient(loginShell: true, shareConnections: true),
     // 1Password prompts only while the asking app is in front; open brings it.
     beforeConnect: agentBundle == null
         ? null
