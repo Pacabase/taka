@@ -142,8 +142,7 @@ void main() {
         ),
       ),
       startsWith(
-        'Tunnel Actions ▸ Web ▸ web is new to this computer. | '
-        'Check Its Key… | --- | Copy',
+        'Tunnel Actions ▸ Web ▸ web is new to this computer. | --- | Copy',
       ),
     );
     expect(
