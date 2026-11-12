@@ -44,7 +44,7 @@ class const ActionEntry(
   String toString() => [label, if (shortcut != null) '⌘$shortcut'].join(' ');
 }
 
-enum TunnelAction { edit, tryAgain, checkKey }
+enum TunnelAction { edit, tryAgain }
 
 class const TunnelActionEntry(
   final Tunnel tunnel,
@@ -120,10 +120,8 @@ List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
       InfoEntry(plainReason(reason)),
     if (status is Failed)
       TunnelActionEntry(tunnel, TunnelAction.tryAgain, 'Try Again'),
-    if (status case UnknownHostKey(:final host)) ...[
+    if (status case UnknownHostKey(:final host))
       InfoEntry('$host is new to this computer.'),
-      TunnelActionEntry(tunnel, TunnelAction.checkKey, 'Check Its Key…'),
-    ],
   ];
   return [
     ...whyDown,
