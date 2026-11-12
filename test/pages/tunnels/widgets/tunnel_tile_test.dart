@@ -184,7 +184,10 @@ void main() {
     );
 
     expect(
-      find.text('First connection to db. Check its ED25519 key:'),
+      find.text(
+        'First connection to db. '
+        'Trust it only if its owner gave you this ED25519 key:',
+      ),
       findsOneWidget,
     );
     expect(find.text(fingerprint), findsOneWidget);
