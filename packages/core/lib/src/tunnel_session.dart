@@ -26,7 +26,6 @@ class TunnelSession({
   final _abort = Completer<void>();
   TunnelStatus _status = const Connecting();
   _Opened? _opened;
-  SshHostKey? _unknownHostKey;
   Timer? _clearWarning;
   Timer? _retry;
   Timer? _stable;
@@ -39,13 +38,7 @@ class TunnelSession({
   bool get isStopped => _abort.isCompleted;
 
   Future<void> connect() async {
-    try {
-      await beforeConnect?.call();
-    } on Object catch (exception) {
-      _log.w(
-        '${tunnel.title}: beforeConnect failed, connecting anyway ($exception)',
-      );
-    }
+    await _prepare();
     final _Opened opened;
     try {
       opened = _opened = await _open();
@@ -70,25 +63,40 @@ class TunnelSession({
     await _opened?.close();
   }
 
-  /// Adds the key this session stopped at to `known_hosts`, then connects.
-  Future<void> trust() async {
-    final hostKey = _unknownHostKey;
-    if (hostKey == null || isStopped) return;
+  /// Whether the key it stopped at is in `known_hosts` now, for [connect].
+  Future<bool> trust() async {
+    final asking = _status;
+    if (asking is! UnknownHostKey || isStopped) return false;
 
-    _log.i('${tunnel.title}: trusting $hostKey');
-    _unknownHostKey = null;
+    _log.i('${tunnel.title}: trusting ${asking.type} ${asking.fingerprint}');
     _status = const Connecting();
     onChange();
+    await _prepare();
     try {
       await client.trustHostKey(
         tunnel.target,
-        hostKey,
+        SshHostKey(
+          host: asking.host,
+          type: asking.type,
+          fingerprint: asking.fingerprint,
+        ),
         abortTrigger: _abort.future,
       );
     } on Object catch (exception) {
-      return _drop(exception);
+      _drop(exception);
+      return false;
     }
-    if (!isStopped) await connect();
+    return !isStopped;
+  }
+
+  Future<void> _prepare() async {
+    try {
+      await beforeConnect?.call();
+    } on Object catch (exception) {
+      _log.w(
+        '${tunnel.title}: beforeConnect failed, connecting anyway ($exception)',
+      );
+    }
   }
 
   Future<_Opened> _open() async {
@@ -150,7 +158,6 @@ class TunnelSession({
     _stable?.cancel();
     if (exception case SshUnknownHostKeyException(:final hostKey)) {
       _log.w('${tunnel.title}: waiting for the user to check $hostKey');
-      _unknownHostKey = hostKey;
       _status = UnknownHostKey(
         host: hostKey.host,
         type: hostKey.type,
