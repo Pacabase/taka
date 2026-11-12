@@ -36,13 +36,7 @@ class TunnelSession({
   bool get isStopped => _abort.isCompleted;
 
   Future<void> connect() async {
-    try {
-      await beforeConnect?.call();
-    } on Object catch (exception) {
-      _log.w(
-        '${tunnel.title}: beforeConnect failed, connecting anyway ($exception)',
-      );
-    }
+    await _prepare();
     final SshTunnel opened;
     try {
       opened = _opened = await _open();
@@ -65,6 +59,42 @@ class TunnelSession({
     _stable?.cancel();
     if (!isStopped) _abort.complete();
     await _opened?.close();
+  }
+
+  /// Whether the key it stopped at is in `known_hosts` now, for [connect].
+  Future<bool> trust() async {
+    final asking = _status;
+    if (asking is! UnknownHostKey || isStopped) return false;
+
+    _log.i('${tunnel.title}: trusting ${asking.type} ${asking.fingerprint}');
+    _status = const Connecting();
+    onChange();
+    await _prepare();
+    try {
+      await client.trustHostKey(
+        tunnel.target,
+        SshHostKey(
+          host: asking.host,
+          type: asking.type,
+          fingerprint: asking.fingerprint,
+        ),
+        abortTrigger: _abort.future,
+      );
+    } on Object catch (exception) {
+      _drop(exception);
+      return false;
+    }
+    return !isStopped;
+  }
+
+  Future<void> _prepare() async {
+    try {
+      await beforeConnect?.call();
+    } on Object catch (exception) {
+      _log.w(
+        '${tunnel.title}: beforeConnect failed, connecting anyway ($exception)',
+      );
+    }
   }
 
   Future<SshTunnel> _open() {
@@ -99,6 +129,15 @@ class TunnelSession({
     if (isStopped) return;
 
     _stable?.cancel();
+    if (exception case SshUnknownHostKeyException(:final hostKey)) {
+      _log.w('${tunnel.title}: waiting for the user to check $hostKey');
+      _status = UnknownHostKey(
+        host: hostKey.host,
+        type: hostKey.type,
+        fingerprint: hostKey.fingerprint,
+      );
+      return onChange();
+    }
     final message = exception == null ? 'Disconnected' : _messageOf(exception);
     final isPermanent = switch (exception) {
       SshException(:final isPermanent) => isPermanent,

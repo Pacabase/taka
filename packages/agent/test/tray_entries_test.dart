@@ -67,6 +67,37 @@ void main() {
     ]);
   });
 
+  test("says which tunnel waits for its server's key to be checked", () {
+    const waiting = UnknownHostKey(
+      host: 'web',
+      type: 'ED25519',
+      fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY',
+    );
+    const snapshot = TunnelsSnapshot(
+      tunnels: [database, web],
+      statuses: {'c3': waiting},
+    );
+
+    expect(menu(snapshot).take(4), [
+      '0 of 2 connected · 1 key to check',
+      '---',
+      '☐ Production database',
+      "☐ Web — check the server's key",
+    ]);
+    expect(
+      menu(
+        snapshot.copyWith(
+          statuses: {
+            'a1': waiting,
+            'c3': waiting,
+            'd4': waiting.copyWith(fingerprint: 'SHA256:other'),
+          },
+        ),
+      ).first,
+      '0 of 2 connected · 2 keys to check',
+    );
+  });
+
   test('keeps each tunnel to its actions, and why it is down', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [database, web, other],
@@ -112,6 +143,18 @@ void main() {
     expect(
       actionsWhen(const Failed('')),
       startsWith("Tunnel Actions ▸ Web ▸ It couldn't connect. | Try Again"),
+    );
+    expect(
+      actionsWhen(
+        const UnknownHostKey(
+          host: 'web',
+          type: 'ED25519',
+          fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY',
+        ),
+      ),
+      startsWith(
+        "Tunnel Actions ▸ Web ▸ Open Taka to check web's key. | --- | Copy",
+      ),
     );
     expect(
       actionsWhen(const Reconnecting('Timeout, server web not responding.')),

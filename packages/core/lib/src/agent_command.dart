@@ -13,6 +13,8 @@ sealed class const AgentCommand._() with _$AgentCommand {
 
   const factory move(String id, int index) = MoveTunnel;
 
+  const factory trustHostKey(String id, String fingerprint) = TrustHostKey;
+
   const factory importTunnels(List<Tunnel> tunnels) = ImportTunnels;
 
   const factory exportTunnels(String path) = ExportTunnels;
@@ -33,6 +35,12 @@ sealed class const AgentCommand._() with _$AgentCommand {
     {'command': 'toggle', 'id': final String id} => ToggleTunnel(id),
     {'command': 'move', 'id': final String id, 'index': final int index} =>
       MoveTunnel(id, index),
+    {
+      'command': 'trustHostKey',
+      'id': final String id,
+      'fingerprint': final String fingerprint,
+    } =>
+      TrustHostKey(id, fingerprint),
     {'command': 'import', 'tunnels': final List<Object?> tunnels} =>
       ImportTunnels(tunnels.map(Tunnel.fromJson).toList()),
     {'command': 'export', 'path': final String path} => ExportTunnels(path),
@@ -53,6 +61,11 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'command': 'move',
       'id': id,
       'index': index,
+    },
+    TrustHostKey(:final id, :final fingerprint) => {
+      'command': 'trustHostKey',
+      'id': id,
+      'fingerprint': fingerprint,
     },
     ImportTunnels(:final tunnels) => {
       'command': 'import',

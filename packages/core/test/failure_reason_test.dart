@@ -48,6 +48,12 @@ void main() {
       "The server's host key changed.",
     ),
     (
+      'the host key for bastion has changed; it now offers the ED25519 key '
+          'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cYw8u2bq3Jm8sY',
+      'host key changed',
+      "The server's host key changed.",
+    ),
+    (
       'Connection to bastion closed by remote host.',
       'disconnected',
       'The connection dropped.',

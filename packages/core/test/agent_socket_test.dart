@@ -1,11 +1,14 @@
 @Tags(['unit'])
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:async/async.dart';
 import 'package:core/core.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:system_ssh/system_ssh.dart';
 import 'package:test/test.dart';
 
 import 'fakes/fakes.dart';
@@ -85,6 +88,49 @@ void main() {
 
     agent.send(const AgentCommand.toggle('c3'));
     expect((await snapshots.next).statusOf('c3'), isNot(const Stopped()));
+  });
+
+  test('trustHostKey reaches the manager', () async {
+    const hostKey = SshHostKey(
+      host: 'bastion',
+      type: 'ED25519',
+      fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY',
+    );
+    registerFallbackValue(const SshTarget('fallback'));
+    registerFallbackValue(hostKey);
+    final client = MockSshClient();
+    when(
+      () => client.openTunnel(
+        any(),
+        remoteHost: any(named: 'remoteHost'),
+        remotePort: any(named: 'remotePort'),
+        localPort: any(named: 'localPort'),
+        onLog: any(named: 'onLog'),
+        abortTrigger: any(named: 'abortTrigger'),
+      ),
+    ).thenAnswer((_) async => throw SshUnknownHostKeyException(hostKey));
+    final trusted = Completer<void>();
+    when(
+      () => client.trustHostKey(
+        any(),
+        any(),
+        abortTrigger: any(named: 'abortTrigger'),
+      ),
+    ).thenAnswer((_) async => trusted.complete());
+    await manager.close();
+    manager = TunnelManager(store: FakeStore([database]), client: client);
+    await manager.load();
+    await serve();
+    final agent = await connect();
+    final snapshots = StreamQueue(agent.snapshots);
+    await snapshots.next;
+
+    agent.send(const AgentCommand.toggle('a1'));
+    await snapshots.next;
+    expect((await snapshots.next).statusOf('a1'), isA<UnknownHostKey>());
+    agent.send(AgentCommand.trustHostKey('a1', hostKey.fingerprint));
+
+    await trusted.future;
   });
 
   test('export writes every tunnel, and import adds the new ones', () async {

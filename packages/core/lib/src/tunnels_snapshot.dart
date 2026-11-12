@@ -16,6 +16,13 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
 
   const factory reconnecting(String reason) = Reconnecting;
 
+  /// The server's key isn't in `known_hosts` yet; the user decides.
+  const factory unknownHostKey({
+    required String host,
+    required String type,
+    required String fingerprint,
+  }) = UnknownHostKey;
+
   static TunnelStatus fromJson(Object? json) => switch (json) {
     {'status': 'connecting'} => const Connecting(),
     {'status': 'connected', 'warning': final String warning} => Connected(
@@ -28,6 +35,13 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
       reason,
     ),
     {'status': 'reconnecting'} => const Reconnecting(''),
+    {
+      'status': 'unknownHostKey',
+      'host': final String host,
+      'type': final String type,
+      'fingerprint': final String fingerprint,
+    } =>
+      UnknownHostKey(host: host, type: type, fingerprint: fingerprint),
     _ => const Stopped(),
   };
 
@@ -40,11 +54,17 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
     },
     Failed(:final message) => {'status': 'failed', 'message': message},
     Reconnecting(:final reason) => {'status': 'reconnecting', 'reason': reason},
+    UnknownHostKey(:final host, :final type, :final fingerprint) => {
+      'status': 'unknownHostKey',
+      'host': host,
+      'type': type,
+      'fingerprint': fingerprint,
+    },
   };
 
   bool get isOn => switch (this) {
     Connecting() || Connected() || Reconnecting() => true,
-    Stopped() || Failed() => false,
+    Stopped() || Failed() || UnknownHostKey() => false,
   };
 }
 

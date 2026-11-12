@@ -55,6 +55,37 @@ void main() {
     return bloc;
   }
 
+  testWidgets('Trust sends the key the tunnel shows', (tester) async {
+    final bloc = await pumpPage(
+      tester,
+      initialState: const Ready(
+        TunnelsSnapshot(
+          tunnels: [database, proxy],
+          statuses: {
+            'b2': UnknownHostKey(
+              host: 'bastion',
+              type: 'ED25519',
+              fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY',
+            ),
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Trust'));
+
+    verify(
+      () => bloc.add(
+        const TunnelsEvent.send(
+          AgentCommand.trustHostKey(
+            'b2',
+            'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY',
+          ),
+        ),
+      ),
+    ).called(1);
+  });
+
   testWidgets(
     'lists the tunnels from the top, and dragging one moves it, shown as hovered',
     (tester) async {

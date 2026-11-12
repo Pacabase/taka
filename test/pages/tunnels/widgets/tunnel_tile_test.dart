@@ -22,6 +22,7 @@ void main() {
     remotePort: 5432,
   );
   late int toggles;
+  late List<String> trusted;
 
   Future<void> pumpTile(
     WidgetTester tester, {
@@ -29,6 +30,7 @@ void main() {
     TunnelStatus status = const Stopped(),
   }) async {
     toggles = 0;
+    trusted = [];
     await tester.pumpWidget(
       MaterialApp(
         theme: takaTheme(Brightness.light),
@@ -37,6 +39,7 @@ void main() {
             tunnel: tunnel,
             status: status,
             onToggle: () => toggles++,
+            onTrust: trusted.add,
             onEdit: () {},
             onDelete: () {},
           ),
@@ -102,6 +105,7 @@ void main() {
                 tunnel: unnamed,
                 status: const Stopped(),
                 onToggle: () {},
+                onTrust: (_) {},
                 onEdit: () {},
                 onDelete: () {},
               ),
@@ -164,6 +168,41 @@ void main() {
 
     expect(find.text('The server refused the login.'), findsOneWidget);
     expect(find.byTooltip(message), findsOneWidget);
+  });
+
+  testWidgets('a tunnel to a new server shows its key, and Trust sends it', (
+    tester,
+  ) async {
+    const fingerprint = 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cYw8u2bq3Jm8sY';
+    await pumpTile(
+      tester,
+      status: const UnknownHostKey(
+        host: 'db',
+        type: 'ED25519',
+        fingerprint: fingerprint,
+      ),
+    );
+
+    expect(
+      find.text(
+        'First connection to db. '
+        'Trust it only if its owner gave you this ED25519 key:',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(fingerprint), findsOneWidget);
+    expect(tester.widget<NativeSwitch>(find.byType(NativeSwitch)).value, false);
+    expect(trusted, isEmpty);
+
+    await tester.tap(find.text('Trust'));
+
+    expect(trusted, [fingerprint]);
+  });
+
+  testWidgets('no other tunnel offers Trust', (tester) async {
+    await pumpTile(tester, status: const Failed('Timed out'));
+
+    expect(find.text('Trust'), findsNothing);
   });
 
   testWidgets('a failure with no message has no tooltip', (tester) async {

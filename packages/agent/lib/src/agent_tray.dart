@@ -81,7 +81,7 @@ class AgentTray({
     TunnelEntry(:final tunnel, :final label, :final isChecked) => _create(
       label,
       MenuItemType.checkbox,
-      onClick: () => _guard(manager.toggle(tunnel.id)),
+      onClick: () => _guard(_toggle(tunnel.id)),
     )?..state = isChecked ? MenuItemState.checked : MenuItemState.unchecked,
     CopyEntry(:final label, :final text) => _create(
       label,
@@ -127,11 +127,25 @@ class AgentTray({
 
   // The menu can be stale: don't stop a tunnel that has come back since.
   void _tryAgain(String id) {
-    if (!manager.snapshot.statusOf(id).isOn) _guard(manager.toggle(id));
+    if (!manager.snapshot.statusOf(id).isOn) _guard(_toggle(id));
+  }
+
+  // A new server's key is trusted in the window, so connecting brings it up.
+  Future<void> _toggle(String id) async {
+    if (manager.snapshot.statusOf(id) is! UnknownHostKey) {
+      await manager.toggle(id);
+    }
+    if (manager.snapshot.statusOf(id) is UnknownHostKey) onManageTunnels();
+  }
+
+  Future<void> _connectAll() async {
+    await manager.connectAll();
+    final statuses = manager.snapshot.statuses.values;
+    if (statuses.any((status) => status is UnknownHostKey)) onManageTunnels();
   }
 
   void _run(TrayAction action) => switch (action) {
-    TrayAction.connectAll => _guard(manager.connectAll()),
+    TrayAction.connectAll => _guard(_connectAll()),
     TrayAction.disconnectAll => _guard(manager.disconnectAll()),
     TrayAction.addTunnel => onOpenTunnel(null),
     TrayAction.manageTunnels => onManageTunnels(),

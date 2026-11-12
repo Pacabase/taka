@@ -77,7 +77,6 @@ Ordered roughly by priority; each line is about one pull request.
 ### Logins (0.4)
 
 - [ ] **Passwords, passphrases and 2FA** through `SSH_ASKPASS`, with 1Password `op://` references.
-- [ ] **Host-key prompt** showing the fingerprint on first connect.
 
 ### Power users (0.5)
 

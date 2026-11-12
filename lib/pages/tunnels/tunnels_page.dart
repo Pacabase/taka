@@ -195,6 +195,10 @@ class const _TunnelList({
                     status: snapshot.statusOf(tunnel.id),
                     onToggle: () =>
                         _send(context, AgentCommand.toggle(tunnel.id)),
+                    onTrust: (fingerprint) => _send(
+                      context,
+                      AgentCommand.trustHostKey(tunnel.id, fingerprint),
+                    ),
                     onEdit: () => onEdit(tunnel),
                     onDelete: () =>
                         _send(context, AgentCommand.remove(tunnel.id)),
