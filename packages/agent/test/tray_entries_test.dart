@@ -87,6 +87,31 @@ void main() {
     ]);
   });
 
+  test('says where a remote tunnel listens, which is on the server', () {
+    const preview = Tunnel(
+      id: 'r5',
+      name: 'Preview',
+      kind: TunnelKind.remote,
+      sshHost: 'bastion',
+      localPort: 3000,
+      remotePort: 8080,
+    );
+    const snapshot = TunnelsSnapshot(
+      tunnels: [preview],
+      statuses: {'r5': Connected()},
+    );
+
+    expect(menu(snapshot)[2], '☑ Preview — port 8080 on the server');
+    expect(
+      tunnelActions(snapshot),
+      startsWith(
+        'Tunnel Actions ▸ Preview ▸ '
+        'Copy Address on the Server ⧉ localhost:8080 | '
+        'Copy SSH Command ⧉ ssh -N -R 127.0.0.1:8080:localhost:3000 bastion',
+      ),
+    );
+  });
+
   test('keeps each tunnel to its actions, and why it is down', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [database, web, other],

@@ -3,16 +3,21 @@ import 'package:system_ssh/system_ssh.dart';
 
 part 'tunnel.freezed.dart';
 
-enum TunnelKind { local, socks }
+enum TunnelKind { local, socks, remote }
 
 @freezed
 sealed class const Tunnel._() with _$Tunnel {
   /// [sshHost] is a `~/.ssh/config` alias, a host or `user@host`.
+  ///
+  /// A remote tunnel has [sshHost] listen on its own [remotePort], and brings
+  /// each connection back to [localHost], or localhost when null, on
+  /// [localPort].
   const factory({
     required String id,
     @Default('') String name,
     @Default(TunnelKind.local) TunnelKind kind,
     @Default('') String sshHost,
+    String? localHost,
     required int localPort,
     String? remoteHost,
     int? remotePort,
@@ -32,6 +37,7 @@ sealed class const Tunnel._() with _$Tunnel {
         name: field<String>('name') ?? '',
         kind: TunnelKind.values.asNameMap()[fields['kind']] ?? TunnelKind.local,
         sshHost: field<String>('sshHost') ?? '',
+        localHost: field<String>('localHost'),
         localPort: localPort,
         remoteHost: field<String>('remoteHost'),
         remotePort: field<int>('remotePort'),
@@ -46,6 +52,7 @@ sealed class const Tunnel._() with _$Tunnel {
     'name': name,
     'kind': kind.name,
     'sshHost': sshHost,
+    'localHost': ?localHost,
     'localPort': localPort,
     'remoteHost': ?remoteHost,
     'remotePort': ?remotePort,
@@ -64,6 +71,7 @@ sealed class const Tunnel._() with _$Tunnel {
   String get address => switch (kind) {
     TunnelKind.local => 'localhost:$localPort',
     TunnelKind.socks => 'socks5h://localhost:$localPort',
+    TunnelKind.remote => 'localhost:$remotePort',
   };
 
   /// Null for a tunnel ssh can't open, such as a local port outside 1 to 65535.
@@ -77,6 +85,12 @@ sealed class const Tunnel._() with _$Tunnel {
           localPort: localPort,
         ),
         TunnelKind.socks => socksProxyCommand(target, localPort: localPort),
+        TunnelKind.remote => remoteTunnelCommand(
+          target,
+          localHost: localHost ?? 'localhost',
+          localPort: localPort,
+          remotePort: remotePort ?? 0,
+        ),
       };
     } on ArgumentError {
       return null;
@@ -87,6 +101,8 @@ sealed class const Tunnel._() with _$Tunnel {
     TunnelKind.local =>
       'localhost:$localPort → $remoteHost:$remotePort via $sshHost',
     TunnelKind.socks => 'SOCKS on localhost:$localPort via $sshHost',
+    TunnelKind.remote =>
+      'port $remotePort on $sshHost → ${localHost ?? 'localhost'}:$localPort',
   };
 
   @override

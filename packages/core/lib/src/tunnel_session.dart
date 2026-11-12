@@ -9,6 +9,8 @@ import 'package:system_ssh/system_ssh.dart';
 final _log = FimberLog('Tunnels');
 final _sshLog = FimberLog('ssh');
 
+typedef _Opened = ({Future<void> done, Future<void> Function() close});
+
 class TunnelSession({
   required final Tunnel tunnel,
   required final SshClient client,
@@ -23,7 +25,7 @@ class TunnelSession({
 }) {
   final _abort = Completer<void>();
   TunnelStatus _status = const Connecting();
-  SshTunnel? _opened;
+  _Opened? _opened;
   SshHostKey? _unknownHostKey;
   Timer? _clearWarning;
   Timer? _retry;
@@ -44,7 +46,7 @@ class TunnelSession({
         '${tunnel.title}: beforeConnect failed, connecting anyway ($exception)',
       );
     }
-    final SshTunnel opened;
+    final _Opened opened;
     try {
       opened = _opened = await _open();
     } on Object catch (exception) {
@@ -89,7 +91,7 @@ class TunnelSession({
     if (!isStopped) await connect();
   }
 
-  Future<SshTunnel> _open() {
+  Future<_Opened> _open() async {
     final abortTrigger = _abort.future;
     // ssh's lines, named since tunnels connect at once.
     void onLog(SshLog log) {
@@ -97,23 +99,40 @@ class TunnelSession({
       if (log case SshForwardFailed(:final reason)) _warn(reason);
     }
 
-    return switch (tunnel) {
-      Tunnel(kind: TunnelKind.socks) => client.openSocksProxy(
-        tunnel.target,
-        localPort: tunnel.localPort,
-        onLog: onLog,
-        abortTrigger: abortTrigger,
-      ),
-      Tunnel(:final remoteHost?, :final remotePort?) => client.openTunnel(
-        tunnel.target,
-        remoteHost: remoteHost,
-        remotePort: remotePort,
-        localPort: tunnel.localPort,
-        onLog: onLog,
-        abortTrigger: abortTrigger,
-      ),
-      _ => throw ArgumentError('A local tunnel needs a remote host and port'),
-    };
+    final SshTunnel opened;
+    switch (tunnel) {
+      case Tunnel(kind: TunnelKind.socks):
+        opened = await client.openSocksProxy(
+          tunnel.target,
+          localPort: tunnel.localPort,
+          onLog: onLog,
+          abortTrigger: abortTrigger,
+        );
+      case Tunnel(kind: TunnelKind.remote, :final remotePort?):
+        final remote = await client.openRemoteTunnel(
+          tunnel.target,
+          localHost: tunnel.localHost ?? 'localhost',
+          localPort: tunnel.localPort,
+          remotePort: remotePort,
+          onLog: onLog,
+          abortTrigger: abortTrigger,
+        );
+        return (done: remote.done, close: remote.close);
+      case Tunnel(kind: TunnelKind.remote):
+        throw ArgumentError('A remote tunnel needs a port on the SSH host');
+      case Tunnel(:final remoteHost?, :final remotePort?):
+        opened = await client.openTunnel(
+          tunnel.target,
+          remoteHost: remoteHost,
+          remotePort: remotePort,
+          localPort: tunnel.localPort,
+          onLog: onLog,
+          abortTrigger: abortTrigger,
+        );
+      case _:
+        throw ArgumentError('A local tunnel needs a remote host and port');
+    }
+    return (done: opened.done, close: opened.close);
   }
 
   // A first try the user is watching stays failed; others retry.

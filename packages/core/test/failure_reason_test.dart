@@ -12,6 +12,12 @@ void main() {
       'Port 8080 is already in use.',
     ),
     (
+      'Error: remote port forwarding failed for listen port 8080',
+      "server won't open port 8080",
+      "The server won't open port 8080: it's taken there, "
+          "or forwarding isn't allowed.",
+    ),
+    (
       'ssh: connect to host bastion port 22: Connection refused',
       "can't reach the server",
       "Can't reach the server.",
@@ -107,6 +113,21 @@ void main() {
           ),
         ),
         "Can't reach db.example.com:5432 through the server.",
+      );
+    });
+
+    test('names where a remote tunnel leads on this computer', () {
+      expect(
+        forwardWarning(
+          const Tunnel(
+            id: 'r5',
+            kind: TunnelKind.remote,
+            sshHost: 'bastion',
+            localPort: 3000,
+            remotePort: 8080,
+          ),
+        ),
+        "Can't reach localhost:3000 from this computer.",
       );
     });
 

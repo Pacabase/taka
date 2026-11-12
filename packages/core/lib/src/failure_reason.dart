@@ -1,6 +1,9 @@
 import 'package:core/src/tunnel.dart';
 
 final _portInUse = RegExp(r':(\d+) is already in use');
+final _remotePortRefused = RegExp(
+  r'remote port forwarding failed for listen port (\d+)',
+);
 
 const _reasons = [
   (
@@ -52,6 +55,15 @@ const _reasons = [
     );
   }
 
+  if (_remotePortRefused.firstMatch(message)?[1] case final port?) {
+    return (
+      short: "server won't open port $port",
+      sentence:
+          "The server won't open port $port: it's taken there, "
+          "or forwarding isn't allowed.",
+    );
+  }
+
   return _reasons
       .where((reason) => reason.patterns.any(message.contains))
       .map((reason) => (short: reason.short, sentence: reason.sentence))
@@ -69,6 +81,8 @@ String plainReason(String message) =>
 String forwardWarning(Tunnel tunnel) => switch (tunnel) {
   Tunnel(kind: TunnelKind.socks) =>
     "A site through the SOCKS proxy couldn't be reached.",
+  Tunnel(kind: TunnelKind.remote, :final localHost, :final localPort) =>
+    "Can't reach ${localHost ?? 'localhost'}:$localPort from this computer.",
   Tunnel(:final remoteHost, :final remotePort) =>
     "Can't reach $remoteHost:$remotePort through the server.",
 };

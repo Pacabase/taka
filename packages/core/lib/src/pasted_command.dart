@@ -12,8 +12,9 @@ final _word = RegExp(
 final _operator = RegExp('^[;&|<>]');
 final _quoted = RegExp(r''''([^']*)'|"((?:\\.|[^"\\])*)"|\\(.)''');
 final _escapedInDoubleQuotes = RegExp(r'\\([$`"\\])');
-// An optional bind address goes unused: Taka listens on 127.0.0.1 only.
-final _localForward = RegExp(
+// An optional bind address goes unused: Taka listens on 127.0.0.1 only, and
+// so does the SSH host for a remote forward.
+final _portForward = RegExp(
   r'^(?:[^:\[\]]*:|\[[^\]]*\]:)?(\d+):(?:\[([^\]]+)\]|([^:\[\]]+)):(\d+)$',
 );
 final _socksForward = RegExp(r'^(?:[^:\[\]]*:|\[[^\]]*\]:)?(\d+)$');
@@ -21,7 +22,7 @@ final _socksForward = RegExp(r'^(?:[^:\[\]]*:|\[[^\]]*\]:)?(\d+)$');
 /// A word that isn't an option has no flag: the host or the remote command.
 typedef _Argument = ({String? flag, String? value});
 
-/// The tunnel a pasted `ssh -L` or `ssh -D` command opens, with an empty id,
+/// The tunnel a pasted `ssh -L`, `-R` or `-D` command opens, with an empty id,
 /// and what else the command sets that a tunnel can't keep, like `-i key.pem`.
 ({Tunnel tunnel, List<String> leftOut})? parseSshCommand(String command) {
   try {
@@ -31,7 +32,7 @@ typedef _Argument = ({String? flag, String? value});
       _ => throw const FormatException('Not ssh'),
     };
     final forwardAt = arguments.indexWhere(
-      (argument) => argument.flag == 'L' || argument.flag == 'D',
+      (argument) => const ['L', 'R', 'D'].contains(argument.flag),
     );
     final (host, remoteCommand) = switch ([
       for (final (:flag, :value) in arguments)
@@ -148,7 +149,7 @@ List<_Argument> _flags(
 
 Tunnel _tunnel(_Argument forward) => switch ((
   forward.flag,
-  _localForward.firstMatch(forward.value!),
+  _portForward.firstMatch(forward.value!),
   _socksForward.firstMatch(forward.value!),
 )) {
   ('L', final local?, _) => Tunnel(
@@ -156,6 +157,13 @@ Tunnel _tunnel(_Argument forward) => switch ((
     localPort: _port(local[1]!),
     remoteHost: local[2] ?? local[3],
     remotePort: _port(local[4]!),
+  ),
+  ('R', final remote?, _) => Tunnel(
+    id: '',
+    kind: TunnelKind.remote,
+    remotePort: _port(remote[1]!),
+    localHost: remote[2] ?? remote[3],
+    localPort: _port(remote[4]!),
   ),
   ('D', _, final socks?) => Tunnel(
     id: '',
