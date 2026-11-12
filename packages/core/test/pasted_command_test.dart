@@ -44,6 +44,38 @@ void main() {
       expect(pasted?.leftOut, isEmpty);
     });
 
+    test('a remote forward', () {
+      final pasted = parseSshCommand(
+        remoteTunnelCommand(
+          const SshTarget('bastion'),
+          localPort: 3000,
+          remotePort: 8080,
+        ),
+      );
+
+      expect(
+        pasted?.tunnel,
+        const Tunnel(
+          id: '',
+          kind: TunnelKind.remote,
+          sshHost: 'bastion',
+          localHost: 'localhost',
+          localPort: 3000,
+          remotePort: 8080,
+        ),
+      );
+      expect(pasted?.leftOut, isEmpty);
+    });
+
+    test('a remote forward typed without a bind address', () {
+      final pasted = parseSshCommand('ssh -R 8080:192.168.1.1:80 bastion');
+
+      expect(pasted?.tunnel.kind, TunnelKind.remote);
+      expect(pasted?.tunnel.remotePort, 8080);
+      expect(pasted?.tunnel.localHost, '192.168.1.1');
+      expect(pasted?.tunnel.localPort, 80);
+    });
+
     test('an IPv6 destination', () {
       final pasted = parseSshCommand(
         tunnelCommand(
@@ -223,9 +255,9 @@ void main() {
       ),
       ('a second SOCKS proxy', 'ssh -D 1080 -D 1081 bastion', ['-D 1081']),
       (
-        'a remote forward',
+        'a forward of another kind',
         'ssh -R 8080:localhost:3000 -L 15432:db:5432 deploy@bastion',
-        ['-R 8080:localhost:3000'],
+        ['-L 15432:db:5432'],
       ),
       (
         'a command to run on the server',
@@ -261,7 +293,7 @@ void main() {
       ('an empty string', ''),
       ('another program', 'mosh -L 15432:db:5432 deploy@bastion'),
       ('ssh with no forward', 'ssh deploy@bastion'),
-      ('only a remote forward', 'ssh -R 8080:localhost:3000 bastion'),
+      ('a remote SOCKS proxy', 'ssh -R 1080 bastion'),
       ('no host', 'ssh -L 15432:db:5432'),
       ('a flag with no value', 'ssh bastion -L'),
       ('an unclosed quote', "ssh -L '15432:db:5432 bastion"),

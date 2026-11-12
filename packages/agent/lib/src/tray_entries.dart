@@ -109,6 +109,8 @@ TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
   _shortened(switch (status) {
     Stopped() => tunnel.title,
     Connecting() => '${tunnel.title} — connecting…',
+    Connected() when tunnel.kind == TunnelKind.remote =>
+      '${tunnel.title} — port ${tunnel.remotePort} on the server',
     Connected() => '${tunnel.title} — ${tunnel.address}',
     Failed(:final message) => '${tunnel.title} — ${shortReason(message)}',
     Reconnecting() => '${tunnel.title} — reconnecting…',
@@ -130,7 +132,12 @@ List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
   return [
     ...whyDown,
     if (whyDown.isNotEmpty) const SeparatorEntry(),
-    CopyEntry('Copy Address', tunnel.address),
+    CopyEntry(
+      tunnel.kind == TunnelKind.remote
+          ? 'Copy Address on the Server'
+          : 'Copy Address',
+      tunnel.address,
+    ),
     if (tunnel.sshCommand case final command?)
       CopyEntry('Copy SSH Command', command),
     TunnelActionEntry(tunnel, TunnelAction.edit, 'Edit…'),

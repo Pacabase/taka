@@ -45,6 +45,23 @@ class FakeTunnel(@override final int localPort) implements SshTunnel {
   }
 }
 
+class FakeRemoteTunnel(@override final int remotePort)
+    implements SshRemoteTunnel {
+  final _done = Completer<void>();
+  int closeCount = 0;
+
+  void drop() => _done.complete();
+
+  @override
+  Future<void> get done => _done.future;
+
+  @override
+  Future<void> close() async {
+    closeCount++;
+    if (!_done.isCompleted) _done.complete();
+  }
+}
+
 const database = Tunnel(
   id: 'a1',
   name: 'Production database',
@@ -59,6 +76,14 @@ const proxy = Tunnel(
   kind: TunnelKind.socks,
   sshHost: 'bastion',
   localPort: 1080,
+);
+
+const preview = Tunnel(
+  id: 'r5',
+  kind: TunnelKind.remote,
+  sshHost: 'bastion',
+  localPort: 3000,
+  remotePort: 8080,
 );
 
 class FakePreferences implements AgentPreferences {

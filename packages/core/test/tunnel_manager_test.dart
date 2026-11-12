@@ -241,6 +241,105 @@ void main() {
       ).called(1);
     });
 
+    group('a remote tunnel', () {
+      late FakeRemoteTunnel remote;
+
+      Future<SshRemoteTunnel> openAnyRemoteTunnel() => client.openRemoteTunnel(
+        any(),
+        localHost: any(named: 'localHost'),
+        localPort: any(named: 'localPort'),
+        remotePort: any(named: 'remotePort'),
+        onLog: any(named: 'onLog'),
+        abortTrigger: any(named: 'abortTrigger'),
+      );
+
+      setUp(() {
+        store = FakeStore([preview]);
+        remote = FakeRemoteTunnel(8080);
+        when(openAnyRemoteTunnel).thenAnswer((_) async => remote);
+      });
+
+      test('opens with its fields', () async {
+        final manager = await loaded();
+
+        await manager.toggle('r5');
+
+        expect(manager.snapshot.statusOf('r5'), const Connected());
+        verify(
+          () => client.openRemoteTunnel(
+            const SshTarget('bastion'),
+            localHost: any(named: 'localHost'),
+            localPort: 3000,
+            remotePort: 8080,
+            onLog: any(named: 'onLog'),
+            abortTrigger: any(named: 'abortTrigger'),
+          ),
+        ).called(1);
+      });
+
+      test('opens back to its local host when it has one', () async {
+        store = FakeStore([preview.copyWith(localHost: '192.168.1.1')]);
+        final manager = await loaded();
+
+        await manager.toggle('r5');
+
+        verify(
+          () => client.openRemoteTunnel(
+            any(),
+            localHost: '192.168.1.1',
+            localPort: 3000,
+            remotePort: 8080,
+            onLog: any(named: 'onLog'),
+            abortTrigger: any(named: 'abortTrigger'),
+          ),
+        ).called(1);
+      });
+
+      test('again closes it', () async {
+        final manager = await loaded();
+        await manager.toggle('r5');
+
+        await manager.toggle('r5');
+
+        expect(manager.snapshot.statusOf('r5'), const Stopped());
+        expect(remote.closeCount, 1);
+      });
+
+      test('fails when ssh drops it', () async {
+        final manager = await loaded();
+        await manager.toggle('r5');
+
+        remote.drop();
+        await pumpEventQueue();
+
+        expect(manager.snapshot.statusOf('r5'), isA<Reconnecting>());
+      });
+
+      test('says why the server would not open its port', () async {
+        const message =
+            'Error: remote port forwarding failed for listen port 8080';
+        when(openAnyRemoteTunnel)
+            .thenAnswer((_) => Future.error(const SshTunnelException(message)));
+        final manager = await loaded();
+
+        await manager.toggle('r5');
+
+        expect(manager.snapshot.statusOf('r5'), const Failed(message));
+      });
+
+      test('fails without a port on the SSH host', () async {
+        store = FakeStore([preview.copyWith(remotePort: null)]);
+        final manager = await loaded();
+
+        await manager.toggle('r5');
+
+        expect(
+          manager.snapshot.statusOf('r5'),
+          const Failed('A remote tunnel needs a port on the SSH host'),
+        );
+      });
+    });
+
     test('says Connecting while ssh connects', () async {
       final manager = await connecting(Completer<SshTunnel>().future);
 

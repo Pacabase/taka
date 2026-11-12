@@ -24,6 +24,9 @@ class _TunnelFormState extends State<TunnelForm> {
   late final _localPort = TextEditingController(
     text: widget.initial?.localPort.toString(),
   );
+  late final _localHost = TextEditingController(
+    text: widget.initial?.localHost,
+  );
   late final _sshHost = TextEditingController(text: widget.initial?.sshHost);
   late final _remoteHost = TextEditingController(
     text: widget.initial?.remoteHost,
@@ -32,18 +35,27 @@ class _TunnelFormState extends State<TunnelForm> {
     text: widget.initial?.remotePort?.toString(),
   );
   late final _name = TextEditingController(text: widget.initial?.name);
-  late final _fields = [_localPort, _sshHost, _remoteHost, _remotePort, _name];
+  late final _fields = [
+    _localHost,
+    _localPort,
+    _sshHost,
+    _remoteHost,
+    _remotePort,
+    _name,
+  ];
   ({String host, List<String> leftOut})? _pasted;
   late final _pasteCommand = _PasteCommandAction(onText: _fill);
 
   bool get _isLocal => _kind == TunnelKind.local;
 
+  // Its From is a port on the SSH host, and its To is on this computer.
+  bool get _isRemote => _kind == TunnelKind.remote;
+
   bool get _isValid =>
       _port(_localPort.text) != null &&
       _sshHost.text.trim().isNotEmpty &&
-      (!_isLocal ||
-          _remoteHost.text.trim().isNotEmpty &&
-              _port(_remotePort.text) != null);
+      (!_isLocal || _remoteHost.text.trim().isNotEmpty) &&
+      (_kind == TunnelKind.socks || _port(_remotePort.text) != null);
 
   @override
   void dispose() {
@@ -81,7 +93,7 @@ class _TunnelFormState extends State<TunnelForm> {
                 onPick: (kind) => setState(() => _kind = kind),
               ),
               RouteStep(
-                label: 'From',
+                label: _isRemote ? 'From, on the SSH host' : 'From',
                 hasNext: true,
                 child: Row(
                   spacing: 6,
@@ -101,8 +113,12 @@ class _TunnelFormState extends State<TunnelForm> {
                     SizedBox(
                       width: 72,
                       child: _input(
-                        _localPort,
-                        hint: _isLocal ? '5432' : '1080',
+                        _isRemote ? _remotePort : _localPort,
+                        hint: switch (_kind) {
+                          TunnelKind.local => '5432',
+                          TunnelKind.socks => '1080',
+                          TunnelKind.remote => '8080',
+                        },
                         style: mono,
                         autofocus: true,
                       ),
@@ -112,7 +128,7 @@ class _TunnelFormState extends State<TunnelForm> {
               ),
               RouteStep(
                 label: 'SSH host',
-                hasNext: _isLocal,
+                hasNext: _kind != TunnelKind.socks,
                 child: HostInput(
                   controller: _sshHost,
                   hosts: widget.hosts,
@@ -121,16 +137,16 @@ class _TunnelFormState extends State<TunnelForm> {
                   onSubmitted: _save,
                 ),
               ),
-              if (_isLocal)
+              if (_kind != TunnelKind.socks)
                 RouteStep(
-                  label: 'To',
+                  label: _isRemote ? 'To, from this computer' : 'To',
                   hasNext: false,
                   child: Row(
                     spacing: 6,
                     children: [
                       Expanded(
                         child: _input(
-                          _remoteHost,
+                          _isRemote ? _localHost : _remoteHost,
                           hint: 'localhost',
                           style: mono,
                         ),
@@ -138,7 +154,11 @@ class _TunnelFormState extends State<TunnelForm> {
                       const _Colon(),
                       SizedBox(
                         width: 72,
-                        child: _input(_remotePort, hint: '5432', style: mono),
+                        child: _input(
+                          _isRemote ? _localPort : _remotePort,
+                          hint: _isRemote ? '3000' : '5432',
+                          style: mono,
+                        ),
                       ),
                     ],
                   ),
@@ -215,6 +235,7 @@ class _TunnelFormState extends State<TunnelForm> {
         _pasted = (host: tunnel.sshHost, leftOut: leftOut);
       });
       for (final (field, value) in [
+        (_localHost, tunnel.localHost ?? ''),
         (_localPort, '${tunnel.localPort}'),
         (_sshHost, tunnel.sshHost),
         (_remoteHost, tunnel.remoteHost ?? ''),
@@ -246,9 +267,12 @@ class _TunnelFormState extends State<TunnelForm> {
         name: _name.text.trim(),
         kind: _kind,
         sshHost: _sshHost.text.trim(),
+        localHost: _isRemote && _localHost.text.trim().isNotEmpty
+            ? _localHost.text.trim()
+            : null,
         localPort: _port(_localPort.text)!,
         remoteHost: _isLocal ? _remoteHost.text.trim() : null,
-        remotePort: _isLocal ? _port(_remotePort.text) : null,
+        remotePort: _kind == TunnelKind.socks ? null : _port(_remotePort.text),
       ),
     );
   }
@@ -279,6 +303,7 @@ class const _KindTabs({
       children: [
         for (final (tab, label) in [
           (TunnelKind.local, 'Forward a port'),
+          (TunnelKind.remote, 'Expose a port'),
           (TunnelKind.socks, 'SOCKS proxy'),
         ])
           _KindTab(

@@ -92,6 +92,58 @@ void main() {
     expect(saved.single.remoteHost, isNull);
   });
 
+  testWidgets('an exposed port needs the SSH host and both ports', (
+    tester,
+  ) async {
+    await pumpForm(tester);
+    await tester.tap(find.text('Expose a port'));
+    await tester.pump();
+    expect(find.text('From, on the SSH host'), findsOneWidget);
+    expect(find.text('To, from this computer'), findsOneWidget);
+
+    await tester.enterText(field(0), '8080');
+    await tester.enterText(field(1), 'bastion');
+    await tester.pump();
+    expect(addEnabled(tester), isFalse);
+
+    await tester.enterText(field(3), '3000');
+    await tester.pump();
+    await tester.tap(find.text('Add'));
+
+    expect(
+      saved.single,
+      isA<Tunnel>()
+          .having((tunnel) => tunnel.kind, 'kind', TunnelKind.remote)
+          .having((tunnel) => tunnel.sshHost, 'sshHost', 'bastion')
+          .having((tunnel) => tunnel.remotePort, 'remotePort', 8080)
+          .having((tunnel) => tunnel.localHost, 'localHost', isNull)
+          .having((tunnel) => tunnel.localPort, 'localPort', 3000)
+          .having((tunnel) => tunnel.remoteHost, 'remoteHost', isNull),
+    );
+  });
+
+  testWidgets('editing an exposed port prefills every field', (tester) async {
+    const tunnel = Tunnel(
+      id: 'r',
+      kind: TunnelKind.remote,
+      sshHost: 'bastion',
+      localHost: '192.168.1.1',
+      localPort: 80,
+      remotePort: 8080,
+    );
+    await pumpForm(tester, initial: tunnel);
+
+    expect(
+      tester
+          .widgetList<TextField>(find.byType(TextField))
+          .take(4)
+          .map((field) => field.controller!.text),
+      ['8080', 'bastion', '192.168.1.1', '80'],
+    );
+    await tester.tap(find.text('Save'));
+    expect(saved.single, tunnel);
+  });
+
   testWidgets('Tab walks the fields in order', (tester) async {
     await pumpForm(tester);
     final fields = tester
@@ -193,6 +245,18 @@ void main() {
             .having((tunnel) => tunnel.remotePort, 'remotePort', 5432)
             .having((tunnel) => tunnel.name, 'name', ''),
       );
+    }, variant: macOS);
+
+    testWidgets('switches to an exposed port', (tester) async {
+      await pumpForm(tester);
+      await paste(tester, 0, 'ssh -R 8080:localhost:3000 bastion');
+
+      expect(find.text('To, from this computer'), findsOneWidget);
+      await tester.tap(find.text('Add'));
+      expect(saved.single.kind, TunnelKind.remote);
+      expect(saved.single.remotePort, 8080);
+      expect(saved.single.localHost, 'localhost');
+      expect(saved.single.localPort, 3000);
     }, variant: macOS);
 
     testWidgets('switches to a SOCKS proxy', (tester) async {

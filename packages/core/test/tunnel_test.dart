@@ -21,6 +21,14 @@ void main() {
     localPort: 1080,
   );
 
+  const preview = Tunnel(
+    id: 'r5',
+    kind: TunnelKind.remote,
+    sshHost: 'bastion',
+    localPort: 3000,
+    remotePort: 8080,
+  );
+
   group('JSON', () {
     test('a local tunnel round-trips', () {
       expect(Tunnel.fromJson(database.toJson()), database);
@@ -37,6 +45,22 @@ void main() {
       expect(Tunnel.fromJson(proxy.toJson()), proxy);
     });
 
+    test('a remote tunnel round-trips, with its local host when set', () {
+      expect(preview.toJson(), {
+        'id': 'r5',
+        'name': '',
+        'kind': 'remote',
+        'sshHost': 'bastion',
+        'localPort': 3000,
+        'remotePort': 8080,
+      });
+      expect(Tunnel.fromJson(preview.toJson()), preview);
+
+      final toRouter = preview.copyWith(localHost: '192.168.1.1');
+      expect(toRouter.toJson()['localHost'], '192.168.1.1');
+      expect(Tunnel.fromJson(toRouter.toJson()), toRouter);
+    });
+
     test('missing optional fields fall back to their defaults', () {
       expect(
         Tunnel.fromJson({'id': 'c3', 'localPort': 8080}),
@@ -46,7 +70,7 @@ void main() {
 
     test('an unknown kind falls back to local', () {
       expect(
-        Tunnel.fromJson({'id': 'c3', 'localPort': 8080, 'kind': 'remote'}).kind,
+        Tunnel.fromJson({'id': 'c3', 'localPort': 8080, 'kind': 'vpn'}).kind,
         TunnelKind.local,
       );
     });
@@ -84,6 +108,14 @@ void main() {
       expect(proxy.summary, 'SOCKS on localhost:1080 via bastion');
     });
 
+    test('summary describes a remote tunnel', () {
+      expect(preview.summary, 'port 8080 on bastion → localhost:3000');
+      expect(
+        preview.copyWith(localHost: '192.168.1.1').summary,
+        'port 8080 on bastion → 192.168.1.1:3000',
+      );
+    });
+
     test('title is the name, or the summary without one', () {
       expect(database.title, 'Production database');
       expect(proxy.title, proxy.summary);
@@ -92,6 +124,7 @@ void main() {
     test('address is where a client connects', () {
       expect(database.address, 'localhost:15432');
       expect(proxy.address, 'socks5h://localhost:1080');
+      expect(preview.address, 'localhost:8080');
     });
 
     test('toString names the id and title', () {
@@ -131,7 +164,19 @@ void main() {
       expect(proxy.sshCommand, 'ssh -N -D 127.0.0.1:1080 bastion');
     });
 
+    test('has the SSH host listen and forward back here', () {
+      expect(
+        preview.sshCommand,
+        'ssh -N -R 127.0.0.1:8080:localhost:3000 bastion',
+      );
+      expect(
+        preview.copyWith(localHost: '192.168.1.1').sshCommand,
+        'ssh -N -R 127.0.0.1:8080:192.168.1.1:3000 bastion',
+      );
+    });
+
     test('is null for a tunnel ssh cannot open', () {
+      expect(preview.copyWith(remotePort: null).sshCommand, isNull);
       expect(proxy.copyWith(localPort: 0).sshCommand, isNull);
       expect(database.copyWith(localPort: 65536).sshCommand, isNull);
       expect(proxy.copyWith(sshHost: '-oProxyCommand=x').sshCommand, isNull);
