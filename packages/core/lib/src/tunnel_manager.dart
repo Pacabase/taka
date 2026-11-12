@@ -74,7 +74,9 @@ class TunnelManager({
     ];
     await _persist();
 
-    if (_isOn(tunnel.id) && previous?.copyWith(name: tunnel.name) != tunnel) {
+    final isWanted =
+        _isOn(tunnel.id) || _sessions[tunnel.id]?.status is UnknownHostKey;
+    if (isWanted && previous?.copyWith(name: tunnel.name) != tunnel) {
       final running = _sessions.remove(tunnel.id)!;
       _log.i('Stopping ${running.tunnel.title}');
       await running.stop();
@@ -130,8 +132,7 @@ class TunnelManager({
     }
   }
 
-  /// Trusts the key tunnel [id] stopped at, if it still shows [fingerprint],
-  /// then connects it and every tunnel that stopped at the same key.
+  /// [fingerprint] is the one the user saw; another key by now isn't trusted.
   Future<void> trustHostKey(String id, String fingerprint) async {
     final asked = _sessions[id];
     final status = asked?.status;
@@ -141,10 +142,10 @@ class TunnelManager({
       return;
     }
 
-    await asked.trust();
-    if (asked.status is! Connected) return;
+    if (!await asked.trust()) return;
 
     await Future.wait([
+      asked.connect(),
       for (final session in [..._sessions.values])
         if (session.status == status) _start(session.tunnel),
     ]);

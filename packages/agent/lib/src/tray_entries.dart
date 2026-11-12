@@ -69,14 +69,18 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
 
   final statuses = snapshot.statuses.values;
   final failed = statuses.whereType<Failed>().length;
-  final unknown = statuses.whereType<UnknownHostKey>().length;
+  final unknown = statuses
+      .whereType<UnknownHostKey>()
+      .map((status) => status.fingerprint)
+      .toSet()
+      .length;
 
   return [
     InfoEntry(
       [
         '${snapshot.connectedCount} of ${tunnels.length} connected',
         if (failed > 0) '$failed failed',
-        if (unknown > 0) '$unknown to check',
+        if (unknown > 0) '$unknown ${unknown == 1 ? 'key' : 'keys'} to check',
       ].join(' · '),
     ),
     const SeparatorEntry(),
@@ -121,7 +125,7 @@ List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
     if (status is Failed)
       TunnelActionEntry(tunnel, TunnelAction.tryAgain, 'Try Again'),
     if (status case UnknownHostKey(:final host))
-      InfoEntry('$host is new to this computer.'),
+      InfoEntry("Open Taka to check $host's key."),
   ];
   return [
     ...whyDown,

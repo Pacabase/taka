@@ -65,24 +65,7 @@ class _TunnelTileState extends State<TunnelTile> {
         details: message,
       ),
       Connecting() => captioned('Connecting…', colors.orange),
-      UnknownHostKey(:final host, :final type, :final fingerprint) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 2,
-        children: [
-          captioned(
-            'First connection to $host. Check its $type key:',
-            colors.orange,
-          ),
-          SelectableText(
-            fingerprint,
-            style: TextStyle(
-              fontFamily: monoFont,
-              fontSize: 12,
-              color: colors.textSecondary,
-            ),
-          ),
-        ],
-      ),
+      UnknownHostKey() => null,
       Reconnecting(:final reason) => captioned(
         'Reconnecting — ${plainReason(reason)}',
         colors.orange,
@@ -106,6 +89,30 @@ class _TunnelTileState extends State<TunnelTile> {
       ),
     };
 
+    // Under the row, at full width, so the buttons shown on hover don't rewrap it.
+    final hostKey = switch (status) {
+      UnknownHostKey(:final host, :final type, :final fingerprint) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 2,
+        children: [
+          captioned(
+            'First connection to $host. '
+            'Trust it only if its owner gave you this $type key:',
+            colors.orange,
+          ),
+          Text(
+            fingerprint,
+            style: TextStyle(
+              fontFamily: monoFont,
+              fontSize: 12,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+      _ => null,
+    };
+
     return Focus(
       canRequestFocus: false,
       skipTraversal: true,
@@ -117,73 +124,86 @@ class _TunnelTileState extends State<TunnelTile> {
           constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           color: isHovered ? colors.selection : Colors.transparent,
-          child: Row(
-            spacing: 8,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: 4,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 2,
-                  children: [
-                    Text(
-                      tunnel.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+              Row(
+                spacing: 8,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 2,
+                      children: [
+                        Text(
+                          tunnel.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        ?caption,
+                      ],
                     ),
-                    ?caption,
+                  ),
+                  if (isHovered || _focused) ...[
+                    if (tunnel.sshCommand case final command?)
+                      IconButton(
+                        tooltip: _copied == null
+                            ? 'Copy SSH command'
+                            : 'Copied',
+                        onPressed: () => _copy(command),
+                        icon: AppIcon(
+                          _copied == null ? AppIcons.copy : AppIcons.check,
+                          color: _copied == null
+                              ? colors.textSecondary
+                              : colors.green,
+                        ),
+                      ),
+                    IconButton(
+                      tooltip: 'Edit',
+                      onPressed: widget.onEdit,
+                      icon: AppIcon(
+                        AppIcons.pencil,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Delete',
+                      onPressed: widget.onDelete,
+                      icon: AppIcon(
+                        AppIcons.trash,
+                        color: colors.textSecondary,
+                      ),
+                    ),
                   ],
-                ),
-              ),
-              if (isHovered || _focused) ...[
-                if (tunnel.sshCommand case final command?)
-                  IconButton(
-                    tooltip: _copied == null ? 'Copy SSH command' : 'Copied',
-                    onPressed: () => _copy(command),
-                    icon: AppIcon(
-                      _copied == null ? AppIcons.copy : AppIcons.check,
-                      color: _copied == null
-                          ? colors.textSecondary
-                          : colors.green,
+                  if (status is Connecting || status is Reconnecting)
+                    SizedBox.square(
+                      dimension: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colors.orange,
+                      ),
                     ),
+                  if (status is Failed)
+                    AppIcon(AppIcons.triangleAlert, color: colors.red),
+                  if (status case UnknownHostKey(:final fingerprint))
+                    TextButton(
+                      onPressed: () => widget.onTrust(fingerprint),
+                      child: const Text('Trust'),
+                    ),
+                  NativeSwitch(
+                    value: status.isOn,
+                    color: status is Connecting || status is Reconnecting
+                        ? colors.orange
+                        : colors.green,
+                    label: tunnel.title,
+                    onToggle: widget.onToggle,
                   ),
-                IconButton(
-                  tooltip: 'Edit',
-                  onPressed: widget.onEdit,
-                  icon: AppIcon(AppIcons.pencil, color: colors.textSecondary),
-                ),
-                IconButton(
-                  tooltip: 'Delete',
-                  onPressed: widget.onDelete,
-                  icon: AppIcon(AppIcons.trash, color: colors.textSecondary),
-                ),
-              ],
-              if (status is Connecting || status is Reconnecting)
-                SizedBox.square(
-                  dimension: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: colors.orange,
-                  ),
-                ),
-              if (status is Failed)
-                AppIcon(AppIcons.triangleAlert, color: colors.red),
-              if (status case UnknownHostKey(:final fingerprint))
-                Tooltip(
-                  message: "Only if it's the key the server's owner gave you",
-                  child: TextButton(
-                    onPressed: () => widget.onTrust(fingerprint),
-                    child: const Text('Trust'),
-                  ),
-                ),
-              NativeSwitch(
-                value: status.isOn,
-                color: status is Connecting || status is Reconnecting
-                    ? colors.orange
-                    : colors.green,
-                label: tunnel.title,
-                onToggle: widget.onToggle,
+                ],
               ),
+              ?hostKey,
             ],
           ),
         ),
