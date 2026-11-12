@@ -44,6 +44,27 @@ void main() {
       expect(pasted?.leftOut, isEmpty);
     });
 
+    test('a forward to a socket', () {
+      final pasted = parseSshCommand(
+        socketTunnelCommand(
+          const SshTarget('bastion'),
+          remoteSocket: '/var/run/docker.sock',
+          localPort: 2375,
+        ),
+      );
+
+      expect(
+        pasted?.tunnel,
+        const Tunnel(
+          id: '',
+          sshHost: 'bastion',
+          localPort: 2375,
+          remoteSocket: '/var/run/docker.sock',
+        ),
+      );
+      expect(pasted?.leftOut, isEmpty);
+    });
+
     test('a remote forward', () {
       final pasted = parseSshCommand(
         remoteTunnelCommand(
@@ -297,7 +318,8 @@ void main() {
       ('no host', 'ssh -L 15432:db:5432'),
       ('a flag with no value', 'ssh bastion -L'),
       ('an unclosed quote', "ssh -L '15432:db:5432 bastion"),
-      ('a forward to a socket', 'ssh -L 15432:/run/db.sock bastion'),
+      ('a forward from a socket', 'ssh -L /tmp/db.sock:db:5432 bastion'),
+      ('a remote forward to a socket', 'ssh -R 8080:/run/app.sock bastion'),
       ('a forward with no host', 'ssh -L 15432::5432 bastion'),
       ('a port out of range', 'ssh -L 70000:db:5432 bastion'),
       ('port 0', 'ssh -D 0 bastion'),

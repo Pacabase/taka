@@ -17,6 +17,7 @@ final _escapedInDoubleQuotes = RegExp(r'\\([$`"\\])');
 final _portForward = RegExp(
   r'^(?:[^:\[\]]*:|\[[^\]]*\]:)?(\d+):(?:\[([^\]]+)\]|([^:\[\]]+)):(\d+)$',
 );
+final _socketForward = RegExp(r'^(?:[^:\[\]/]*:|\[[^\]]*\]:)?(\d+):(/[^:]+)$');
 final _socksForward = RegExp(r'^(?:[^:\[\]]*:|\[[^\]]*\]:)?(\d+)$');
 
 /// A word that isn't an option has no flag: the host or the remote command.
@@ -151,21 +152,27 @@ Tunnel _tunnel(_Argument forward) => switch ((
   forward.flag,
   _portForward.firstMatch(forward.value!),
   _socksForward.firstMatch(forward.value!),
+  _socketForward.firstMatch(forward.value!),
 )) {
-  ('L', final local?, _) => Tunnel(
+  ('L', _, _, final socket?) => Tunnel(
+    id: '',
+    localPort: _port(socket[1]!),
+    remoteSocket: socket[2],
+  ),
+  ('L', final local?, _, _) => Tunnel(
     id: '',
     localPort: _port(local[1]!),
     remoteHost: local[2] ?? local[3],
     remotePort: _port(local[4]!),
   ),
-  ('R', final remote?, _) => Tunnel(
+  ('R', final remote?, _, _) => Tunnel(
     id: '',
     kind: TunnelKind.remote,
     remotePort: _port(remote[1]!),
     localHost: remote[2] ?? remote[3],
     localPort: _port(remote[4]!),
   ),
-  ('D', _, final socks?) => Tunnel(
+  ('D', _, final socks?, _) => Tunnel(
     id: '',
     kind: TunnelKind.socks,
     localPort: _port(socks[1]!),

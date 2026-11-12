@@ -29,7 +29,7 @@ class _TunnelFormState extends State<TunnelForm> {
   );
   late final _sshHost = TextEditingController(text: widget.initial?.sshHost);
   late final _remoteHost = TextEditingController(
-    text: widget.initial?.remoteHost,
+    text: widget.initial?.remoteSocket ?? widget.initial?.remoteHost,
   );
   late final _remotePort = TextEditingController(
     text: widget.initial?.remotePort?.toString(),
@@ -51,11 +51,16 @@ class _TunnelFormState extends State<TunnelForm> {
   // Its From is a port on the SSH host, and its To is on this computer.
   bool get _isRemote => _kind == TunnelKind.remote;
 
+  // A local tunnel's To is a Unix socket on the SSH host when it is a path.
+  bool get _isSocket => _isLocal && _remoteHost.text.trim().startsWith('/');
+
   bool get _isValid =>
       _port(_localPort.text) != null &&
       _sshHost.text.trim().isNotEmpty &&
       (!_isLocal || _remoteHost.text.trim().isNotEmpty) &&
-      (_kind == TunnelKind.socks || _port(_remotePort.text) != null);
+      (_kind == TunnelKind.socks ||
+          _isSocket ||
+          _port(_remotePort.text) != null);
 
   @override
   void dispose() {
@@ -141,26 +146,33 @@ class _TunnelFormState extends State<TunnelForm> {
                 RouteStep(
                   label: _isRemote ? 'To, from this computer' : 'To',
                   hasNext: false,
-                  child: Row(
-                    spacing: 6,
-                    children: [
-                      Expanded(
-                        child: _input(
-                          _isRemote ? _localHost : _remoteHost,
-                          hint: 'localhost',
-                          style: mono,
+                  child: ListenableBuilder(
+                    listenable: _remoteHost,
+                    builder: (context, _) => Row(
+                      spacing: 6,
+                      children: [
+                        Expanded(
+                          child: _input(
+                            _isRemote ? _localHost : _remoteHost,
+                            hint: _isRemote
+                                ? 'localhost'
+                                : 'localhost, or a socket like /run/app.sock',
+                            style: mono,
+                          ),
                         ),
-                      ),
-                      const _Colon(),
-                      SizedBox(
-                        width: 72,
-                        child: _input(
-                          _isRemote ? _localPort : _remotePort,
-                          hint: _isRemote ? '3000' : '5432',
-                          style: mono,
-                        ),
-                      ),
-                    ],
+                        if (!_isSocket) ...[
+                          const _Colon(),
+                          SizedBox(
+                            width: 72,
+                            child: _input(
+                              _isRemote ? _localPort : _remotePort,
+                              hint: _isRemote ? '3000' : '5432',
+                              style: mono,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               Padding(
@@ -238,7 +250,7 @@ class _TunnelFormState extends State<TunnelForm> {
         (_localHost, tunnel.localHost ?? ''),
         (_localPort, '${tunnel.localPort}'),
         (_sshHost, tunnel.sshHost),
-        (_remoteHost, tunnel.remoteHost ?? ''),
+        (_remoteHost, tunnel.remoteSocket ?? tunnel.remoteHost ?? ''),
         (_remotePort, '${tunnel.remotePort ?? ''}'),
       ]) {
         field.value = TextEditingValue(
@@ -271,8 +283,11 @@ class _TunnelFormState extends State<TunnelForm> {
             ? _localHost.text.trim()
             : null,
         localPort: _port(_localPort.text)!,
-        remoteHost: _isLocal ? _remoteHost.text.trim() : null,
-        remotePort: _kind == TunnelKind.socks ? null : _port(_remotePort.text),
+        remoteHost: _isLocal && !_isSocket ? _remoteHost.text.trim() : null,
+        remotePort: _kind == TunnelKind.socks || _isSocket
+            ? null
+            : _port(_remotePort.text),
+        remoteSocket: _isSocket ? _remoteHost.text.trim() : null,
       ),
     );
   }

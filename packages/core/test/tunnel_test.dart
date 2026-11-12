@@ -29,6 +29,13 @@ void main() {
     remotePort: 8080,
   );
 
+  const docker = Tunnel(
+    id: 's6',
+    sshHost: 'bastion',
+    localPort: 2375,
+    remoteSocket: '/var/run/docker.sock',
+  );
+
   group('JSON', () {
     test('a local tunnel round-trips', () {
       expect(Tunnel.fromJson(database.toJson()), database);
@@ -59,6 +66,18 @@ void main() {
       final toRouter = preview.copyWith(localHost: '192.168.1.1');
       expect(toRouter.toJson()['localHost'], '192.168.1.1');
       expect(Tunnel.fromJson(toRouter.toJson()), toRouter);
+    });
+
+    test('a tunnel to a socket round-trips', () {
+      expect(docker.toJson(), {
+        'id': 's6',
+        'name': '',
+        'kind': 'local',
+        'sshHost': 'bastion',
+        'localPort': 2375,
+        'remoteSocket': '/var/run/docker.sock',
+      });
+      expect(Tunnel.fromJson(docker.toJson()), docker);
     });
 
     test('missing optional fields fall back to their defaults', () {
@@ -106,6 +125,13 @@ void main() {
 
     test('summary describes a SOCKS proxy', () {
       expect(proxy.summary, 'SOCKS on localhost:1080 via bastion');
+    });
+
+    test('summary describes a tunnel to a socket', () {
+      expect(
+        docker.summary,
+        'localhost:2375 → /var/run/docker.sock via bastion',
+      );
     });
 
     test('summary describes a remote tunnel', () {
@@ -162,6 +188,14 @@ void main() {
 
     test('serves a SOCKS proxy through the SSH host', () {
       expect(proxy.sshCommand, 'ssh -N -D 127.0.0.1:1080 bastion');
+    });
+
+    test('forwards the local port to a socket on the SSH host', () {
+      expect(
+        docker.sshCommand,
+        'ssh -N -L 127.0.0.1:2375:/var/run/docker.sock bastion',
+      );
+      expect(docker.copyWith(remoteSocket: 'docker.sock').sshCommand, isNull);
     });
 
     test('has the SSH host listen and forward back here', () {

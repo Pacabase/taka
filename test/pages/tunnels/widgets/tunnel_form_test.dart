@@ -92,6 +92,47 @@ void main() {
     expect(saved.single.remoteHost, isNull);
   });
 
+  testWidgets('a path as the destination is a socket, and needs no port', (
+    tester,
+  ) async {
+    await pumpForm(tester);
+    await tester.enterText(field(0), '2375');
+    await tester.enterText(field(1), 'bastion');
+    await tester.enterText(field(2), '/var/run/docker.sock');
+    await tester.pump();
+
+    expect(find.byType(TextField), findsNWidgets(4));
+    await tester.tap(find.text('Add'));
+
+    expect(
+      saved.single,
+      isA<Tunnel>()
+          .having((tunnel) => tunnel.kind, 'kind', TunnelKind.local)
+          .having((tunnel) => tunnel.localPort, 'localPort', 2375)
+          .having((tunnel) => tunnel.remoteHost, 'remoteHost', isNull)
+          .having((tunnel) => tunnel.remotePort, 'remotePort', isNull)
+          .having(
+            (tunnel) => tunnel.remoteSocket,
+            'remoteSocket',
+            '/var/run/docker.sock',
+          ),
+    );
+  });
+
+  testWidgets('editing a tunnel to a socket prefills it', (tester) async {
+    const tunnel = Tunnel(
+      id: 's',
+      sshHost: 'bastion',
+      localPort: 2375,
+      remoteSocket: '/var/run/docker.sock',
+    );
+    await pumpForm(tester, initial: tunnel);
+
+    expect(find.text('/var/run/docker.sock'), findsOneWidget);
+    await tester.tap(find.text('Save'));
+    expect(saved.single, tunnel);
+  });
+
   testWidgets('an exposed port needs the SSH host and both ports', (
     tester,
   ) async {

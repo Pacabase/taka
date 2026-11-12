@@ -83,6 +83,7 @@ String forwardWarning(Tunnel tunnel) => switch (tunnel) {
     "A site through the SOCKS proxy couldn't be reached.",
   Tunnel(kind: TunnelKind.remote, :final localHost, :final localPort) =>
     "Can't reach ${localHost ?? 'localhost'}:$localPort from this computer.",
+  Tunnel(:final remoteSocket?) => "Can't open $remoteSocket on the server.",
   Tunnel(:final remoteHost, :final remotePort) =>
     "Can't reach $remoteHost:$remotePort through the server.",
 };

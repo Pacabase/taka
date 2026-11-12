@@ -116,6 +116,20 @@ void main() {
       );
     });
 
+    test('names the socket a tunnel could not open', () {
+      expect(
+        forwardWarning(
+          const Tunnel(
+            id: 's6',
+            sshHost: 'bastion',
+            localPort: 2375,
+            remoteSocket: '/var/run/docker.sock',
+          ),
+        ),
+        "Can't open /var/run/docker.sock on the server.",
+      );
+    });
+
     test('names where a remote tunnel leads on this computer', () {
       expect(
         forwardWarning(

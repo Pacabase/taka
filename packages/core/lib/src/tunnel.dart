@@ -9,6 +9,9 @@ enum TunnelKind { local, socks, remote }
 sealed class const Tunnel._() with _$Tunnel {
   /// [sshHost] is a `~/.ssh/config` alias, a host or `user@host`.
   ///
+  /// A local tunnel leads to [remoteHost] and [remotePort], or to the Unix
+  /// socket at [remoteSocket] on [sshHost] when that is set.
+  ///
   /// A remote tunnel has [sshHost] listen on its own [remotePort], and brings
   /// each connection back to [localHost], or localhost when null, on
   /// [localPort].
@@ -21,6 +24,7 @@ sealed class const Tunnel._() with _$Tunnel {
     required int localPort,
     String? remoteHost,
     int? remotePort,
+    String? remoteSocket,
   }) = _Tunnel;
 
   static Tunnel fromJson(Object? json) {
@@ -41,6 +45,7 @@ sealed class const Tunnel._() with _$Tunnel {
         localPort: localPort,
         remoteHost: field<String>('remoteHost'),
         remotePort: field<int>('remotePort'),
+        remoteSocket: field<String>('remoteSocket'),
       );
     }
 
@@ -56,6 +61,7 @@ sealed class const Tunnel._() with _$Tunnel {
     'localPort': localPort,
     'remoteHost': ?remoteHost,
     'remotePort': ?remotePort,
+    'remoteSocket': ?remoteSocket,
   };
 
   SshTarget get target {
@@ -78,12 +84,19 @@ sealed class const Tunnel._() with _$Tunnel {
   String? get sshCommand {
     try {
       return switch (kind) {
-        TunnelKind.local => tunnelCommand(
-          target,
-          remoteHost: remoteHost ?? '',
-          remotePort: remotePort ?? 0,
-          localPort: localPort,
-        ),
+        TunnelKind.local => switch (remoteSocket) {
+          final remoteSocket? => socketTunnelCommand(
+            target,
+            remoteSocket: remoteSocket,
+            localPort: localPort,
+          ),
+          null => tunnelCommand(
+            target,
+            remoteHost: remoteHost ?? '',
+            remotePort: remotePort ?? 0,
+            localPort: localPort,
+          ),
+        },
         TunnelKind.socks => socksProxyCommand(target, localPort: localPort),
         TunnelKind.remote => remoteTunnelCommand(
           target,
@@ -99,7 +112,8 @@ sealed class const Tunnel._() with _$Tunnel {
 
   String get summary => switch (kind) {
     TunnelKind.local =>
-      'localhost:$localPort → $remoteHost:$remotePort via $sshHost',
+      'localhost:$localPort → '
+          '${remoteSocket ?? '$remoteHost:$remotePort'} via $sshHost',
     TunnelKind.socks => 'SOCKS on localhost:$localPort via $sshHost',
     TunnelKind.remote =>
       'port $remotePort on $sshHost → ${localHost ?? 'localhost'}:$localPort',

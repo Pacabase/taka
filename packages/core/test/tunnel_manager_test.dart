@@ -241,6 +241,35 @@ void main() {
       ).called(1);
     });
 
+    test('opens a tunnel to a socket with its fields', () async {
+      store = FakeStore([docker]);
+      when(
+        () => client.openSocketTunnel(
+          any(),
+          remoteSocket: any(named: 'remoteSocket'),
+          localPort: any(named: 'localPort'),
+          onLog: any(named: 'onLog'),
+          abortTrigger: any(named: 'abortTrigger'),
+        ),
+      ).thenAnswer((_) async => tunnel);
+      final manager = await loaded();
+
+      await manager.toggle('s6');
+      expect(manager.snapshot.statusOf('s6'), const Connected());
+      verify(
+        () => client.openSocketTunnel(
+          const SshTarget('bastion'),
+          remoteSocket: '/var/run/docker.sock',
+          localPort: 2375,
+          onLog: any(named: 'onLog'),
+          abortTrigger: any(named: 'abortTrigger'),
+        ),
+      ).called(1);
+
+      await manager.toggle('s6');
+      expect(tunnel.closeCount, 1);
+    });
+
     group('a remote tunnel', () {
       late FakeRemoteTunnel remote;
 

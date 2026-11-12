@@ -120,6 +120,14 @@ class TunnelSession({
         return (done: remote.done, close: remote.close);
       case Tunnel(kind: TunnelKind.remote):
         throw ArgumentError('A remote tunnel needs a port on the SSH host');
+      case Tunnel(:final remoteSocket?):
+        opened = await client.openSocketTunnel(
+          tunnel.target,
+          remoteSocket: remoteSocket,
+          localPort: tunnel.localPort,
+          onLog: onLog,
+          abortTrigger: abortTrigger,
+        );
       case Tunnel(:final remoteHost?, :final remotePort?):
         opened = await client.openTunnel(
           tunnel.target,
