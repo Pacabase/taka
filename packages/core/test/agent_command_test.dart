@@ -15,6 +15,7 @@ void main() {
       AgentCommand.remove('a1'),
       AgentCommand.toggle('b2'),
       AgentCommand.move('b2', 0),
+      AgentCommand.trustHostKey('a1', 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY'),
       AgentCommand.setLaunchAtLogin(on: true),
       AgentCommand.setDebugLogging(on: false),
       AgentCommand.showLogs(),

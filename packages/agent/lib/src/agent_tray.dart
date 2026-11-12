@@ -99,6 +99,7 @@ class AgentTray({
       onClick: () => switch (action) {
         TunnelAction.edit => onOpenTunnel(tunnel.id),
         TunnelAction.tryAgain => _tryAgain(tunnel.id),
+        TunnelAction.checkKey => onManageTunnels(),
       },
     ),
     InfoEntry(:final label) => _create(label, MenuItemType.normal),

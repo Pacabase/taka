@@ -477,10 +477,10 @@ packages:
     dependency: "direct main"
     description:
       name: system_ssh
-      sha256: "8a19147d7692268dec49725488dc4f21ecc0e8eabda3988050ee33d1b3ff912e"
+      sha256: "2f1fbc4822d1f0ad73708a85bb9afba3230b86699d8a531f0aa54af6e4605ca6"
       url: "https://pub.dev"
     source: hosted
-    version: "0.8.0"
+    version: "0.9.0"
   term_glyph:
     dependency: transitive
     description:

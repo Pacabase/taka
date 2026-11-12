@@ -19,6 +19,11 @@ void main() {
       Connected(warning: 'Connection refused'),
       Reconnecting('Connection to bastion closed by remote host.'),
       Failed('127.0.0.1:5432 is already in use'),
+      UnknownHostKey(
+        host: 'bastion',
+        type: 'ED25519',
+        fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cYw8u2bq3Jm8sY',
+      ),
     ]) {
       test('$status round-trips', () {
         expect(
@@ -37,6 +42,7 @@ void main() {
       ({'status': 'connected', 'warning': 3}, const Connected()),
       ({'status': 'reconnecting'}, const Reconnecting('')),
       ({'status': 'reconnecting', 'reason': 3}, const Reconnecting('')),
+      ({'status': 'unknownHostKey', 'host': 'bastion'}, const Stopped()),
       (<String, Object?>{}, const Stopped()),
       (null, const Stopped()),
     ]) {
@@ -52,8 +58,9 @@ void main() {
           const Connecting(),
           const Connected(),
           const Failed(''),
+          const UnknownHostKey(host: '', type: '', fingerprint: ''),
         ].map((status) => status.isOn),
-        [false, true, true, false],
+        [false, true, true, false, false],
       );
     });
   });

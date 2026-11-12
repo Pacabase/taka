@@ -24,6 +24,7 @@ class TunnelSession({
   final _abort = Completer<void>();
   TunnelStatus _status = const Connecting();
   SshTunnel? _opened;
+  SshHostKey? _unknownHostKey;
   Timer? _clearWarning;
   Timer? _retry;
   Timer? _stable;
@@ -67,6 +68,27 @@ class TunnelSession({
     await _opened?.close();
   }
 
+  /// Adds the key this session stopped at to `known_hosts`, then connects.
+  Future<void> trust() async {
+    final hostKey = _unknownHostKey;
+    if (hostKey == null || isStopped) return;
+
+    _log.i('${tunnel.title}: trusting $hostKey');
+    _unknownHostKey = null;
+    _status = const Connecting();
+    onChange();
+    try {
+      await client.trustHostKey(
+        tunnel.target,
+        hostKey,
+        abortTrigger: _abort.future,
+      );
+    } on Object catch (exception) {
+      return _drop(exception);
+    }
+    if (!isStopped) await connect();
+  }
+
   Future<SshTunnel> _open() {
     final abortTrigger = _abort.future;
     // ssh's lines, named since tunnels connect at once.
@@ -99,6 +121,16 @@ class TunnelSession({
     if (isStopped) return;
 
     _stable?.cancel();
+    if (exception case SshUnknownHostKeyException(:final hostKey)) {
+      _log.w('${tunnel.title}: waiting for the user to check $hostKey');
+      _unknownHostKey = hostKey;
+      _status = UnknownHostKey(
+        host: hostKey.host,
+        type: hostKey.type,
+        fingerprint: hostKey.fingerprint,
+      );
+      return onChange();
+    }
     final message = exception == null ? 'Disconnected' : _messageOf(exception);
     final isPermanent = switch (exception) {
       SshException(:final isPermanent) => isPermanent,

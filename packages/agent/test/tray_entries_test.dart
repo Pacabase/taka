@@ -67,6 +67,26 @@ void main() {
     ]);
   });
 
+  test("says which tunnel waits for its server's key to be checked", () {
+    const snapshot = TunnelsSnapshot(
+      tunnels: [database, web],
+      statuses: {
+        'c3': UnknownHostKey(
+          host: 'web',
+          type: 'ED25519',
+          fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY',
+        ),
+      },
+    );
+
+    expect(menu(snapshot).take(4), [
+      '0 of 2 connected · 1 to check',
+      '---',
+      '☐ Production database',
+      "☐ Web — check the server's key",
+    ]);
+  });
+
   test('keeps each tunnel to its actions, and why it is down', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [database, web, other],
@@ -112,6 +132,19 @@ void main() {
     expect(
       actionsWhen(const Failed('')),
       startsWith("Tunnel Actions ▸ Web ▸ It couldn't connect. | Try Again"),
+    );
+    expect(
+      actionsWhen(
+        const UnknownHostKey(
+          host: 'web',
+          type: 'ED25519',
+          fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY',
+        ),
+      ),
+      startsWith(
+        'Tunnel Actions ▸ Web ▸ web is new to this computer. | '
+        'Check Its Key… | --- | Copy',
+      ),
     );
     expect(
       actionsWhen(const Reconnecting('Timeout, server web not responding.')),

@@ -17,6 +17,7 @@ const _reasons = [
     patterns: [
       'Host key verification failed',
       'REMOTE HOST IDENTIFICATION HAS CHANGED',
+      'has changed; it now offers',
     ],
     short: 'host key changed',
     sentence: "The server's host key changed.",

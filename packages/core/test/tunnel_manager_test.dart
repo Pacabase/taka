@@ -323,6 +323,181 @@ void main() {
       );
     });
 
+    group('to a server whose host key is new', () {
+      const hostKey = SshHostKey(
+        host: 'bastion',
+        type: 'ED25519',
+        fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cYw8u2bq3Jm8sY',
+      );
+      const asking = UnknownHostKey(
+        host: 'bastion',
+        type: 'ED25519',
+        fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cYw8u2bq3Jm8sY',
+      );
+
+      Future<void> trustAnyHostKey() => client.trustHostKey(
+        any(),
+        any(),
+        abortTrigger: any(named: 'abortTrigger'),
+      );
+
+      setUpAll(() => registerFallbackValue(hostKey));
+
+      setUp(() {
+        var isKnown = false;
+        when(openAnyTunnel).thenAnswer((_) async {
+          if (!isKnown) throw SshUnknownHostKeyException(hostKey);
+          return tunnel;
+        });
+        when(openAnySocksProxy).thenAnswer((_) async {
+          if (!isKnown) throw SshUnknownHostKeyException(hostKey);
+          return FakeTunnel(1080);
+        });
+        when(trustAnyHostKey).thenAnswer((_) async => isKnown = true);
+      });
+
+      test('shows the key and trusts nothing', () async {
+        final manager = await loaded();
+
+        await manager.toggle('a1');
+
+        expect(manager.snapshot.statusOf('a1'), asking);
+        expect(store.on, isEmpty);
+        verifyNever(trustAnyHostKey);
+      });
+
+      test('shows it for a restored tunnel too, without retrying', () async {
+        store = FakeStore([database], {'a1'});
+        final manager = await loaded();
+
+        await manager.restore();
+
+        expect(manager.snapshot.statusOf('a1'), asking);
+        verify(openAnyTunnel).called(1);
+      });
+
+      test('trustHostKey adds the key and connects', () async {
+        final manager = await loaded();
+        await manager.toggle('a1');
+
+        await manager.trustHostKey('a1', hostKey.fingerprint);
+
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(store.on, {'a1'});
+        verify(
+          () => client.trustHostKey(
+            const SshTarget('bastion', user: 'deploy'),
+            hostKey,
+            abortTrigger: any(named: 'abortTrigger'),
+          ),
+        ).called(1);
+      });
+
+      test('trustHostKey says Connecting while it works', () async {
+        final trusted = Completer<void>();
+        when(trustAnyHostKey).thenAnswer((_) => trusted.future);
+        final manager = await loaded();
+        await manager.toggle('a1');
+
+        unawaited(manager.trustHostKey('a1', hostKey.fingerprint));
+
+        expect(manager.snapshot.statusOf('a1'), const Connecting());
+        trusted.complete();
+      });
+
+      test('trustHostKey connects every tunnel waiting on that key', () async {
+        final manager = await loaded();
+        await manager.toggle('a1');
+        await manager.toggle('b2');
+
+        await manager.trustHostKey('a1', hostKey.fingerprint);
+
+        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.snapshot.statusOf('b2'), const Connected());
+        verify(trustAnyHostKey).called(1);
+      });
+
+      test('trustHostKey ignores a fingerprint that is not shown', () async {
+        final manager = await loaded();
+        await manager.toggle('a1');
+
+        await manager.trustHostKey('a1', 'SHA256:other');
+        await manager.trustHostKey('b2', hostKey.fingerprint);
+        await manager.trustHostKey('missing', hostKey.fingerprint);
+
+        expect(manager.snapshot.statusOf('a1'), asking);
+        verifyNever(trustAnyHostKey);
+      });
+
+      test('shows the other key when the server offers one by then', () async {
+        const other = SshHostKey(
+          host: 'bastion',
+          type: 'RSA',
+          fingerprint: 'SHA256:other',
+        );
+        when(trustAnyHostKey)
+            .thenAnswer((_) => Future.error(SshUnknownHostKeyException(other)));
+        final manager = await loaded();
+        await manager.toggle('a1');
+        await manager.toggle('b2');
+
+        await manager.trustHostKey('a1', hostKey.fingerprint);
+
+        expect(
+          manager.snapshot.statusOf('a1'),
+          const UnknownHostKey(
+            host: 'bastion',
+            type: 'RSA',
+            fingerprint: 'SHA256:other',
+          ),
+        );
+        expect(manager.snapshot.statusOf('b2'), asking);
+      });
+
+      test('says why the key could not be added', () async {
+        when(trustAnyHostKey).thenAnswer(
+          (_) => Future.error(const SshException('known_hosts is read-only')),
+        );
+        final manager = await loaded();
+        await manager.toggle('a1');
+
+        await manager.trustHostKey('a1', hostKey.fingerprint);
+
+        expect(
+          manager.snapshot.statusOf('a1'),
+          const Failed('known_hosts is read-only'),
+        );
+        verify(openAnyTunnel).called(1);
+      });
+
+      test('toggle while the key is added aborts it', () async {
+        when(trustAnyHostKey).thenAnswer((invocation) async {
+          await (invocation.namedArguments[#abortTrigger]! as Future<void>);
+          throw const SshTunnelAbortedException();
+        });
+        final manager = await loaded();
+        await manager.toggle('a1');
+        final trusting = manager.trustHostKey('a1', hostKey.fingerprint);
+        await pumpEventQueue();
+
+        await manager.toggle('a1');
+        await trusting;
+
+        expect(manager.snapshot.statusOf('a1'), const Stopped());
+        verify(openAnyTunnel).called(1);
+      });
+
+      test('toggle asks the server again', () async {
+        final manager = await loaded();
+        await manager.toggle('a1');
+
+        await manager.toggle('a1');
+
+        expect(manager.snapshot.statusOf('a1'), asking);
+        verify(openAnyTunnel).called(2);
+      });
+    });
+
     test('ignores an unknown id', () async {
       final manager = await loaded();
 

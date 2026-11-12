@@ -56,7 +56,7 @@ extension TunnelStatusPatterns on TunnelStatus {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Stopped value)?  stopped,TResult Function( Connecting value)?  connecting,TResult Function( Connected value)?  connected,TResult Function( Failed value)?  failed,TResult Function( Reconnecting value)?  reconnecting,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Stopped value)?  stopped,TResult Function( Connecting value)?  connecting,TResult Function( Connected value)?  connected,TResult Function( Failed value)?  failed,TResult Function( Reconnecting value)?  reconnecting,TResult Function( UnknownHostKey value)?  unknownHostKey,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
@@ -64,7 +64,8 @@ return stopped(_that);case Connecting() when connecting != null:
 return connecting(_that);case Connected() when connected != null:
 return connected(_that);case Failed() when failed != null:
 return failed(_that);case Reconnecting() when reconnecting != null:
-return reconnecting(_that);case _:
+return reconnecting(_that);case UnknownHostKey() when unknownHostKey != null:
+return unknownHostKey(_that);case _:
   return orElse();
 
 }
@@ -82,7 +83,7 @@ return reconnecting(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Stopped value)  stopped,required TResult Function( Connecting value)  connecting,required TResult Function( Connected value)  connected,required TResult Function( Failed value)  failed,required TResult Function( Reconnecting value)  reconnecting,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Stopped value)  stopped,required TResult Function( Connecting value)  connecting,required TResult Function( Connected value)  connected,required TResult Function( Failed value)  failed,required TResult Function( Reconnecting value)  reconnecting,required TResult Function( UnknownHostKey value)  unknownHostKey,}){
 final _that = this;
 switch (_that) {
 case Stopped():
@@ -90,7 +91,8 @@ return stopped(_that);case Connecting():
 return connecting(_that);case Connected():
 return connected(_that);case Failed():
 return failed(_that);case Reconnecting():
-return reconnecting(_that);}
+return reconnecting(_that);case UnknownHostKey():
+return unknownHostKey(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -104,7 +106,7 @@ return reconnecting(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Stopped value)?  stopped,TResult? Function( Connecting value)?  connecting,TResult? Function( Connected value)?  connected,TResult? Function( Failed value)?  failed,TResult? Function( Reconnecting value)?  reconnecting,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Stopped value)?  stopped,TResult? Function( Connecting value)?  connecting,TResult? Function( Connected value)?  connected,TResult? Function( Failed value)?  failed,TResult? Function( Reconnecting value)?  reconnecting,TResult? Function( UnknownHostKey value)?  unknownHostKey,}){
 final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
@@ -112,7 +114,8 @@ return stopped(_that);case Connecting() when connecting != null:
 return connecting(_that);case Connected() when connected != null:
 return connected(_that);case Failed() when failed != null:
 return failed(_that);case Reconnecting() when reconnecting != null:
-return reconnecting(_that);case _:
+return reconnecting(_that);case UnknownHostKey() when unknownHostKey != null:
+return unknownHostKey(_that);case _:
   return null;
 
 }
@@ -129,14 +132,15 @@ return reconnecting(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  stopped,TResult Function()?  connecting,TResult Function( String warning)?  connected,TResult Function( String message)?  failed,TResult Function( String reason)?  reconnecting,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  stopped,TResult Function()?  connecting,TResult Function( String warning)?  connected,TResult Function( String message)?  failed,TResult Function( String reason)?  reconnecting,TResult Function( String host,  String type,  String fingerprint)?  unknownHostKey,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped();case Connecting() when connecting != null:
 return connecting();case Connected() when connected != null:
 return connected(_that.warning);case Failed() when failed != null:
 return failed(_that.message);case Reconnecting() when reconnecting != null:
-return reconnecting(_that.reason);case _:
+return reconnecting(_that.reason);case UnknownHostKey() when unknownHostKey != null:
+return unknownHostKey(_that.host,_that.type,_that.fingerprint);case _:
   return orElse();
 
 }
@@ -154,14 +158,15 @@ return reconnecting(_that.reason);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  stopped,required TResult Function()  connecting,required TResult Function( String warning)  connected,required TResult Function( String message)  failed,required TResult Function( String reason)  reconnecting,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  stopped,required TResult Function()  connecting,required TResult Function( String warning)  connected,required TResult Function( String message)  failed,required TResult Function( String reason)  reconnecting,required TResult Function( String host,  String type,  String fingerprint)  unknownHostKey,}) {final _that = this;
 switch (_that) {
 case Stopped():
 return stopped();case Connecting():
 return connecting();case Connected():
 return connected(_that.warning);case Failed():
 return failed(_that.message);case Reconnecting():
-return reconnecting(_that.reason);}
+return reconnecting(_that.reason);case UnknownHostKey():
+return unknownHostKey(_that.host,_that.type,_that.fingerprint);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -175,14 +180,15 @@ return reconnecting(_that.reason);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  stopped,TResult? Function()?  connecting,TResult? Function( String warning)?  connected,TResult? Function( String message)?  failed,TResult? Function( String reason)?  reconnecting,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  stopped,TResult? Function()?  connecting,TResult? Function( String warning)?  connected,TResult? Function( String message)?  failed,TResult? Function( String reason)?  reconnecting,TResult? Function( String host,  String type,  String fingerprint)?  unknownHostKey,}) {final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped();case Connecting() when connecting != null:
 return connecting();case Connected() when connected != null:
 return connected(_that.warning);case Failed() when failed != null:
 return failed(_that.message);case Reconnecting() when reconnecting != null:
-return reconnecting(_that.reason);case _:
+return reconnecting(_that.reason);case UnknownHostKey() when unknownHostKey != null:
+return unknownHostKey(_that.host,_that.type,_that.fingerprint);case _:
   return null;
 
 }
@@ -451,6 +457,78 @@ class _$ReconnectingCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') $Res call({Object? reason = null,}) {
   return _then(Reconnecting(
 null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class UnknownHostKey extends TunnelStatus {
+  const UnknownHostKey({required this.host, required this.type, required this.fingerprint}): super._();
+  
+
+ final  String host;
+ final  String type;
+ final  String fingerprint;
+
+/// Create a copy of TunnelStatus
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$UnknownHostKeyCopyWith<UnknownHostKey> get copyWith => _$UnknownHostKeyCopyWithImpl<UnknownHostKey>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is UnknownHostKey&&(identical(other.host, host) || other.host == host)&&(identical(other.type, type) || other.type == type)&&(identical(other.fingerprint, fingerprint) || other.fingerprint == fingerprint));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,host,type,fingerprint);
+}
+
+@override
+String toString() {
+    return 'TunnelStatus.unknownHostKey(host: $host, type: $type, fingerprint: $fingerprint)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $UnknownHostKeyCopyWith<$Res> implements $TunnelStatusCopyWith<$Res> {
+  factory $UnknownHostKeyCopyWith(UnknownHostKey value, $Res Function(UnknownHostKey) _then) = _$UnknownHostKeyCopyWithImpl;
+@useResult
+$Res call({
+ String host, String type, String fingerprint
+});
+
+
+
+
+}
+/// @nodoc
+class _$UnknownHostKeyCopyWithImpl<$Res>
+    implements $UnknownHostKeyCopyWith<$Res> {
+  _$UnknownHostKeyCopyWithImpl(this._self, this._then);
+
+  final UnknownHostKey _self;
+  final $Res Function(UnknownHostKey) _then;
+
+/// Create a copy of TunnelStatus
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? host = null,Object? type = null,Object? fingerprint = null,}) {
+  return _then(UnknownHostKey(
+host: null == host ? _self.host : host // ignore: cast_nullable_to_non_nullable
+as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,fingerprint: null == fingerprint ? _self.fingerprint : fingerprint // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

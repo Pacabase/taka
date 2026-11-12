@@ -14,6 +14,7 @@ class const TunnelTile({
   required final Tunnel tunnel,
   required final TunnelStatus status,
   required final void Function() onToggle,
+  required final void Function(String fingerprint) onTrust,
   required final void Function() onEdit,
   required final void Function() onDelete,
 }) extends StatefulWidget {
@@ -64,6 +65,24 @@ class _TunnelTileState extends State<TunnelTile> {
         details: message,
       ),
       Connecting() => captioned('Connecting…', colors.orange),
+      UnknownHostKey(:final host, :final type, :final fingerprint) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 2,
+        children: [
+          captioned(
+            'First connection to $host. Check its $type key:',
+            colors.orange,
+          ),
+          SelectableText(
+            fingerprint,
+            style: TextStyle(
+              fontFamily: monoFont,
+              fontSize: 12,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+      ),
       Reconnecting(:final reason) => captioned(
         'Reconnecting — ${plainReason(reason)}',
         colors.orange,
@@ -149,6 +168,14 @@ class _TunnelTileState extends State<TunnelTile> {
                 ),
               if (status is Failed)
                 AppIcon(AppIcons.triangleAlert, color: colors.red),
+              if (status case UnknownHostKey(:final fingerprint))
+                Tooltip(
+                  message: "Only if it's the key the server's owner gave you",
+                  child: TextButton(
+                    onPressed: () => widget.onTrust(fingerprint),
+                    child: const Text('Trust'),
+                  ),
+                ),
               NativeSwitch(
                 value: status.isOn,
                 color: status is Connecting || status is Reconnecting

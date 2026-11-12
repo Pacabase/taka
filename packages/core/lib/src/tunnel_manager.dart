@@ -130,6 +130,26 @@ class TunnelManager({
     }
   }
 
+  /// Trusts the key tunnel [id] stopped at, if it still shows [fingerprint],
+  /// then connects it and every tunnel that stopped at the same key.
+  Future<void> trustHostKey(String id, String fingerprint) async {
+    final asked = _sessions[id];
+    final status = asked?.status;
+    if (asked == null ||
+        status is! UnknownHostKey ||
+        status.fingerprint != fingerprint) {
+      return;
+    }
+
+    await asked.trust();
+    if (asked.status is! Connected) return;
+
+    await Future.wait([
+      for (final session in [..._sessions.values])
+        if (session.status == status) _start(session.tunnel),
+    ]);
+  }
+
   Future<void> connectAll() => Future.wait(
     _tunnels.map((tunnel) => tunnel.id).whereNot(_isOn).map(toggle),
   );
