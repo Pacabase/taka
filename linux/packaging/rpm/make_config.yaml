@@ -1,0 +1,8 @@
+# The same libraries as the .deb, under Fedora's names.
+vendor: Pacabase
+requires:
+  - gtk3
+  - libX11
+  - libXi
+  - libstdc++
+  - openssh-clients

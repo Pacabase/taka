@@ -1,0 +1,24 @@
+name: 'Install fastforge'
+description: 'A checksum-pinned fastforge, which makes the disk image, the .deb and the .rpm.'
+
+runs:
+  using: 'composite'
+  steps:
+    # Bumping VERSION means updating every sum from that release's assets.
+    - name: Install fastforge
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      env:
+        VERSION: 0.7.0-dev.7
+      run: |
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          macOS-ARM64) target=aarch64-apple-darwin sum=1dfe1aeaf9f289875748da69fb4b57acf203137bb7585f6661dad209fd470dea ;;
+          macOS-X64) target=x86_64-apple-darwin sum=f00dc810f0c0c18fdba04ec0a52df3639060641bf9519c8f92f86e317336c112 ;;
+          Linux-X64) target=x86_64-unknown-linux-gnu sum=e1bc0c4aa580d3e38046218122f3142575497d9c23ee485c5d0f957fdff13b8f ;;
+          Linux-ARM64) target=aarch64-unknown-linux-gnu sum=1caafc42afd9e51d567bf8bf84476d6633f71878d6343aa90a29394b2a786005 ;;
+          *) echo "No fastforge for $RUNNER_OS $RUNNER_ARCH" >&2; exit 1 ;;
+        esac
+        curl -fsSLo fastforge.tar.gz "https://github.com/fastforgedev/fastforge/releases/download/v$VERSION/fastforge-$VERSION-$target.tar.gz"
+        echo "$sum  fastforge.tar.gz" | shasum -a 256 -c -
+        tar -xzf fastforge.tar.gz
+        echo "$PWD/fastforge-$VERSION-$target" >> "$GITHUB_PATH"

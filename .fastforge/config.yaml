@@ -1,0 +1,14 @@
+# What fastforge puts in the disk image, the .deb and the .rpm that build.yml
+# makes. The name, version and description come from pubspec.yaml.
+version: 1
+
+project:
+  display_name: Taka
+  homepage: https://github.com/Pacabase/taka
+  icon: assets/icon/icon.png
+  license: BSD-3-Clause
+  maintainer: Pacabase <taka@pacabase.com>
+
+env:
+  # strip can break a compiled Dart executable, which the helper is.
+  STRIP: "false"

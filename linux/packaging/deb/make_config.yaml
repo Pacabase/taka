@@ -1,0 +1,9 @@
+# The window needs GTK 3, and the helper's tray library also needs libX11 and
+# libXi. Taka runs the system's ssh.
+section: net
+dependencies:
+  - libgtk-3-0
+  - libx11-6
+  - libxi6
+  - libstdc++6
+  - openssh-client
