@@ -19,6 +19,7 @@ class TunnelSession({
   required final Future<bool> Function()? isLocked,
   required final Future<void> Function(int localPort)? checkDestination,
   required final Duration warningLifetime,
+  required final Duration checkWindow,
   required final List<Duration> retryDelays,
   required final Duration lockedRecheck,
   required final Duration stableAfter,
@@ -34,6 +35,7 @@ class TunnelSession({
   int _attempts = 0;
   bool _waitsForUnlock = false;
   bool _hasChecked = false;
+  bool _isChecking = false;
 
   TunnelStatus get status => _status;
 
@@ -63,10 +65,19 @@ class TunnelSession({
   }
 
   Future<void> _checkDestination() async {
+    final check = checkDestination;
+    if (check == null) return;
+
+    _isChecking = true;
     try {
-      await checkDestination?.call(tunnel.localPort);
+      await check(tunnel.localPort);
+      // ssh says the destination refused a moment after the check's own
+      // connection has closed.
+      await Future<void>.delayed(checkWindow);
     } on Object catch (exception) {
       _log.w('${tunnel.title}: could not check where it leads ($exception)');
+    } finally {
+      _isChecking = false;
     }
   }
 
@@ -119,7 +130,9 @@ class TunnelSession({
     // ssh's lines, named since tunnels connect at once.
     void onLog(SshLog log) {
       _sshLog.d('${tunnel.title}: ${log.line}');
-      if (log case SshForwardFailed(:final reason)) _warn(reason);
+      if (log case SshForwardFailed(:final reason)) {
+        _isChecking ? _refuse(log.line) : _warn(reason);
+      }
     }
 
     final SshTunnel opened;
@@ -237,6 +250,18 @@ class TunnelSession({
     _log.w('${tunnel.title} failed: $message');
     _status = Failed(message);
     onChange();
+  }
+
+  // The check the user turned it on for found nothing behind it: a tunnel
+  // that can't reach its destination is no use left on.
+  void _refuse(String line) {
+    if (isStopped || _status is! Connected) return;
+
+    _clearWarning?.cancel();
+    _stable?.cancel();
+    _abort.complete();
+    unawaited(_opened?.close());
+    _fail(line);
   }
 
   // A stopping session has left the manager's sessions but is still Connected.

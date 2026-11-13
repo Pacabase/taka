@@ -18,6 +18,11 @@ void main() {
           "or forwarding isn't allowed.",
     ),
     (
+      'channel 2: open failed: connect failed: Connection refused',
+      "can't reach where it leads",
+      "The server can't reach where this tunnel leads.",
+    ),
+    (
       'ssh: connect to host bastion port 22: Connection refused',
       "can't reach the server",
       "Can't reach the server.",

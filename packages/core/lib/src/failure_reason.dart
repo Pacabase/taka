@@ -7,6 +7,12 @@ final _remotePortRefused = RegExp(
 
 const _reasons = [
   (
+    // ssh's line for a forwarded connection the server couldn't make.
+    patterns: [': open failed: '],
+    short: "can't reach where it leads",
+    sentence: "The server can't reach where this tunnel leads.",
+  ),
+  (
     patterns: ['Could not resolve hostname'],
     short: 'server not found',
     sentence: "Can't find the server.",
