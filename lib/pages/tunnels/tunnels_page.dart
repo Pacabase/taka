@@ -212,6 +212,10 @@ class const _TunnelList({
               group,
               key: ValueKey('group $group'),
             ),
+            GroupEndRow(:final group) => SizedBox(
+              key: ValueKey('end $group'),
+              height: 12,
+            ),
             TunnelRow(:final tunnel) => Column(
               key: ValueKey(tunnel.id),
               children: [
@@ -244,10 +248,6 @@ class const _TunnelList({
                     ],
                   ),
                 ),
-                if (rows.elementAtOrNull(index + 1)
-                    case TunnelRow(tunnel: Tunnel(group: null))
-                    when tunnel.group != null)
-                  const SizedBox(height: 12),
               ],
             ),
           },

@@ -182,77 +182,104 @@ void main() {
           (row) => switch (row) {
             GroupHeaderRow(:final group, :final size) => '[$group $size]',
             TunnelRow(:final tunnel) => tunnel.id,
+            GroupEndRow() => '/',
           },
         )
         .join(' ');
 
-    test('shows each group where its first tunnel is, with a header', () {
-      expect(tunnels.shown, [a, c, b, d, e]);
-      expect(layout(tunnels), '[Prod 2] a c b d [dev 1] e');
-    });
+    // Rows: 0 [Prod 2], 1 a, 2 c, 3 /, 4 b, 5 d, 6 [dev 1], 7 e, 8 /.
+    test(
+      'shows each group where its first tunnel is, between a header and a gap',
+      () {
+        expect(tunnels.shown, [a, c, b, d, e]);
+        expect(layout(tunnels), '[Prod 2] a c / b d [dev 1] e /');
+      },
+    );
 
     group('a dropped tunnel', () {
       test('dropped above a header is in no group', () {
-        expect(layout(tunnels.droppedAt(3, 0)), 'b [Prod 2] a c d [dev 1] e');
-        expect(tunnels.droppedAt(3, 0).first, b);
+        expect(
+          layout(tunnels.droppedAt(4, 0)),
+          'b [Prod 2] a c / d [dev 1] e /',
+        );
       });
 
       test("dropped among a group's tunnels joins it", () {
-        final dropped = tunnels.droppedAt(4, 2);
-
-        expect(layout(dropped), '[Prod 3] a d c b [dev 1] e');
-        expect(dropped.firstWhere((tunnel) => tunnel.id == 'd').group, 'Prod');
+        expect(
+          layout(tunnels.droppedAt(5, 2)),
+          '[Prod 3] a d c / b [dev 1] e /',
+        );
       });
 
       test('dropped right under a header joins that group', () {
-        expect(layout(tunnels.droppedAt(3, 1)), '[Prod 3] b a c d [dev 1] e');
+        expect(
+          layout(tunnels.droppedAt(4, 1)),
+          '[Prod 3] b a c / d [dev 1] e /',
+        );
       });
 
-      test("dropped right after its own group's last tunnel stays in", () {
-        expect(layout(tunnels.droppedAt(1, 2)), '[Prod 2] c a b d [dev 1] e');
+      test("dropped above a group's gap joins it as its last tunnel", () {
+        expect(
+          layout(tunnels.droppedAt(4, 3)),
+          '[Prod 3] a c b / d [dev 1] e /',
+        );
       });
 
-      test("dropped below another group's last tunnel is in no group", () {
-        final dropped = tunnels.droppedAt(6, 3);
+      test("dropped below a group's gap lands after the group", () {
+        final dropped = tunnels.droppedAt(1, 3);
 
-        expect(layout(dropped), '[Prod 2] a c e b d');
-        expect(dropped.firstWhere((tunnel) => tunnel.id == 'e').group, isNull);
-      });
-
-      test('dropped among the tunnels in no group leaves its group', () {
-        expect(layout(tunnels.droppedAt(1, 3)), '[Prod 1] c b a d [dev 1] e');
+        expect(layout(dropped), '[Prod 1] c / a b d [dev 1] e /');
+        expect(dropped.firstWhere((tunnel) => tunnel.id == 'a').group, isNull);
       });
 
       test(
         "taken out of its group, a group's only tunnel leaves no header",
         () {
-          expect(layout(tunnels.droppedAt(6, 0)), 'e [Prod 2] a c b d');
+          expect(layout(tunnels.droppedAt(7, 0)), 'e [Prod 2] a c / b d');
         },
       );
 
-      test('dropped past the end lands at the end', () {
-        expect(tunnels.droppedAt(0, 99), tunnels.droppedAt(0, 4));
-        expect(tunnels.droppedAt(3, 99).last.id, 'b');
+      test('dropped past the end lands at the end, in no group', () {
+        expect(tunnels.droppedAt(4, 99).last, b);
       });
     });
 
     group('a dropped group', () {
       test('moves with all its tunnels', () {
-        expect(layout(tunnels.droppedAt(0, 4)), 'b d [dev 1] e [Prod 2] a c');
-        expect(layout(tunnels.droppedAt(5, 0)), '[dev 1] e [Prod 2] a c b d');
+        expect(
+          layout(tunnels.droppedAt(0, 5)),
+          'b d [dev 1] e / [Prod 2] a c /',
+        );
+        expect(
+          layout(tunnels.droppedAt(6, 0)),
+          '[dev 1] e / [Prod 2] a c / b d',
+        );
       });
 
       test('can sit between tunnels in no group', () {
-        expect(layout(tunnels.droppedAt(5, 4)), '[Prod 2] a c b [dev 1] e d');
+        expect(
+          layout(tunnels.droppedAt(6, 5)),
+          '[Prod 2] a c / b [dev 1] e / d',
+        );
       });
 
       test(
         'dropped inside another group lands next to it, the nearer side',
         () {
-          expect(layout(tunnels.droppedAt(5, 2)), '[Prod 2] a c [dev 1] e b d');
-          expect(layout(tunnels.droppedAt(5, 1)), '[dev 1] e [Prod 2] a c b d');
+          expect(
+            layout(tunnels.droppedAt(6, 3)),
+            '[Prod 2] a c / [dev 1] e / b d',
+          );
+          expect(
+            layout(tunnels.droppedAt(6, 1)),
+            '[dev 1] e / [Prod 2] a c / b d',
+          );
         },
       );
+
+      test('dropped past the end lands at the end', () {
+        expect(tunnels.droppedAt(0, 99), tunnels.droppedAt(0, 5));
+      });
     });
 
     test('a blank group is no group', () {

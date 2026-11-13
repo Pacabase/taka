@@ -135,7 +135,14 @@ sealed class const TunnelListRow() {
 class const GroupHeaderRow(final String group, final int size)
     extends TunnelListRow {
   @override
-  int get span => 1 + size;
+  int get span => size + 2;
+}
+
+/// The gap after a group's last tunnel. A tunnel dropped above it joins the
+/// group as its last one; one dropped below it lands after the group.
+class const GroupEndRow(final String group) extends TunnelListRow {
+  @override
+  int get span => 0;
 }
 
 class const TunnelRow(final Tunnel tunnel) extends TunnelListRow {
@@ -178,6 +185,7 @@ int _landing(
 String? _groupAt(List<TunnelListRow> rows, int index) =>
     switch (index >= 0 && index < rows.length ? rows[index] : null) {
       TunnelRow(:final tunnel) => tunnel.group,
+      GroupEndRow(:final group) => group,
       _ => null,
     };
 
@@ -197,6 +205,7 @@ extension TunnelOrder on List<Tunnel> {
           if (seen.add(group)) ...[
             GroupHeaderRow(group, members[group]!.length),
             for (final member in members[group]!) TunnelRow(member),
+            GroupEndRow(group),
           ],
         ] else
           TunnelRow(tunnel),
@@ -217,21 +226,16 @@ extension TunnelOrder on List<Tunnel> {
   }
 
   /// The tunnels once [rows] row [from] is dropped at [to] among the others.
-  /// A header carries its whole group. A tunnel takes the group of the tunnel
-  /// it lands above, so one dropped below another group's last tunnel is out,
-  /// but one dropped right after its own group's last tunnel stays in.
+  /// A header carries its whole group, and a tunnel takes the group of the
+  /// row it lands above.
   List<Tunnel> droppedAt(int from, int to) {
     final rows = this.rows;
     final moving = rows[from];
     final others = _without(rows, from);
     final at = _landing(rows, others, from, to);
     final regrouped = switch (moving) {
-      TunnelRow(:final tunnel) => tunnel.copyWith(
-        group:
-            _groupAt(others, at) ??
-            (_groupAt(others, at - 1) == tunnel.group ? tunnel.group : null),
-      ),
-      GroupHeaderRow() => null,
+      TunnelRow(:final tunnel) => tunnel.copyWith(group: _groupAt(others, at)),
+      GroupHeaderRow() || GroupEndRow() => null,
     };
 
     return [

@@ -169,6 +169,51 @@ void main() {
     ).called(1);
   });
 
+  testWidgets("a tunnel dropped above a group's gap joins it as its last", (
+    tester,
+  ) async {
+    final bloc = await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            proxy,
+          ],
+        ),
+      ),
+    );
+    Finder tile(String name) =>
+        find.ancestor(of: find.text(name), matching: find.byType(TunnelTile));
+    // Proxy's top just above the middle of the gap under Database.
+    final distance =
+        tester.getBottomLeft(tile('Database')).dy +
+        4 -
+        tester.getTopLeft(tile('Proxy')).dy;
+
+    final drag = await tester.startGesture(
+      tester.getCenter(find.text('Proxy')),
+      kind: PointerDeviceKind.mouse,
+    );
+    for (var step = 0; step < 10; step++) {
+      await drag.moveBy(Offset(0, distance / 10));
+      await tester.pump();
+    }
+    await drag.up();
+    await tester.pumpAndSettle();
+
+    verify(
+      () => bloc.add(
+        const TunnelsEvent.send(
+          AgentCommand.arrange([
+            (id: 'a1', group: 'Prod'),
+            (id: 'b2', group: 'Prod'),
+          ]),
+        ),
+      ),
+    ).called(1);
+  });
+
   testWidgets("a tunnel dropped under a group's header joins the group", (
     tester,
   ) async {

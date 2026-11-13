@@ -6,7 +6,8 @@ import 'package:taka/theme/taka_colors.dart';
 
 /// ReorderableListView's fixed 250ms animations feel slow for a short list.
 /// [onReorder]'s `to` is the row's index among the others. [spanOf] is how
-/// many rows a drag from a row carries along, itself included, and [settle]
+/// many rows a drag from a row carries along, itself included (0 for a row
+/// that can't be dragged), and [settle]
 /// moves `to` to where it can really land, while dragging.
 class const ReorderableRows({
   super.key,
@@ -138,12 +139,14 @@ class _ReorderableRowsState extends State<ReorderableRows> {
   );
 
   void _start(int index) {
+    final span = widget.spanOf?.call(index) ?? 1;
+    if (span == 0) return;
     final column = _column.currentContext!.findRenderObject()! as RenderFlex;
     final rows = column.getChildrenAsList();
     setState(
       () => _drag = _Drag(
         index,
-        widget.spanOf?.call(index) ?? 1,
+        span,
         [for (final row in rows) (row.parentData! as FlexParentData).offset.dy],
         [for (final row in rows) row.size.height],
       ),
