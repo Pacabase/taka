@@ -17,6 +17,7 @@ class TunnelSession({
   required final void Function() onChange,
   required final Future<void> Function()? beforeConnect,
   required final Future<bool> Function()? isLocked,
+  required final Future<void> Function(int localPort)? checkDestination,
   required final Duration warningLifetime,
   required final List<Duration> retryDelays,
   required final Duration lockedRecheck,
@@ -53,6 +54,17 @@ class TunnelSession({
     onChange();
     _log.i('Connected ${tunnel.title}');
     unawaited(opened.done.then((_) => _drop(null), onError: _drop));
+    if (tunnel.kind == TunnelKind.local) unawaited(_checkDestination());
+  }
+
+  // ssh asks the server to reach the destination only once something
+  // connects, so one connection now shows a refusal as a warning at once.
+  Future<void> _checkDestination() async {
+    try {
+      await checkDestination?.call(tunnel.localPort);
+    } on Object catch (exception) {
+      _log.w('${tunnel.title}: could not check where it leads ($exception)');
+    }
   }
 
   Future<void> stop() async {

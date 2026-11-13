@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:core/src/port_probe.dart';
 import 'package:core/src/tunnel.dart';
 import 'package:core/src/tunnel_session.dart';
 import 'package:core/src/tunnel_store.dart';
@@ -15,6 +16,10 @@ class TunnelManager({
   required final SshClient client,
   final Future<void> Function()? beforeConnect,
   final Future<bool> Function()? isLocked,
+
+  /// Run with a forward's local port once it connects, such as
+  /// [probeLocalPort]; a refused destination then comes back as a warning.
+  final Future<void> Function(int localPort)? checkDestination,
   final Duration warningLifetime = const Duration(seconds: 30),
 
   /// A dropped tunnel fails once a try after the last delay fails too.
@@ -178,6 +183,7 @@ class TunnelManager({
       onChange: _emit,
       beforeConnect: beforeConnect,
       isLocked: isLocked,
+      checkDestination: checkDestination,
       warningLifetime: warningLifetime,
       retryDelays: retryDelays,
       lockedRecheck: lockedRecheck,

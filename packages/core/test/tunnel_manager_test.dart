@@ -1130,6 +1130,90 @@ void main() {
     });
   });
 
+  group('checking where a forward leads', () {
+    late List<int> checked;
+
+    Future<TunnelManager> checking({
+      Future<void> Function(int localPort)? check,
+    }) async {
+      checked = [];
+      final manager = TunnelManager(
+        store: store,
+        client: client,
+        checkDestination: check ?? (port) async => checked.add(port),
+      );
+      addTearDown(manager.close);
+      await manager.load();
+      return manager;
+    }
+
+    test("checks a forward's local port once it connects", () async {
+      final manager = await checking();
+
+      await manager.toggle('a1');
+      await pumpEventQueue();
+
+      expect(checked, [15432]);
+    });
+
+    test('checks nothing for a SOCKS proxy', () async {
+      final manager = await checking();
+
+      await manager.toggle('b2');
+      await pumpEventQueue();
+
+      expect(checked, isEmpty);
+    });
+
+    test('checks nothing when the tunnel fails to connect', () async {
+      when(
+        openAnyTunnel,
+      ).thenAnswer((_) => Future.error(const SshTunnelException('Timed out')));
+      final manager = await checking();
+
+      await manager.toggle('a1');
+      await pumpEventQueue();
+
+      expect(checked, isEmpty);
+    });
+
+    test('shows the refusal the check brings out as a warning', () async {
+      late void Function(SshLog log) sshSays;
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        sshSays =
+            invocation.namedArguments[#onLog]! as void Function(SshLog log);
+        return tunnel;
+      });
+      final manager = await checking(
+        check: (_) async => sshSays(
+          const SshForwardFailed(
+            'channel 2: open failed: connect failed: Connection refused',
+            reason: 'Connection refused',
+          ),
+        ),
+      );
+
+      await manager.toggle('a1');
+      await pumpEventQueue();
+
+      expect(
+        manager.snapshot.statusOf('a1'),
+        const Connected(warning: 'Connection refused'),
+      );
+    });
+
+    test('stays connected when the check itself fails', () async {
+      final manager = await checking(
+        check: (_) async => throw const SocketException('Connection refused'),
+      );
+
+      await manager.toggle('a1');
+      await pumpEventQueue();
+
+      expect(manager.snapshot.statusOf('a1'), const Connected());
+    });
+  });
+
   group('a warning from ssh', () {
     const refused = SshForwardFailed(
       'channel 2: open failed: connect failed: Connection refused',
