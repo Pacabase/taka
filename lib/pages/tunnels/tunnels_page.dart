@@ -255,7 +255,7 @@ class const _TunnelList({
                           height: 1,
                           indent: 6,
                           endIndent: 6,
-                          color: colors.guide,
+                          color: colors.selection,
                         ),
                       ),
                   ],
