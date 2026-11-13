@@ -37,13 +37,12 @@ class _TunnelFormState extends State<TunnelForm> {
 
   bool get _isSocket => _isLocal && _toHost.text.trim().startsWith('/');
 
-  // sshCommand is null for what system_ssh refuses, but a path as local host passes.
+  // sshCommand is null for a tunnel system_ssh would refuse to open.
   bool get _isValid =>
       _port(_fromPort.text) != null &&
       _sshHost.text.trim().isNotEmpty &&
       (!_isLocal || _toHost.text.trim().isNotEmpty) &&
       (_kind == TunnelKind.socks || _isSocket || _port(_toPort.text) != null) &&
-      !(_isRemote && _toHost.text.contains('/')) &&
       _tunnel.sshCommand != null;
 
   @override
