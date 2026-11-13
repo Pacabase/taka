@@ -80,7 +80,7 @@ void main() {
   test('load rejects a file of another version', () async {
     await file.create(recursive: true);
     await file.writeAsString(
-      jsonEncode({'version': 2, 'tunnels': <Object?>[]}),
+      jsonEncode({'version': 3, 'tunnels': <Object?>[]}),
     );
 
     expect(store().load(), throwsFormatException);
@@ -104,7 +104,7 @@ void main() {
   test('save refuses to overwrite a file it could not read', () async {
     await file.create(recursive: true);
     await file.writeAsString(
-      jsonEncode({'version': 2, 'tunnels': <Object?>[]}),
+      jsonEncode({'version': 3, 'tunnels': <Object?>[]}),
     );
     final saving = store();
     await expectLater(saving.load(), throwsFormatException);
@@ -113,7 +113,7 @@ void main() {
       saving.save([proxy], on: const {}),
       throwsA(isA<FileSystemException>()),
     );
-    expect(jsonDecode(await file.readAsString()), containsPair('version', 2));
+    expect(jsonDecode(await file.readAsString()), containsPair('version', 3));
   });
 
   test('a failed save does not stop the next one', () async {

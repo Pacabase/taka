@@ -1,6 +1,8 @@
 @Tags(['unit'])
 library;
 
+import 'dart:convert';
+
 import 'package:core/core.dart';
 import 'package:test/test.dart';
 
@@ -14,9 +16,27 @@ void main() {
     expect(decoded.on, {'b2'});
   });
 
+  Object? versionOf(List<Tunnel> tunnels) =>
+      (jsonDecode(encodeTunnels(tunnels)) as Map<String, Object?>)['version'];
+
+  test('stays at version 1 for tunnels a version 1 build can keep', () {
+    expect(versionOf([database, proxy]), 1);
+  });
+
+  test('is version 2 once a remote or socket tunnel is in it', () {
+    expect(versionOf([database, preview]), 2);
+    expect(versionOf([proxy, docker]), 2);
+  });
+
+  test('decodes version 2', () {
+    final decoded = decodeTunnels(encodeTunnels([preview, docker]));
+
+    expect(decoded.tunnels, [preview, docker]);
+  });
+
   for (final text in [
     '[]',
-    '{"version": 2, "tunnels": []}',
+    '{"version": 3, "tunnels": []}',
     '{"tunnels": 1}',
   ]) {
     test('$text is a FormatException', () {
