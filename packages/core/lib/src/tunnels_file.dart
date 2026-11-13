@@ -2,11 +2,18 @@ import 'dart:convert';
 
 import 'package:core/src/tunnel.dart';
 
-const _version = 1;
+// Version 1 builds would save remote and socket tunnels back as local ones.
+int _versionOf(List<Tunnel> tunnels) =>
+    tunnels.any(
+      (tunnel) =>
+          tunnel.kind == TunnelKind.remote || tunnel.remoteSocket != null,
+    )
+    ? 2
+    : 1;
 
 String encodeTunnels(List<Tunnel> tunnels, {Set<String> on = const {}}) =>
     const JsonEncoder.withIndent('  ').convert({
-      'version': _version,
+      'version': _versionOf(tunnels),
       'tunnels': tunnels.map((tunnel) => tunnel.toJson()).toList(),
       'on': [
         for (final tunnel in tunnels)
@@ -17,7 +24,7 @@ String encodeTunnels(List<Tunnel> tunnels, {Set<String> on = const {}}) =>
 /// Reads what [encodeTunnels] wrote, or throws a [FormatException].
 ({List<Tunnel> tunnels, Set<String> on}) decodeTunnels(String text) =>
     switch (jsonDecode(text)) {
-      {'version': _version, 'tunnels': final List<Object?> tunnels} &&
+      {'version': 1 || 2, 'tunnels': final List<Object?> tunnels} &&
           final Map<Object?, Object?> saved =>
         (
           tunnels: tunnels.map(Tunnel.fromJson).toList(),
