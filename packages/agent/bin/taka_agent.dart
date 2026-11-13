@@ -38,6 +38,7 @@ Future<void> _start() async {
         ? null
         : () => Process.run('open', [agentBundle]),
     isLocked: isScreenLocked,
+    checkDestination: probeLocalPort,
   );
   try {
     await manager.load();
