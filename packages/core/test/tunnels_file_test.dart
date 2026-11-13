@@ -9,13 +9,6 @@ import 'package:test/test.dart';
 import 'fakes/fakes.dart';
 
 void main() {
-  test('decodes what it encodes, with the tunnels that were on', () {
-    final decoded = decodeTunnels(encodeTunnels([database, proxy], on: {'b2'}));
-
-    expect(decoded.tunnels, [database, proxy]);
-    expect(decoded.on, {'b2'});
-  });
-
   Object? versionOf(List<Tunnel> tunnels) =>
       (jsonDecode(encodeTunnels(tunnels)) as Map<String, Object?>)['version'];
 
@@ -28,11 +21,20 @@ void main() {
     expect(versionOf([proxy, docker]), 2);
   });
 
-  test('decodes version 2', () {
-    final decoded = decodeTunnels(encodeTunnels([preview, docker]));
+  for (final tunnels in [
+    [database, proxy],
+    [preview, docker],
+  ]) {
+    test('decodes what it encodes at version ${versionOf(tunnels)}, '
+        'with the tunnels that were on', () {
+      final decoded = decodeTunnels(
+        encodeTunnels(tunnels, on: {tunnels.last.id}),
+      );
 
-    expect(decoded.tunnels, [preview, docker]);
-  });
+      expect(decoded.tunnels, tunnels);
+      expect(decoded.on, {tunnels.last.id});
+    });
+  }
 
   for (final text in [
     '[]',

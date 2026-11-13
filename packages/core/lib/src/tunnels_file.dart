@@ -2,8 +2,7 @@ import 'dart:convert';
 
 import 'package:core/src/tunnel.dart';
 
-// Version 1 builds would save remote and socket tunnels back as broken local
-// ones, so a file with any of those is version 2, which they don't open.
+// Version 1 builds would save remote and socket tunnels back as local ones.
 int _versionOf(List<Tunnel> tunnels) =>
     tunnels.any(
       (tunnel) =>
