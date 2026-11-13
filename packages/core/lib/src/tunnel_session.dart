@@ -55,7 +55,7 @@ class TunnelSession({
     onChange();
     _log.i('Connected ${tunnel.title}');
     unawaited(opened.done.then((_) => _drop(null), onError: _drop));
-    // MySQL blocks a host after many connections that never log in.
+    // Only when turned on: the destination sees each check as a client.
     if (tunnel.kind == TunnelKind.local && !isRestored && !_hasChecked) {
       _hasChecked = true;
       unawaited(_checkDestination());
