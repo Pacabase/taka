@@ -8,7 +8,6 @@ class const HostInput({
   required final List<String> hosts,
   required final String hint,
   required final TextStyle style,
-  final bool autofocus = false,
   required final void Function() onSubmitted,
 }) extends StatefulWidget {
   @override
@@ -31,8 +30,10 @@ class _HostInputState extends State<HostInput> {
     return RawAutocomplete<String>(
       textEditingController: widget.controller,
       focusNode: _focus,
+      // Only once typed, so Enter in an empty field saves the form.
       optionsBuilder: (value) {
         final typed = value.text.trim().toLowerCase();
+        if (typed.isEmpty) return const [];
         return widget.hosts.where(
           (host) => host.toLowerCase().contains(typed) && host != value.text,
         );
@@ -42,7 +43,6 @@ class _HostInputState extends State<HostInput> {
         focusNode: focus,
         hint: widget.hint,
         style: widget.style,
-        autofocus: widget.autofocus,
         onSubmitted: () {
           final typed = controller.text;
           if (!widget.hosts.contains(typed.trim())) onFieldSubmitted();

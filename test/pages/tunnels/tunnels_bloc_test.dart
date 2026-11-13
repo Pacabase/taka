@@ -81,18 +81,6 @@ void main() {
   );
 
   blocTest<TunnelsBloc, TunnelsState>(
-    'shows a moved tunnel in its new place before the agent replies',
-    build: () => TunnelsBloc(agent: agent),
-    seed: () => const Ready(TunnelsSnapshot(tunnels: [database, proxy])),
-    act: (bloc) =>
-        bloc.add(const TunnelsEvent.send(AgentCommand.move('b2', 0))),
-    expect: () => const [
-      Ready(TunnelsSnapshot(tunnels: [proxy, database])),
-    ],
-    verify: (_) => expect(agent.sent, const [AgentCommand.move('b2', 0)]),
-  );
-
-  blocTest<TunnelsBloc, TunnelsState>(
     'shows an arrangement before the agent answers, and sends it',
     build: () => TunnelsBloc(agent: agent),
     seed: () => const Ready(TunnelsSnapshot(tunnels: [database, proxy])),
@@ -114,16 +102,24 @@ void main() {
         ),
       ),
     ],
-    verify: (_) => expect(agent.sent, hasLength(1)),
+    verify: (_) => expect(agent.sent, const [
+      AgentCommand.arrange([
+        (id: 'b2', group: 'Prod'),
+        (id: 'a1', group: null),
+      ]),
+    ]),
   );
 
   blocTest<TunnelsBloc, TunnelsState>(
-    'only sends a move while it has no snapshot yet',
+    'only sends an arrangement while it has no snapshot yet',
     build: () => TunnelsBloc(agent: agent),
-    act: (bloc) =>
-        bloc.add(const TunnelsEvent.send(AgentCommand.move('b2', 0))),
+    act: (bloc) => bloc.add(
+      const TunnelsEvent.send(AgentCommand.arrange([(id: 'b2', group: null)])),
+    ),
     expect: () => const <TunnelsState>[],
-    verify: (_) => expect(agent.sent, const [AgentCommand.move('b2', 0)]),
+    verify: (_) => expect(agent.sent, const [
+      AgentCommand.arrange([(id: 'b2', group: null)]),
+    ]),
   );
 
   blocTest<TunnelsBloc, TunnelsState>(

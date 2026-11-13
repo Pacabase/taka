@@ -80,8 +80,8 @@ void main() {
     tester,
   ) async {
     await pumpForm(tester);
-    // Group, Name, then the three kinds of tunnel.
-    for (var press = 0; press < 4; press++) {
+    // From Name, past the three kinds of tunnel.
+    for (var press = 0; press < 3; press++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     }
     await tester.sendKeyEvent(LogicalKeyboardKey.space);
@@ -293,7 +293,8 @@ void main() {
         .map((field) => field.controller)
         .toList();
 
-    for (final (index, controller) in fields.indexed) {
+    // It opens on Name, under Group.
+    for (final (index, controller) in fields.indexed.skip(1)) {
       expect(focusedController(tester), controller);
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       // After Name, Tab passes the three kinds of tunnel.
@@ -320,6 +321,39 @@ void main() {
   });
 
   group('the group', () {
+    testWidgets('lists no groups until its field is used', (tester) async {
+      await pumpForm(tester, groups: ['Production']);
+      await tester.pump();
+
+      expect(find.text('Production'), findsNothing);
+    });
+
+    testWidgets('left empty, Enter saves instead of picking one', (
+      tester,
+    ) async {
+      await pumpForm(tester, groups: ['Production']);
+      await fillLocal(tester);
+      await tester.tap(field(0));
+      await tester.pump();
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+
+      expect(saved.single.group, isNull);
+    });
+
+    testWidgets("typed in another case, is the group that's in use", (
+      tester,
+    ) async {
+      await pumpForm(tester, groups: ['Production']);
+      await fillLocal(tester);
+      await tester.enterText(field(0), 'production');
+      await tester.pump();
+
+      await tester.tap(find.text('Add'));
+
+      expect(saved.single.group, 'Production');
+    });
+
     testWidgets('is saved without the spaces around it', (tester) async {
       await pumpForm(tester);
       await fillLocal(tester);

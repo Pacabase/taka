@@ -149,8 +149,14 @@ class AgentTray({
 
   Future<void> _connectAll({String? group}) async {
     await manager.connectAll(group: group);
-    final statuses = manager.snapshot.statuses.values;
-    if (statuses.any((status) => status is UnknownHostKey)) onManageTunnels();
+    final snapshot = manager.snapshot;
+    if (snapshot.tunnels.any(
+      (tunnel) =>
+          (group == null || tunnel.group == group) &&
+          snapshot.statusOf(tunnel.id) is UnknownHostKey,
+    )) {
+      onManageTunnels();
+    }
   }
 
   void _run(TrayAction action) => switch (action) {

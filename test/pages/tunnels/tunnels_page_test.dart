@@ -143,6 +143,8 @@ void main() {
       await drag.moveBy(const Offset(0, 10));
       await tester.pump();
     }
+    // The lifted copy carries the group's tunnels too.
+    expect(find.text('Cache'), findsNWidgets(2));
     await drag.up();
     await tester.pumpAndSettle();
 

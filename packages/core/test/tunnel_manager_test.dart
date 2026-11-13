@@ -137,6 +137,20 @@ void main() {
       },
     );
 
+    test('puts a tunnel that joins a group after its tunnels', () async {
+      const cache = Tunnel(id: 'c3', localPort: 6379, group: 'Prod');
+      store = FakeStore([proxy, database.copyWith(group: 'Prod'), cache]);
+      final manager = await loaded();
+
+      await manager.save(proxy.copyWith(group: 'Prod'));
+
+      expect(manager.snapshot.tunnels.map((tunnel) => tunnel.id), [
+        'a1',
+        'c3',
+        'b2',
+      ]);
+    });
+
     test('keeps a tunnel that is on connected when only renamed', () async {
       final manager = await loaded();
       await manager.toggle('a1');
@@ -158,6 +172,30 @@ void main() {
 
       expect(manager.snapshot.tunnels, [database, proxy, added]);
       expect(store.tunnels, [database, proxy, added]);
+    });
+
+    test(
+      'skips a tunnel already saved, keeping the group it has here',
+      () async {
+        store = FakeStore([database.copyWith(group: 'Prod'), proxy]);
+        final manager = await loaded();
+
+        await manager.import([database.copyWith(id: 'x9'), proxy]);
+
+        expect(manager.snapshot.tunnels, [
+          database.copyWith(group: 'Prod'),
+          proxy,
+        ]);
+      },
+    );
+
+    test('keeps the group of a tunnel it adds', () async {
+      final manager = await loaded();
+      const added = Tunnel(id: 'c3', localPort: 8080, group: 'Web');
+
+      await manager.import([added]);
+
+      expect(manager.snapshot.tunnels.last, added);
     });
 
     test('skips a tunnel already saved, whatever its id', () async {
@@ -1506,7 +1544,7 @@ void main() {
       await manager.save(database.copyWith(localPort: 15433));
       expect(store.on, {'a1'});
 
-      await manager.move('a1', 1);
+      await manager.arrange([(id: 'b2', group: null), (id: 'a1', group: null)]);
       expect(store.on, {'a1'});
     });
 
@@ -1765,15 +1803,6 @@ void main() {
     expect(store.tunnels, [proxy]);
   });
 
-  test('move reorders the tunnels and saves', () async {
-    final manager = await loaded();
-
-    await manager.move('b2', 0);
-
-    expect(manager.snapshot.tunnels, [proxy, database]);
-    expect(store.tunnels, [proxy, database]);
-  });
-
   test('arrange reorders and regroups the tunnels and saves', () async {
     final manager = await loaded();
 
@@ -1781,6 +1810,16 @@ void main() {
 
     expect(manager.snapshot.tunnels, [proxy.copyWith(group: 'Prod'), database]);
     expect(store.tunnels, [proxy.copyWith(group: 'Prod'), database]);
+  });
+
+  test('arrange keeps a tunnel that is on connected', () async {
+    final manager = await loaded();
+    await manager.toggle('a1');
+
+    await manager.arrange([(id: 'a1', group: 'Prod'), (id: 'b2', group: null)]);
+
+    expect(tunnel.closeCount, 0);
+    expect(manager.snapshot.statusOf('a1'), const Connected());
   });
 
   test('arrange saves nothing when nothing changes', () async {
@@ -1792,13 +1831,12 @@ void main() {
     expect(store.saveCount, saves);
   });
 
-  test('move saves nothing when nothing moves', () async {
+  test('arrange saves nothing and says nothing for an unknown id', () async {
     final manager = await loaded();
     final changes = <TunnelsSnapshot>[];
     manager.changes.listen(changes.add);
 
-    await manager.move('a1', 0);
-    await manager.move('gone', 1);
+    await manager.arrange([(id: 'gone', group: 'Prod')]);
 
     expect(changes, isEmpty);
     expect(store.saveCount, 0);

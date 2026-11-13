@@ -145,7 +145,12 @@ void main() {
       'Dev — 0 of 1 connected ▸ ☐ Dev db',
       '---',
     ]);
-    expect(tunnelActions(snapshot), startsWith('Tunnel Actions ▸ Api ▸ '));
+    expect(
+      RegExp(r'(?:▸ |\| )(\w[\w ]*) ▸ Copy')
+          .allMatches(tunnelActions(snapshot))
+          .map((match) => match[1]),
+      ['Api', 'Cache', 'Local', 'Dev db'],
+    );
   });
 
   test('offers to connect a group when none of it is on', () {

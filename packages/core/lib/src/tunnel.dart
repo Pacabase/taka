@@ -48,7 +48,7 @@ sealed class const Tunnel._() with _$Tunnel {
         remoteHost: field<String>('remoteHost'),
         remotePort: field<int>('remotePort'),
         remoteSocket: field<String>('remoteSocket'),
-        group: field<String>('group'),
+        group: groupNamed(field<String>('group')),
       );
     }
 
@@ -127,83 +127,109 @@ sealed class const Tunnel._() with _$Tunnel {
   String toString() => 'Tunnel($id, $title)';
 }
 
-/// A row of the tunnel list: a group's header, or a tunnel.
-sealed class const TunnelListRow() {}
+sealed class const TunnelListRow() {
+  /// How many rows dragging this one carries, itself included.
+  int get span;
+}
 
 class const GroupHeaderRow(final String group, final int size)
-    extends TunnelListRow {}
+    extends TunnelListRow {
+  @override
+  int get span => 1 + size;
+}
 
-class const TunnelRow(final Tunnel tunnel) extends TunnelListRow {}
+class const TunnelRow(final Tunnel tunnel) extends TunnelListRow {
+  @override
+  int get span => 1;
+}
+
+String? groupNamed(String? group) => switch (group?.trim()) {
+  null || '' => null,
+  final named => named,
+};
+
+List<TunnelListRow> _without(List<TunnelListRow> rows, int from) =>
+    [...rows]..removeRange(from, from + rows[from].span);
+
+int _landing(
+  List<TunnelListRow> rows,
+  List<TunnelListRow> others,
+  int from,
+  int to,
+) {
+  var at = to.clamp(0, others.length);
+  if (rows[from] is GroupHeaderRow) {
+    if (_groupAt(others, at) case final inside?) {
+      while (_groupAt(others, at) == inside) {
+        at++;
+      }
+    }
+  }
+  return at;
+}
+
+String? _groupAt(List<TunnelListRow> rows, int index) =>
+    switch (index >= 0 && index < rows.length ? rows[index] : null) {
+      TunnelRow(:final tunnel) => tunnel.group,
+      _ => null,
+    };
 
 extension TunnelOrder on List<Tunnel> {
-  /// Every group in use, by name.
   List<String> get groups =>
       {for (final tunnel in this) ?tunnel.group}.sorted(compareAsciiLowerCase);
 
   /// As the window and tray list them: each group where its first tunnel is,
-  /// with all its tunnels together.
-  List<Tunnel> get shown {
+  /// after a header, with all its tunnels together.
+  List<TunnelListRow> get rows {
+    final members = where((tunnel) => tunnel.group != null)
+        .groupListsBy((tunnel) => tunnel.group!);
     final seen = <String>{};
     return [
       for (final tunnel in this)
-        if (tunnel.group == null)
-          tunnel
-        else if (seen.add(tunnel.group!))
-          ...where((member) => member.group == tunnel.group),
+        if (tunnel.group case final group?) ...[
+          if (seen.add(group)) ...[
+            GroupHeaderRow(group, members[group]!.length),
+            for (final member in members[group]!) TunnelRow(member),
+          ],
+        ] else
+          TunnelRow(tunnel),
     ];
   }
 
-  /// [shown], with a header before each group.
-  List<TunnelListRow> get rows {
-    final tunnels = shown;
-    return [
-      for (final (index, tunnel) in tunnels.indexed) ...[
-        if (tunnel.group case final group?
-            when index == 0 || tunnels[index - 1].group != group)
-          GroupHeaderRow(
-            group,
-            tunnels.where((member) => member.group == group).length,
-          ),
-        TunnelRow(tunnel),
-      ],
-    ];
+  List<Tunnel> get shown => [
+    for (final row in rows)
+      if (row case TunnelRow(:final tunnel)) tunnel,
+  ];
+
+  /// Where among the other rows [rows] row [from] lands when dropped at
+  /// [to]: a group can't land inside another, so it goes after that one.
+  int landingOf(int from, int to) {
+    final rows = this.rows;
+    return _landing(rows, _without(rows, from), from, to);
   }
 
-  /// The tunnels once [rows] row [from] is dropped at [to] among the others:
-  /// a header moves its whole group, and a tunnel takes the group of the
-  /// tunnel it lands above, so one dropped below a group's last tunnel is out.
+  /// The tunnels once [rows] row [from] is dropped at [to] among the others.
+  /// A header carries its whole group. A tunnel takes the group of the tunnel
+  /// it lands above, so one dropped below another group's last tunnel is out,
+  /// but one dropped right after its own group's last tunnel stays in.
   List<Tunnel> droppedAt(int from, int to) {
     final rows = this.rows;
     final moving = rows[from];
-    final span = switch (moving) {
-      GroupHeaderRow(:final size) => 1 + size,
-      TunnelRow() => 1,
-    };
-    final others = [...rows]..removeRange(from, from + span);
-    String? groupAt(int index) =>
-        switch (index < others.length ? others[index] : null) {
-          TunnelRow(:final tunnel) => tunnel.group,
-          _ => null,
-        };
-
-    var at = to.clamp(0, others.length);
-    // A group can't land inside another, so it goes after that one.
-    if (moving is GroupHeaderRow) {
-      if (groupAt(at) case final inside?) {
-        while (groupAt(at) == inside) {
-          at++;
-        }
-      }
-    }
+    final others = _without(rows, from);
+    final at = _landing(rows, others, from, to);
     final regrouped = switch (moving) {
-      TunnelRow(:final tunnel) => tunnel.copyWith(group: groupAt(at)),
+      TunnelRow(:final tunnel) => tunnel.copyWith(
+        group:
+            _groupAt(others, at) ??
+            (_groupAt(others, at - 1) == tunnel.group ? tunnel.group : null),
+      ),
       GroupHeaderRow() => null,
     };
 
     return [
       for (final row in [
         ...others.take(at),
-        ...rows.skip(from).take(span),
+        ...rows.skip(from).take(moving.span),
         ...others.skip(at),
       ])
         if (row case TunnelRow(:final tunnel))
@@ -222,14 +248,5 @@ extension TunnelOrder on List<Tunnel> {
         if (byId.remove(id) case final tunnel?) tunnel.copyWith(group: group),
       ...byId.values,
     ];
-  }
-
-  List<Tunnel> moved(String id, int index) {
-    final from = indexWhere((tunnel) => tunnel.id == id);
-    final to = index.clamp(0, length - 1);
-    if (from < 0 || from == to) return this;
-
-    final tunnels = [...this];
-    return tunnels..insert(to, tunnels.removeAt(from));
   }
 }

@@ -93,7 +93,6 @@ class _TunnelFormState extends State<TunnelForm> {
                     hosts: widget.groups,
                     hint: 'Optional, such as Production',
                     style: const TextStyle(),
-                    autofocus: true,
                     onSubmitted: _save,
                   ),
                 ),
@@ -102,7 +101,7 @@ class _TunnelFormState extends State<TunnelForm> {
                 padding: const EdgeInsets.only(left: RouteStep.indent),
                 child: Labelled(
                   label: 'Name',
-                  child: _input(_name, hint: 'Optional'),
+                  child: _input(_name, hint: 'Optional', autofocus: true),
                 ),
               ),
               _KindTabs(
@@ -234,10 +233,12 @@ class _TunnelFormState extends State<TunnelForm> {
     TextEditingController controller, {
     required String hint,
     TextStyle style = const TextStyle(),
+    bool autofocus = false,
   }) => Input(
     controller: controller,
     hint: hint,
     style: style,
+    autofocus: autofocus,
     onSubmitted: _save,
   );
 
@@ -305,7 +306,14 @@ class _TunnelFormState extends State<TunnelForm> {
       TunnelKind.remote => _port(_fromPort.text),
     },
     remoteSocket: _isSocket ? _toHost.text.trim() : null,
-    group: _group.text.trim().isEmpty ? null : _group.text.trim(),
+    group: switch (groupNamed(_group.text)) {
+      final typed? =>
+        widget.groups
+                .where((group) => group.toLowerCase() == typed.toLowerCase())
+                .firstOrNull ??
+            typed,
+      null => null,
+    },
   );
 }
 

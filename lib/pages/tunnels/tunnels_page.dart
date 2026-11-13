@@ -196,10 +196,8 @@ class const _TunnelList({
     final rows = snapshot.tunnels.rows;
 
     return ReorderableRows(
-      spanOf: (index) => switch (rows[index]) {
-        GroupHeaderRow(:final size) => 1 + size,
-        TunnelRow() => 1,
-      },
+      spanOf: (index) => rows[index].span,
+      settle: snapshot.tunnels.landingOf,
       onReorder: (from, to) => _send(
         context,
         AgentCommand.arrange([
@@ -230,6 +228,10 @@ class const _TunnelList({
                   onDelete: () =>
                       _send(context, AgentCommand.remove(tunnel.id)),
                 ),
+                if (rows.elementAtOrNull(index + 1)
+                    case TunnelRow(tunnel: Tunnel(group: null))
+                    when tunnel.group != null)
+                  const SizedBox(height: 12),
                 if (rows.elementAtOrNull(index + 1)
                     case TunnelRow(tunnel: Tunnel(:final group))
                     when group == tunnel.group)

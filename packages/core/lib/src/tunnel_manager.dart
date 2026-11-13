@@ -73,6 +73,12 @@ class TunnelManager({
       for (final saved in _tunnels) saved.id == tunnel.id ? tunnel : saved,
       if (previous == null) tunnel,
     ];
+    // Otherwise a group shows where its first tunnel is, so it could jump.
+    if (tunnel.group case final group? when previous?.group != group) {
+      final others = _tunnels.where((saved) => saved.id != tunnel.id).toList();
+      final last = others.lastIndexWhere((saved) => saved.group == group);
+      if (last != -1) _tunnels = others..insert(last + 1, tunnel);
+    }
     await _persist();
 
     final isWanted =
@@ -91,7 +97,10 @@ class TunnelManager({
     final imported = [..._tunnels];
     final ids = {for (final saved in imported) saved.id};
     for (final tunnel in tunnels) {
-      if (imported.any((saved) => tunnel.copyWith(id: saved.id) == saved)) {
+      // A tunnel already saved stays in the group it has here.
+      if (imported.any(
+        (saved) => tunnel.copyWith(id: saved.id, group: saved.group) == saved,
+      )) {
         continue;
       }
       var id = tunnel.id;
@@ -118,14 +127,6 @@ class TunnelManager({
     if (const ListEquality<Tunnel>().equals(arranged, _tunnels)) return;
 
     _tunnels = arranged;
-    await _persist();
-  }
-
-  Future<void> move(String id, int index) async {
-    final moved = _tunnels.moved(id, index);
-    if (identical(moved, _tunnels)) return;
-
-    _tunnels = moved;
     await _persist();
   }
 
@@ -162,7 +163,6 @@ class TunnelManager({
     ]);
   }
 
-  /// Every tunnel, or only those in [group].
   Future<void> connectAll({String? group}) =>
       Future.wait(_idsIn(group).whereNot(_isOn).map(toggle));
 

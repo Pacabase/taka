@@ -6,12 +6,14 @@ import 'package:taka/theme/taka_colors.dart';
 
 /// ReorderableListView's fixed 250ms animations feel slow for a short list.
 /// [onReorder]'s `to` is the row's index among the others. [spanOf] is how
-/// many rows a drag from a row carries along, itself included.
+/// many rows a drag from a row carries along, itself included, and [settle]
+/// moves a drop's `to` to where it will really land.
 class const ReorderableRows({
   super.key,
   required final List<Widget> children,
   required final void Function(int from, int to) onReorder,
   final int Function(int index)? spanOf,
+  final int Function(int from, int to)? settle,
 }) extends StatefulWidget {
   static bool isLifted(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_Lifted>()?.isLifted ?? false;
@@ -60,6 +62,7 @@ class _ReorderableRowsState extends State<ReorderableRows> {
                       KeyedSubtree(
                         key: child.key,
                         child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           supportedDevices: const {PointerDeviceKind.mouse},
                           onVerticalDragStart: (_) => _start(index),
                           onVerticalDragUpdate: _update,
@@ -104,7 +107,7 @@ class _ReorderableRowsState extends State<ReorderableRows> {
                     ),
                     child: IgnorePointer(
                       child: _Lifted(
-                        isLifted: true,
+                        isLifted: drag.span == 1,
                         child: _lifted(
                           Column(
                             children: widget.children
@@ -155,6 +158,7 @@ class _ReorderableRowsState extends State<ReorderableRows> {
 
   void _end() {
     if (_drag case final drag? when !drag.isDropping) {
+      drag.to = widget.settle?.call(drag.from, drag.to) ?? drag.to;
       if (drag.dy == drag.slot) return _drop();
       setState(() => drag.isDropping = true);
     }
@@ -189,7 +193,7 @@ class _Drag(
 
   bool covers(int index) => index >= from && index < _end;
 
-  List<int> get _others => [
+  late final List<int> _others = [
     for (var index = 0; index < tops.length; index++)
       if (!covers(index)) index,
   ];

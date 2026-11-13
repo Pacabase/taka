@@ -208,11 +208,31 @@ void main() {
         expect(layout(tunnels.droppedAt(3, 1)), '[Prod 3] b a c d [dev 1] e');
       });
 
-      test("dropped below a group's last tunnel leaves the group", () {
-        final dropped = tunnels.droppedAt(1, 2);
+      test("dropped right after its own group's last tunnel stays in", () {
+        expect(layout(tunnels.droppedAt(1, 2)), '[Prod 2] c a b d [dev 1] e');
+      });
 
-        expect(layout(dropped), '[Prod 1] c a b d [dev 1] e');
-        expect(dropped.firstWhere((tunnel) => tunnel.id == 'a').group, isNull);
+      test("dropped below another group's last tunnel is in no group", () {
+        final dropped = tunnels.droppedAt(6, 3);
+
+        expect(layout(dropped), '[Prod 2] a c e b d');
+        expect(dropped.firstWhere((tunnel) => tunnel.id == 'e').group, isNull);
+      });
+
+      test('dropped among the tunnels in no group leaves its group', () {
+        expect(layout(tunnels.droppedAt(1, 3)), '[Prod 1] c b a d [dev 1] e');
+      });
+
+      test(
+        "taken out of its group, a group's only tunnel leaves no header",
+        () {
+          expect(layout(tunnels.droppedAt(6, 0)), 'e [Prod 2] a c b d');
+        },
+      );
+
+      test('dropped past the end lands at the end', () {
+        expect(tunnels.droppedAt(0, 99), tunnels.droppedAt(0, 4));
+        expect(tunnels.droppedAt(3, 99).last.id, 'b');
       });
     });
 
@@ -231,6 +251,17 @@ void main() {
       });
     });
 
+    test('a blank group is no group', () {
+      expect(
+        Tunnel.fromJson({'id': 'x', 'localPort': 1, 'group': '  '}).group,
+        isNull,
+      );
+      expect(
+        Tunnel.fromJson({'id': 'x', 'localPort': 1, 'group': ' Prod '}).group,
+        'Prod',
+      );
+    });
+
     test(
       'arranges by an order of ids and groups, keeping any it leaves out',
       () {
@@ -238,28 +269,16 @@ void main() {
           tunnels.arranged([(id: 'e', group: null), (id: 'a', group: 'dev')]),
           [e.copyWith(group: null), a.copyWith(group: 'dev'), b, c, d],
         );
+        expect(
+          tunnels.arranged([
+            (id: 'zz', group: 'x'),
+            (id: 'b', group: 'Prod'),
+            (id: 'b', group: 'dev'),
+          ]),
+          [b.copyWith(group: 'Prod'), a, c, d, e],
+        );
       },
     );
-  });
-
-  group('moved', () {
-    const web = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
-    const tunnels = [database, proxy, web];
-
-    test('puts a tunnel at the index among the others', () {
-      expect(tunnels.moved('a1', 2), [proxy, web, database]);
-      expect(tunnels.moved('c3', 0), [web, database, proxy]);
-      expect(tunnels.moved('b2', 1), tunnels);
-    });
-
-    test('keeps an index past either end in the list', () {
-      expect(tunnels.moved('b2', 9), [database, web, proxy]);
-      expect(tunnels.moved('b2', -1), [proxy, database, web]);
-    });
-
-    test('leaves the list as it is for a tunnel it does not have', () {
-      expect(tunnels.moved('zz', 0), tunnels);
-    });
   });
 
   group('sshCommand', () {

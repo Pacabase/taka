@@ -190,11 +190,61 @@ void main() {
 
     final gesture = await lift(tester, 'one', 60);
     await tester.pump(const Duration(milliseconds: 200));
-    expect(isLifted(tester, 'two'), isTrue);
+    double liftedTop(String name) => tester.getTopLeft(find.text(name).last).dy;
+    expect(liftedTop('two') - liftedTop('one'), 40);
     expect(topOf(tester, 'three'), 0);
     await gesture.up();
     await tester.pumpAndSettle();
 
     expect(moves, [(0, 1)]);
+  });
+
+  testWidgets('a row with a span moves up past a row before it', (
+    tester,
+  ) async {
+    await pumpRows(tester, spanOf: (index) => index == 1 ? 2 : 1);
+
+    final gesture = await lift(tester, 'two', -40);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(topOf(tester, 'one'), 80);
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(moves, [(1, 0)]);
+  });
+
+  testWidgets('a short drag of a row with a span moves nothing', (
+    tester,
+  ) async {
+    await pumpRows(tester, spanOf: (index) => index == 0 ? 2 : 1);
+
+    await drag(tester, 'one', 10);
+
+    expect(moves, isEmpty);
+    expect(topOf(tester, 'three'), 80);
+  });
+
+  testWidgets('settle moves where a drop lands', (tester) async {
+    moves = [];
+    names = ['one', 'two', 'three'];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: takaTheme(Brightness.light),
+        home: Scaffold(
+          body: ReorderableRows(
+            settle: (from, to) => 2,
+            onReorder: (from, to) => moves.add((from, to)),
+            children: [
+              for (final name in names)
+                SizedBox(key: ValueKey(name), height: 40, child: Text(name)),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await drag(tester, 'one', 50);
+
+    expect(moves, [(0, 2)]);
   });
 }
