@@ -246,9 +246,13 @@ void main() {
         expect(layout(tunnels.droppedAt(5, 4)), '[Prod 2] a c b [dev 1] e d');
       });
 
-      test('dropped inside another group lands after it', () {
-        expect(layout(tunnels.droppedAt(5, 2)), '[Prod 2] a c [dev 1] e b d');
-      });
+      test(
+        'dropped inside another group lands next to it, the nearer side',
+        () {
+          expect(layout(tunnels.droppedAt(5, 2)), '[Prod 2] a c [dev 1] e b d');
+          expect(layout(tunnels.droppedAt(5, 1)), '[dev 1] e [Prod 2] a c b d');
+        },
+      );
     });
 
     test('a blank group is no group', () {

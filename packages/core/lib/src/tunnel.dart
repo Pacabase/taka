@@ -157,15 +157,22 @@ int _landing(
   int from,
   int to,
 ) {
-  var at = to.clamp(0, others.length);
-  if (rows[from] is GroupHeaderRow) {
-    if (_groupAt(others, at) case final inside?) {
-      while (_groupAt(others, at) == inside) {
-        at++;
-      }
-    }
+  final at = to.clamp(0, others.length);
+  if (rows[from] is! GroupHeaderRow) return at;
+  final inside = _groupAt(others, at);
+  if (inside == null) return at;
+
+  // Before the other group's header or after its last tunnel, the nearer.
+  var start = at;
+  while (_groupAt(others, start - 1) == inside) {
+    start--;
   }
-  return at;
+  final header = start - 1;
+  var end = at;
+  while (_groupAt(others, end) == inside) {
+    end++;
+  }
+  return at - header <= end - at ? header : end;
 }
 
 String? _groupAt(List<TunnelListRow> rows, int index) =>
@@ -202,7 +209,8 @@ extension TunnelOrder on List<Tunnel> {
   ];
 
   /// Where among the other rows [rows] row [from] lands when dropped at
-  /// [to]: a group can't land inside another, so it goes after that one.
+  /// [to]: a group can't land inside another, so it goes just before or just
+  /// after that one, whichever is nearer.
   int landingOf(int from, int to) {
     final rows = this.rows;
     return _landing(rows, _without(rows, from), from, to);

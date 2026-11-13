@@ -224,7 +224,9 @@ void main() {
     expect(topOf(tester, 'three'), 80);
   });
 
-  testWidgets('settle moves where a drop lands', (tester) async {
+  testWidgets('settle moves where a drop lands, while dragging too', (
+    tester,
+  ) async {
     moves = [];
     names = ['one', 'two', 'three'];
     await tester.pumpWidget(
@@ -243,7 +245,11 @@ void main() {
       ),
     );
 
-    await drag(tester, 'one', 50);
+    final gesture = await lift(tester, 'one', 10);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(topOf(tester, 'three'), 40);
+    await gesture.up();
+    await tester.pumpAndSettle();
 
     expect(moves, [(0, 2)]);
   });
