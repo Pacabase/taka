@@ -17,6 +17,7 @@ class TunnelSession({
   required final void Function() onChange,
   required final Future<void> Function()? beforeConnect,
   required final Future<bool> Function()? isLocked,
+  required final Future<void> Function(int localPort)? checkDestination,
   required final Duration warningLifetime,
   required final List<Duration> retryDelays,
   required final Duration lockedRecheck,
@@ -32,6 +33,7 @@ class TunnelSession({
   late bool _retries = isRestored;
   int _attempts = 0;
   bool _waitsForUnlock = false;
+  bool _hasChecked = false;
 
   TunnelStatus get status => _status;
 
@@ -53,6 +55,19 @@ class TunnelSession({
     onChange();
     _log.i('Connected ${tunnel.title}');
     unawaited(opened.done.then((_) => _drop(null), onError: _drop));
+    // Not on reconnects or at login: each check hits the service for real.
+    if (tunnel.kind == TunnelKind.local && !isRestored && !_hasChecked) {
+      _hasChecked = true;
+      unawaited(_checkDestination());
+    }
+  }
+
+  Future<void> _checkDestination() async {
+    try {
+      await checkDestination?.call(tunnel.localPort);
+    } on Object catch (exception) {
+      _log.w('${tunnel.title}: could not check where it leads ($exception)');
+    }
   }
 
   Future<void> stop() async {

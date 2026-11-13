@@ -15,6 +15,7 @@ class TunnelManager({
   required final SshClient client,
   final Future<void> Function()? beforeConnect,
   final Future<bool> Function()? isLocked,
+  final Future<void> Function(int localPort)? checkDestination,
   final Duration warningLifetime = const Duration(seconds: 30),
 
   /// A dropped tunnel fails once a try after the last delay fails too.
@@ -178,6 +179,7 @@ class TunnelManager({
       onChange: _emit,
       beforeConnect: beforeConnect,
       isLocked: isLocked,
+      checkDestination: checkDestination,
       warningLifetime: warningLifetime,
       retryDelays: retryDelays,
       lockedRecheck: lockedRecheck,
