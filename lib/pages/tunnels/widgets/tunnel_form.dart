@@ -115,7 +115,7 @@ class _TunnelFormState extends State<TunnelForm> {
                 child: HostInput(
                   controller: _group,
                   hosts: widget.groups,
-                  hint: 'Optional, such as Production',
+                  hint: 'Optional',
                   style: const TextStyle(),
                   acceptsNew: true,
                   onSubmitted: _save,
