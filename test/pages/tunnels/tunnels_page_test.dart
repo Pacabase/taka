@@ -7,6 +7,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -119,6 +120,80 @@ void main() {
         .dx;
     expect(left('Database'), greaterThan(left('Proxy')));
     expect(left('Cache'), left('Database'));
+  });
+
+  group("a group's header", () {
+    Future<_MockTunnelsBloc> pumpGrouped(WidgetTester tester) => pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'monolith'),
+            proxy,
+            const Tunnel(
+              id: 'c3',
+              name: 'Cache',
+              localPort: 6379,
+              group: 'monolith',
+            ),
+          ],
+        ),
+      ),
+    );
+
+    testWidgets('renames the whole group, even only its case', (tester) async {
+      final bloc = await pumpGrouped(tester);
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), ' Monolith ');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      verify(
+        () => bloc.add(
+          const TunnelsEvent.send(
+            AgentCommand.arrange([
+              (id: 'a1', group: 'Monolith'),
+              (id: 'b2', group: null),
+              (id: 'c3', group: 'Monolith'),
+            ]),
+          ),
+        ),
+      ).called(1);
+    });
+
+    testWidgets('Esc or a blank name renames nothing', (tester) async {
+      final bloc = await pumpGrouped(tester);
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Other');
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(find.text('monolith'), findsOneWidget);
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), '  ');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      for (final name in ['Other', '  ']) {
+        verifyNever(
+          () => bloc.add(
+            TunnelsEvent.send(
+              AgentCommand.arrange([
+                (id: 'a1', group: name),
+                (id: 'b2', group: null),
+                (id: 'c3', group: name),
+              ]),
+            ),
+          ),
+        );
+      }
+      expect(find.text('monolith'), findsOneWidget);
+    });
   });
 
   testWidgets("a group's header carries its tunnels when dragged", (

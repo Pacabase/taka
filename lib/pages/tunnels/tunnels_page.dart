@@ -211,6 +211,7 @@ class const _TunnelList({
             GroupHeaderRow(:final group) => _GroupHeader(
               group,
               key: ValueKey('group $group'),
+              onRename: (name) => _rename(context, snapshot, group, name),
             ),
             GroupEndRow(:final group) => SizedBox(
               key: ValueKey('end $group'),
@@ -255,6 +256,27 @@ class const _TunnelList({
     );
   }
 
+  void _rename(
+    BuildContext context,
+    TunnelsSnapshot snapshot,
+    String group,
+    String name,
+  ) {
+    final renamed = groupNamed(name);
+    if (renamed == null || renamed == group) return;
+
+    _send(
+      context,
+      AgentCommand.arrange([
+        for (final tunnel in snapshot.tunnels)
+          (
+            id: tunnel.id,
+            group: tunnel.group == group ? renamed : tunnel.group,
+          ),
+      ]),
+    );
+  }
+
   void _send(BuildContext context, AgentCommand command) =>
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
@@ -285,24 +307,89 @@ class const _InGroup({
   }
 }
 
-class const _GroupHeader(final String group, {super.key})
-    extends StatelessWidget {
+class const _GroupHeader(
+  final String group, {
+  super.key,
+  required final void Function(String name) onRename,
+}) extends StatefulWidget {
+  @override
+  State<_GroupHeader> createState() => _GroupHeaderState();
+}
+
+class _GroupHeaderState extends State<_GroupHeader> {
+  final _focus = FocusNode();
+  TextEditingController? _editing;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (!_focus.hasFocus) _finish(save: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    _editing?.dispose();
+    super.dispose();
+  }
+
+  void _start() => setState(
+    () => _editing = TextEditingController(text: widget.group)
+      ..selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.group.length,
+      ),
+  );
+
+  void _finish({required bool save}) {
+    final editing = _editing;
+    if (editing == null) return;
+
+    setState(() => _editing = null);
+    if (save) widget.onRename(editing.text);
+    // The field still holds it until it's gone from the tree.
+    WidgetsBinding.instance.addPostFrameCallback((_) => editing.dispose());
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = TakaColors.of(context);
+    const style = TextStyle(fontSize: 12, fontWeight: FontWeight.w500);
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
-        child: Text(
-          group,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: TakaColors.of(context).textSecondary,
+        child: switch (_editing) {
+          final editing? => CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.escape): () =>
+                  _finish(save: false),
+            },
+            child: TextField(
+              controller: editing,
+              focusNode: _focus,
+              autofocus: true,
+              style: style.copyWith(color: colors.text),
+              decoration: const InputDecoration.collapsed(hintText: ''),
+              onSubmitted: (_) => _finish(save: true),
+            ),
           ),
-        ),
+          null => Tooltip(
+            message: 'Rename',
+            child: GestureDetector(
+              onTap: _start,
+              child: Text(
+                widget.group,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: style.copyWith(color: colors.textSecondary),
+              ),
+            ),
+          ),
+        },
       ),
     );
   }
