@@ -315,6 +315,7 @@ void main() {
       ('another program', 'mosh -L 15432:db:5432 deploy@bastion'),
       ('ssh with no forward', 'ssh deploy@bastion'),
       ('a remote SOCKS proxy', 'ssh -R 1080 bastion'),
+      ('a relative socket path', 'ssh -L 2375:docker.sock bastion'),
       ('no host', 'ssh -L 15432:db:5432'),
       ('a flag with no value', 'ssh bastion -L'),
       ('an unclosed quote', "ssh -L '15432:db:5432 bastion"),

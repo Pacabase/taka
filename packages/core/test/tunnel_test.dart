@@ -195,7 +195,9 @@ void main() {
         docker.sshCommand,
         'ssh -N -L 127.0.0.1:2375:/var/run/docker.sock bastion',
       );
-      expect(docker.copyWith(remoteSocket: 'docker.sock').sshCommand, isNull);
+      for (final path in ['docker.sock', '/run/%h.sock', r'/run/$UID.sock']) {
+        expect(docker.copyWith(remoteSocket: path).sshCommand, isNull);
+      }
     });
 
     test('has the SSH host listen and forward back here', () {

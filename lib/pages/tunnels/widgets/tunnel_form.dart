@@ -35,14 +35,16 @@ class _TunnelFormState extends State<TunnelForm> {
 
   bool get _isRemote => _kind == TunnelKind.remote;
 
-  // A local tunnel's To is a Unix socket on the SSH host when it is a path.
   bool get _isSocket => _isLocal && _toHost.text.trim().startsWith('/');
 
+  // sshCommand is null for what system_ssh refuses, but a path as local host passes.
   bool get _isValid =>
       _port(_fromPort.text) != null &&
       _sshHost.text.trim().isNotEmpty &&
       (!_isLocal || _toHost.text.trim().isNotEmpty) &&
-      (_kind == TunnelKind.socks || _isSocket || _port(_toPort.text) != null);
+      (_kind == TunnelKind.socks || _isSocket || _port(_toPort.text) != null) &&
+      !(_isRemote && _toHost.text.contains('/')) &&
+      _tunnel.sshCommand != null;
 
   @override
   void initState() {
@@ -144,7 +146,7 @@ class _TunnelFormState extends State<TunnelForm> {
                             _toHost,
                             hint: _isRemote
                                 ? 'localhost'
-                                : 'localhost, or a socket like /run/app.sock',
+                                : 'localhost or /var/run/docker.sock',
                             style: mono,
                           ),
                         ),
@@ -272,30 +274,26 @@ class _TunnelFormState extends State<TunnelForm> {
   };
 
   void _save() {
-    if (!_isValid) return;
-
-    widget.onSave(
-      Tunnel(
-        id:
-            widget.initial?.id ??
-            DateTime.now().microsecondsSinceEpoch.toString(),
-        name: _name.text.trim(),
-        kind: _kind,
-        sshHost: _sshHost.text.trim(),
-        localHost: _isRemote && _toHost.text.trim().isNotEmpty
-            ? _toHost.text.trim()
-            : null,
-        localPort: _port((_isRemote ? _toPort : _fromPort).text)!,
-        remoteHost: _isLocal && !_isSocket ? _toHost.text.trim() : null,
-        remotePort: switch (_kind) {
-          TunnelKind.local => _isSocket ? null : _port(_toPort.text),
-          TunnelKind.socks => null,
-          TunnelKind.remote => _port(_fromPort.text),
-        },
-        remoteSocket: _isSocket ? _toHost.text.trim() : null,
-      ),
-    );
+    if (_isValid) widget.onSave(_tunnel);
   }
+
+  Tunnel get _tunnel => Tunnel(
+    id: widget.initial?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+    name: _name.text.trim(),
+    kind: _kind,
+    sshHost: _sshHost.text.trim(),
+    localHost: _isRemote && _toHost.text.trim().isNotEmpty
+        ? _toHost.text.trim()
+        : null,
+    localPort: _port((_isRemote ? _toPort : _fromPort).text)!,
+    remoteHost: _isLocal && !_isSocket ? _toHost.text.trim() : null,
+    remotePort: switch (_kind) {
+      TunnelKind.local => _isSocket ? null : _port(_toPort.text),
+      TunnelKind.socks => null,
+      TunnelKind.remote => _port(_fromPort.text),
+    },
+    remoteSocket: _isSocket ? _toHost.text.trim() : null,
+  );
 }
 
 // Reads the clipboard itself: a field is one line, so it would drop the
