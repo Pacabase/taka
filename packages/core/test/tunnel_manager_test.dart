@@ -268,7 +268,7 @@ void main() {
         verify(
           () => client.openRemoteTunnel(
             const SshTarget('bastion'),
-            localHost: any(named: 'localHost'),
+            localHost: any(named: 'localHost', that: equals('localhost')),
             localPort: 3000,
             remotePort: 8080,
             onLog: any(named: 'onLog'),
@@ -305,14 +305,70 @@ void main() {
         expect(remote.closeCount, 1);
       });
 
-      test('fails when ssh drops it', () async {
-        final manager = await loaded();
-        await manager.toggle('r5');
+      test('reconnects when ssh drops it', () {
+        fakeAsync((time) {
+          final opened = <FakeRemoteTunnel>[];
+          when(
+            openAnyRemoteTunnel,
+          ).thenAnswer((_) async => (opened..add(FakeRemoteTunnel(8080))).last);
+          final manager = TunnelManager(store: store, client: client);
+          unawaited(manager.load().then((_) => manager.toggle('r5')));
+          time.flushMicrotasks();
 
-        remote.drop();
+          opened.last.drop();
+          time.flushMicrotasks();
+          expect(manager.snapshot.statusOf('r5'), isA<Reconnecting>());
+
+          time.elapse(const Duration(seconds: 1));
+          expect(manager.snapshot.statusOf('r5'), const Connected());
+          expect(opened, hasLength(2));
+
+          unawaited(manager.close());
+          time.flushMicrotasks();
+        });
+      });
+
+      test('closes one that opens after it was aborted', () async {
+        final opened = Completer<SshRemoteTunnel>();
+        when(openAnyRemoteTunnel).thenAnswer((_) => opened.future);
+        final manager = await loaded();
+        unawaited(manager.toggle('r5'));
         await pumpEventQueue();
 
-        expect(manager.snapshot.statusOf('r5'), isA<Reconnecting>());
+        await manager.toggle('r5');
+        opened.complete(remote);
+        await pumpEventQueue();
+
+        expect(manager.snapshot.statusOf('r5'), const Stopped());
+        expect(remote.closeCount, 1);
+      });
+
+      test('connects once its server\'s new key is trusted', () async {
+        const hostKey = SshHostKey(
+          host: 'bastion',
+          type: 'ED25519',
+          fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY',
+        );
+        registerFallbackValue(hostKey);
+        var isKnown = false;
+        when(openAnyRemoteTunnel).thenAnswer((_) async {
+          if (!isKnown) throw SshUnknownHostKeyException(hostKey);
+          return remote;
+        });
+        when(
+          () => client.trustHostKey(
+            any(),
+            any(),
+            abortTrigger: any(named: 'abortTrigger'),
+          ),
+        ).thenAnswer((_) async => isKnown = true);
+        final manager = await loaded();
+        await manager.toggle('r5');
+        expect(manager.snapshot.statusOf('r5'), isA<UnknownHostKey>());
+
+        await manager.trustHostKey('r5', hostKey.fingerprint);
+
+        expect(manager.snapshot.statusOf('r5'), const Connected());
       });
 
       test('says why the server would not open its port', () async {
