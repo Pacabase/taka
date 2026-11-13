@@ -270,6 +270,25 @@ void main() {
       expect(tunnel.closeCount, 1);
     });
 
+    test('opens the socket even with a host and port left over', () async {
+      store = FakeStore([docker.copyWith(remoteHost: 'db', remotePort: 5432)]);
+      when(
+        () => client.openSocketTunnel(
+          any(),
+          remoteSocket: any(named: 'remoteSocket'),
+          localPort: any(named: 'localPort'),
+          onLog: any(named: 'onLog'),
+          abortTrigger: any(named: 'abortTrigger'),
+        ),
+      ).thenAnswer((_) async => tunnel);
+      final manager = await loaded();
+
+      await manager.toggle('s6');
+
+      expect(manager.snapshot.statusOf('s6'), const Connected());
+      verifyNever(openAnyTunnel);
+    });
+
     group('a remote tunnel', () {
       late FakeRemoteTunnel remote;
 
