@@ -111,6 +111,14 @@ void main() {
     expect(top('Prod'), lessThan(top('Database')));
     expect(top('Database'), lessThan(top('Cache')));
     expect(top('Cache'), lessThan(top('Proxy')));
+
+    double left(String name) => tester
+        .getTopLeft(
+          find.ancestor(of: find.text(name), matching: find.byType(TunnelTile)),
+        )
+        .dx;
+    expect(left('Database'), greaterThan(left('Proxy')));
+    expect(left('Cache'), left('Database'));
   });
 
   testWidgets("a group's header carries its tunnels when dragged", (
