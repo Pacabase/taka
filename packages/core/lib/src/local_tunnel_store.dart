@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:core/src/paths.dart';
 import 'package:core/src/tunnel.dart';
+import 'package:core/src/tunnel_colour.dart';
 import 'package:core/src/tunnel_store.dart';
 import 'package:core/src/tunnels_file.dart';
 
@@ -13,8 +14,14 @@ class LocalTunnelStore({required final File file}) implements TunnelStore {
       LocalTunnelStore(file: File('${takaDirectory().path}/tunnels.json'));
 
   @override
-  Future<({List<Tunnel> tunnels, Set<String> on})> load() async {
-    if (!await file.exists()) return (tunnels: <Tunnel>[], on: <String>{});
+  Future<SavedTunnels> load() async {
+    if (!await file.exists()) {
+      return (
+        tunnels: <Tunnel>[],
+        on: <String>{},
+        groupColours: <String, TunnelColour>{},
+      );
+    }
 
     try {
       return decodeTunnels(await file.readAsString());
@@ -25,14 +32,22 @@ class LocalTunnelStore({required final File file}) implements TunnelStore {
   }
 
   @override
-  Future<void> save(List<Tunnel> tunnels, {required Set<String> on}) {
-    final saved = _lastSave.then((_) => _save(tunnels, on));
+  Future<void> save(
+    List<Tunnel> tunnels, {
+    required Set<String> on,
+    Map<String, TunnelColour> groupColours = const {},
+  }) {
+    final saved = _lastSave.then((_) => _save(tunnels, on, groupColours));
     _lastSave = saved.catchError((Object _) {});
 
     return saved;
   }
 
-  Future<void> _save(List<Tunnel> tunnels, Set<String> on) async {
+  Future<void> _save(
+    List<Tunnel> tunnels,
+    Set<String> on,
+    Map<String, TunnelColour> groupColours,
+  ) async {
     // A newer Taka may have written it; losing its tunnels is worse than not saving.
     if (_isUnreadable) {
       throw FileSystemException(
@@ -43,7 +58,10 @@ class LocalTunnelStore({required final File file}) implements TunnelStore {
 
     await file.parent.create(recursive: true);
     final temporary = File('${file.path}.tmp');
-    await temporary.writeAsString(encodeTunnels(tunnels, on: on), flush: true);
+    await temporary.writeAsString(
+      encodeTunnels(tunnels, on: on, groupColours: groupColours),
+      flush: true,
+    );
     await temporary.rename(file.path);
   }
 }

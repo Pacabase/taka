@@ -6,6 +6,7 @@ import 'package:taka/pages/tunnels/widgets/host_input.dart';
 import 'package:taka/pages/tunnels/widgets/route_step.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/widgets/colour_dot.dart';
 
 class const TunnelForm({
   super.key,
@@ -29,6 +30,7 @@ class _TunnelFormState extends State<TunnelForm> {
   late final _toPort = TextEditingController();
   late final _name = TextEditingController(text: widget.initial?.name);
   late final _group = TextEditingController(text: widget.initial?.group);
+  late TunnelColour? _colour = widget.initial?.colour;
   late final _fields = [_fromPort, _sshHost, _toHost, _toPort, _name, _group];
   ({String host, List<String> leftOut})? _pasted;
   late final _pasteCommand = _PasteCommandAction(onText: _fill);
@@ -186,6 +188,23 @@ class _TunnelFormState extends State<TunnelForm> {
                   ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.only(left: RouteStep.indent),
+                child: Labelled(
+                  label: 'Colour',
+                  child: Row(
+                    spacing: 8,
+                    children: [
+                      for (final colour in [...TunnelColour.values, null])
+                        _Swatch(
+                          colour: colour,
+                          isSelected: _colour == colour,
+                          onTap: () => setState(() => _colour = colour),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
               ListenableBuilder(
                 listenable: _sshHost,
                 builder: (context, _) => switch (_pasted) {
@@ -308,6 +327,7 @@ class _TunnelFormState extends State<TunnelForm> {
     },
     remoteSocket: _isSocket ? _toHost.text.trim() : null,
     group: _group.text.trim().isEmpty ? null : _group.text.trim(),
+    colour: _colour,
   );
 }
 
@@ -435,6 +455,48 @@ class const _Colon() extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: 4,
       children: [dot, dot],
+    );
+  }
+}
+
+class const _Swatch({
+  required final TunnelColour? colour,
+  required final bool isSelected,
+  required final void Function() onTap,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = TakaColors.of(context);
+    final label = colour?.label ?? "Its group's colour";
+
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: label,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: switch (colour) {
+                final colour? => colors.tunnel(colour),
+                null => null,
+              },
+              border: Border.all(
+                color: isSelected || colour == null
+                    ? colors.textBrilliant
+                    : Colors.transparent,
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

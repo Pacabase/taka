@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:core/src/tunnel_colour.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:system_ssh/system_ssh.dart';
 
@@ -27,6 +28,9 @@ sealed class const Tunnel._() with _$Tunnel {
     int? remotePort,
     String? remoteSocket,
     String? group,
+
+    /// Shown instead of its group's colour, when set.
+    TunnelColour? colour,
   }) = _Tunnel;
 
   static Tunnel fromJson(Object? json) {
@@ -49,6 +53,7 @@ sealed class const Tunnel._() with _$Tunnel {
         remotePort: field<int>('remotePort'),
         remoteSocket: field<String>('remoteSocket'),
         group: field<String>('group'),
+        colour: TunnelColour.fromName(fields['colour']),
       );
     }
 
@@ -66,6 +71,7 @@ sealed class const Tunnel._() with _$Tunnel {
     'remotePort': ?remotePort,
     'remoteSocket': ?remoteSocket,
     'group': ?group,
+    'colour': ?colour?.name,
   };
 
   SshTarget get target {

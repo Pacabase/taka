@@ -1,4 +1,5 @@
 import 'package:core/src/tunnel.dart';
+import 'package:core/src/tunnel_colour.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'tunnels_snapshot.freezed.dart';
@@ -73,18 +74,27 @@ sealed class const TunnelsSnapshot._() with _$TunnelsSnapshot {
   const factory({
     @Default([]) List<Tunnel> tunnels,
     @Default({}) Map<String, TunnelStatus> statuses,
+    @Default({}) Map<String, TunnelColour> groupColours,
   }) = _TunnelsSnapshot;
 
   static TunnelsSnapshot fromJson(Object? json) => switch (json) {
     {
-      'tunnels': final List<Object?> tunnels,
-      'statuses': final Map<String, Object?> statuses,
-    } =>
+          'tunnels': final List<Object?> tunnels,
+          'statuses': final Map<String, Object?> statuses,
+        } &&
+        final Map<Object?, Object?> fields =>
       TunnelsSnapshot(
         tunnels: tunnels.map(Tunnel.fromJson).toList(),
         statuses: statuses.map(
           (id, status) => MapEntry(id, TunnelStatus.fromJson(status)),
         ),
+        groupColours: switch (fields['groupColours']) {
+          final Map<String, Object?> colours => {
+            for (final MapEntry(key: group, value: name) in colours.entries)
+              group: ?TunnelColour.fromName(name),
+          },
+          _ => const {},
+        },
       ),
     _ => throw FormatException('Not a snapshot: $json'),
   };
@@ -92,9 +102,16 @@ sealed class const TunnelsSnapshot._() with _$TunnelsSnapshot {
   Map<String, Object?> toJson() => {
     'tunnels': tunnels.map((tunnel) => tunnel.toJson()).toList(),
     'statuses': statuses.map((id, status) => MapEntry(id, status.toJson())),
+    if (groupColours.isNotEmpty)
+      'groupColours': groupColours.map(
+        (group, colour) => MapEntry(group, colour.name),
+      ),
   };
 
   TunnelStatus statusOf(String id) => statuses[id] ?? const Stopped();
+
+  TunnelColour? colourOf(Tunnel tunnel) =>
+      tunnel.colour ?? groupColours[tunnel.group];
 
   int get connectedCount => statuses.values.whereType<Connected>().length;
 }

@@ -36,6 +36,25 @@ void main() {
     });
   }
 
+  test('keeps each group\'s colour, and leaves out names it does not know', () {
+    final text = encodeTunnels(
+      [database.copyWith(group: 'Prod')],
+      groupColours: {'Prod': TunnelColour.blue},
+    );
+
+    expect(decodeTunnels(text).groupColours, {'Prod': TunnelColour.blue});
+    expect(
+      decodeTunnels(
+        '{"version": 1, "tunnels": [], "groupColours": {"Prod": "pink"}}',
+      ).groupColours,
+      isEmpty,
+    );
+    expect(
+      jsonDecode(encodeTunnels([database])),
+      isNot(contains('groupColours')),
+    );
+  });
+
   for (final text in [
     '[]',
     '{"version": 3, "tunnels": []}',
