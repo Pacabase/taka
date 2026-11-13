@@ -55,7 +55,7 @@ class TunnelSession({
     onChange();
     _log.i('Connected ${tunnel.title}');
     unawaited(opened.done.then((_) => _drop(null), onError: _drop));
-    // Only when turned on: the destination sees each check as a client.
+    // Not on reconnects or at login: each check hits the service for real.
     if (tunnel.kind == TunnelKind.local && !isRestored && !_hasChecked) {
       _hasChecked = true;
       unawaited(_checkDestination());
