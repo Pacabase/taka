@@ -220,35 +220,45 @@ class const _TunnelList({
             TunnelRow(:final tunnel) => Column(
               key: ValueKey(tunnel.id),
               children: [
-                _InGroup(
-                  isInGroup: tunnel.group != null,
-                  child: Column(
-                    children: [
-                      TunnelTile(
-                        tunnel: tunnel,
-                        status: snapshot.statusOf(tunnel.id),
-                        onToggle: () =>
-                            _send(context, AgentCommand.toggle(tunnel.id)),
-                        onTrust: (fingerprint) => _send(
-                          context,
-                          AgentCommand.trustHostKey(tunnel.id, fingerprint),
-                        ),
-                        onEdit: () => onEdit(tunnel),
-                        onDelete: () =>
-                            _send(context, AgentCommand.remove(tunnel.id)),
+                // Lifted, it shows the group it would land in.
+                Builder(
+                  builder: (context) {
+                    final landing = ReorderableRows.landingOf(context, index);
+                    final group = landing == null
+                        ? tunnel.group
+                        : snapshot.tunnels
+                              .droppedAt(index, landing)
+                              .firstWhere((moved) => moved.id == tunnel.id)
+                              .group;
+
+                    return TunnelTile(
+                      tunnel: tunnel,
+                      status: snapshot.statusOf(tunnel.id),
+                      isInGroup: group != null,
+                      onToggle: () =>
+                          _send(context, AgentCommand.toggle(tunnel.id)),
+                      onTrust: (fingerprint) => _send(
+                        context,
+                        AgentCommand.trustHostKey(tunnel.id, fingerprint),
                       ),
-                      if (rows.elementAtOrNull(index + 1)
-                          case TunnelRow(tunnel: Tunnel(:final group))
-                          when group == tunnel.group)
-                        Divider(
-                          height: 1,
-                          indent: 6,
-                          endIndent: 6,
-                          color: colors.background,
-                        ),
-                    ],
-                  ),
+                      onEdit: () => onEdit(tunnel),
+                      onDelete: () =>
+                          _send(context, AgentCommand.remove(tunnel.id)),
+                    );
+                  },
                 ),
+                if (rows.elementAtOrNull(index + 1)
+                    case TunnelRow(tunnel: Tunnel(:final group))
+                    when group == tunnel.group)
+                  _InGroup(
+                    isInGroup: tunnel.group != null,
+                    child: Divider(
+                      height: 1,
+                      indent: 6,
+                      endIndent: 6,
+                      color: colors.background,
+                    ),
+                  ),
               ],
             ),
           },
@@ -281,7 +291,7 @@ class const _TunnelList({
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
 
-// Indented under the group's header, with a guide line down its side.
+// The divider between two of a group's tunnels keeps its guide line.
 class const _InGroup({
   required final bool isInGroup,
   required final Widget child,
@@ -295,10 +305,7 @@ class const _InGroup({
       child: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(
-            left: BorderSide(
-              color: TakaColors.of(context).text.withValues(alpha: 0.25),
-              width: 2,
-            ),
+            left: BorderSide(color: TakaColors.of(context).guide, width: 2),
           ),
         ),
         child: child,

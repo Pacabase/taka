@@ -16,6 +16,14 @@ class const ReorderableRows({
   final int Function(int index)? spanOf,
   final int Function(int from, int to)? settle,
 }) extends StatefulWidget {
+  /// Where the lifted copy of row [index] would land right now, or null when
+  /// it isn't the row being dragged.
+  static int? landingOf(BuildContext context, int index) =>
+      switch (context.dependOnInheritedWidgetOfExactType<_Landing>()) {
+        _Landing(:final from, :final to) when from == index => to,
+        _ => null,
+      };
+
   static bool isLifted(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_Lifted>()?.isLifted ?? false;
 
@@ -109,12 +117,16 @@ class _ReorderableRowsState extends State<ReorderableRows> {
                     child: IgnorePointer(
                       child: _Lifted(
                         isLifted: drag.span == 1,
-                        child: _lifted(
-                          Column(
-                            children: widget.children
-                                .skip(drag.from)
-                                .take(drag.span)
-                                .toList(),
+                        child: _Landing(
+                          from: drag.from,
+                          to: drag.to,
+                          child: _lifted(
+                            Column(
+                              children: widget.children
+                                  .skip(drag.from)
+                                  .take(drag.span)
+                                  .toList(),
+                            ),
                           ),
                         ),
                       ),
@@ -227,6 +239,16 @@ class _Drag(
       _ => 0,
     };
   }
+}
+
+class const _Landing({
+  required final int from,
+  required final int to,
+  required super.child,
+}) extends InheritedWidget {
+  @override
+  bool updateShouldNotify(_Landing oldWidget) =>
+      from != oldWidget.from || to != oldWidget.to;
 }
 
 class const _Lifted({required final bool isLifted, required super.child})

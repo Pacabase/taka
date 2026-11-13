@@ -113,13 +113,14 @@ void main() {
     expect(top('Database'), lessThan(top('Cache')));
     expect(top('Cache'), lessThan(top('Proxy')));
 
-    double left(String name) => tester
-        .getTopLeft(
+    bool isInGroup(String name) => tester
+        .widget<TunnelTile>(
           find.ancestor(of: find.text(name), matching: find.byType(TunnelTile)),
         )
-        .dx;
-    expect(left('Database'), greaterThan(left('Proxy')));
-    expect(left('Cache'), left('Database'));
+        .isInGroup;
+    expect(isInGroup('Database'), isTrue);
+    expect(isInGroup('Cache'), isTrue);
+    expect(isInGroup('Proxy'), isFalse);
   });
 
   group("a group's header", () {
@@ -242,6 +243,48 @@ void main() {
         ),
       ),
     ).called(1);
+  });
+
+  testWidgets('a dragged tunnel shows the group it would land in', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            proxy,
+          ],
+        ),
+      ),
+    );
+    Finder tile(String name) =>
+        find.ancestor(of: find.text(name), matching: find.byType(TunnelTile));
+    bool liftedIsInGroup() =>
+        tester.widget<TunnelTile>(tile('Proxy').last).isInGroup;
+    final into =
+        tester.getBottomLeft(tile('Database')).dy +
+        4 -
+        tester.getTopLeft(tile('Proxy')).dy;
+
+    final drag = await tester.startGesture(
+      tester.getCenter(find.text('Proxy')),
+      kind: PointerDeviceKind.mouse,
+    );
+    for (var step = 0; step < 10; step++) {
+      await drag.moveBy(Offset(0, into / 10));
+      await tester.pump();
+    }
+    expect(liftedIsInGroup(), isTrue);
+
+    for (var step = 0; step < 10; step++) {
+      await drag.moveBy(Offset(0, -into / 10));
+      await tester.pump();
+    }
+    expect(liftedIsInGroup(), isFalse);
+    await drag.up();
+    await tester.pumpAndSettle();
   });
 
   testWidgets("a tunnel dropped above a group's gap joins it as its last", (
