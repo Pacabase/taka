@@ -43,4 +43,7 @@ class const TakaColors({
       Theme.of(context).brightness == Brightness.dark ? dark : light;
 
   Color get textSecondary => text.withValues(alpha: 0.75);
+
+  /// The line down the side of a group's tunnels.
+  Color get guide => text.withValues(alpha: 0.25);
 }

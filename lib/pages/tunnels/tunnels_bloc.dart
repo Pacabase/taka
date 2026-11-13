@@ -21,10 +21,10 @@ class TunnelsBloc({required AgentClient agent})
     on<Send>((event, emit) {
       if ((state, event.command) case (
         Ready(:final snapshot),
-        MoveTunnel(:final id, :final index),
+        ArrangeTunnels(:final tunnels),
       )) {
         emit(
-          Ready(snapshot.copyWith(tunnels: snapshot.tunnels.moved(id, index))),
+          Ready(snapshot.copyWith(tunnels: snapshot.tunnels.arranged(tunnels))),
         );
       }
       agent.send(event.command);

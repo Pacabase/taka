@@ -5,12 +5,25 @@ import 'package:flutter/rendering.dart';
 import 'package:taka/theme/taka_colors.dart';
 
 /// ReorderableListView's fixed 250ms animations feel slow for a short list.
-/// [onReorder]'s `to` is the row's index among the others.
+/// [onReorder]'s `to` is the row's index among the others. [spanOf] is how
+/// many rows a drag from a row carries along, itself included (0 for a row
+/// that can't be dragged), and [settle]
+/// moves `to` to where it can really land, while dragging.
 class const ReorderableRows({
   super.key,
   required final List<Widget> children,
   required final void Function(int from, int to) onReorder,
+  final int Function(int index)? spanOf,
+  final int Function(int from, int to)? settle,
 }) extends StatefulWidget {
+  /// Where the lifted copy of row [index] would land right now, or null when
+  /// it isn't the row being dragged.
+  static int? dropIndexOf(BuildContext context, int index) =>
+      switch (context.dependOnInheritedWidgetOfExactType<_Landing>()) {
+        _Landing(:final from, :final to) when from == index => to,
+        _ => null,
+      };
+
   static bool isLifted(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_Lifted>()?.isLifted ?? false;
 
@@ -58,6 +71,7 @@ class _ReorderableRowsState extends State<ReorderableRows> {
                       KeyedSubtree(
                         key: child.key,
                         child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
                           supportedDevices: const {PointerDeviceKind.mouse},
                           onVerticalDragStart: (_) => _start(index),
                           onVerticalDragUpdate: _update,
@@ -72,7 +86,7 @@ class _ReorderableRowsState extends State<ReorderableRows> {
                                   child: child,
                                 ),
                             child: Visibility.maintain(
-                              visible: drag?.from != index,
+                              visible: !(drag?.covers(index) ?? false),
                               child: _Lifted(
                                 isLifted: child.key == _dropped,
                                 child: child,
@@ -102,8 +116,19 @@ class _ReorderableRowsState extends State<ReorderableRows> {
                     ),
                     child: IgnorePointer(
                       child: _Lifted(
-                        isLifted: true,
-                        child: _lifted(widget.children[drag.from]),
+                        isLifted: drag.span == 1,
+                        child: _Landing(
+                          from: drag.from,
+                          to: drag.to,
+                          child: _lifted(
+                            Column(
+                              children: widget.children
+                                  .skip(drag.from)
+                                  .take(drag.span)
+                                  .toList(),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -126,11 +151,14 @@ class _ReorderableRowsState extends State<ReorderableRows> {
   );
 
   void _start(int index) {
+    final span = widget.spanOf?.call(index) ?? 1;
+    if (span == 0) return;
     final column = _column.currentContext!.findRenderObject()! as RenderFlex;
     final rows = column.getChildrenAsList();
     setState(
       () => _drag = _Drag(
         index,
+        span,
         [for (final row in rows) (row.parentData! as FlexParentData).offset.dy],
         [for (final row in rows) row.size.height],
       ),
@@ -139,7 +167,10 @@ class _ReorderableRowsState extends State<ReorderableRows> {
 
   void _update(DragUpdateDetails details) {
     if (_drag case final drag? when !drag.isDropping) {
-      setState(() => drag.moveBy(details.delta.dy));
+      setState(() {
+        drag.moveBy(details.delta.dy);
+        drag.to = widget.settle?.call(drag.from, drag.to) ?? drag.to;
+      });
     }
   }
 
@@ -163,6 +194,7 @@ class _ReorderableRowsState extends State<ReorderableRows> {
 
 class _Drag(
   final int from,
+  final int span,
   final List<double> tops,
   final List<double> heights,
 ) {
@@ -170,29 +202,53 @@ class _Drag(
   late int to = from;
   bool isDropping = false;
 
-  double get _height => heights[from];
+  int get _end => from + span;
 
-  double get slot => to <= from
-      ? tops[to] - tops[from]
-      : tops[to] + heights[to] - tops[from] - _height;
+  double get _top => tops[from];
+
+  double get _height => tops[_end - 1] + heights[_end - 1] - _top;
+
+  bool covers(int index) => index >= from && index < _end;
+
+  late final List<int> _others = [
+    for (var index = 0; index < tops.length; index++)
+      if (!covers(index)) index,
+  ];
+
+  double get slot =>
+      tops.first +
+      _others.take(to).fold(0.0, (top, index) => top + heights[index]) -
+      _top;
 
   void moveBy(double delta) {
-    final top = tops[from];
-    dy = (dy + delta).clamp(-top, tops.last + heights.last - top - _height);
+    dy = (dy + delta).clamp(-_top, tops.last + heights.last - _top - _height);
     to = [
-      for (final (index, height) in heights.indexed)
-        if (tops[index] + height / 2 case final center
-            when index < from && center < top + dy ||
-                index > from && center < top + dy + _height)
+      for (final index in _others)
+        if (tops[index] + heights[index] / 2 case final center
+            when index < from && center < _top + dy ||
+                index >= _end && center < _top + dy + _height)
           index,
     ].length;
   }
 
-  double shiftOf(int index) => switch (index) {
-    _ when index < from && index >= to => _height,
-    _ when index > from && index <= to => -_height,
-    _ => 0,
-  };
+  double shiftOf(int index) {
+    final rank = index < from ? index : index - span;
+    return switch (index) {
+      _ when index < from && rank >= to => _height,
+      _ when index >= _end && rank < to => -_height,
+      _ => 0,
+    };
+  }
+}
+
+class const _Landing({
+  required final int from,
+  required final int to,
+  required super.child,
+}) extends InheritedWidget {
+  @override
+  bool updateShouldNotify(_Landing oldWidget) =>
+      from != oldWidget.from || to != oldWidget.to;
 }
 
 class const _Lifted({required final bool isLifted, required super.child})

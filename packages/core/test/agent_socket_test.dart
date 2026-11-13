@@ -79,12 +79,20 @@ void main() {
 
     agent
       ..send(const AgentCommand.save(added))
-      ..send(const AgentCommand.move('c3', 0))
+      ..send(
+        const AgentCommand.arrange([
+          (id: 'c3', group: 'Web'),
+          (id: 'a1', group: null),
+        ]),
+      )
       ..send(const AgentCommand.remove('a1'));
 
     await snapshots.next;
-    await snapshots.next;
-    expect((await snapshots.next).tunnels, [added]);
+    expect((await snapshots.next).tunnels, [
+      added.copyWith(group: 'Web'),
+      database,
+    ]);
+    expect((await snapshots.next).tunnels, [added.copyWith(group: 'Web')]);
 
     agent.send(const AgentCommand.toggle('c3'));
     expect((await snapshots.next).statusOf('c3'), isNot(const Stopped()));

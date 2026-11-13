@@ -101,6 +101,12 @@ class _TunnelsPageState extends State<TunnelsPage> {
                         initial: _editing,
                         kind: _newKind,
                         hosts: _hosts,
+                        groups: context.select(
+                          (TunnelsBloc bloc) => switch (bloc.state) {
+                            Ready(:final snapshot) => snapshot.tunnels.groups,
+                            _ => const <String>[],
+                          },
+                        ),
                         onSave: (tunnel) {
                           context.read<TunnelsBloc>().add(
                             TunnelsEvent.send(AgentCommand.save(tunnel)),
@@ -182,42 +188,220 @@ class const _TunnelList({
             ],
           ),
         ),
-        Ready(:final snapshot) => ReorderableRows(
-          onReorder: (from, to) =>
-              _send(context, AgentCommand.move(snapshot.tunnels[from].id, to)),
-          children: [
-            for (final (index, tunnel) in snapshot.tunnels.indexed)
-              Column(
-                key: ValueKey(tunnel.id),
-                children: [
-                  TunnelTile(
-                    tunnel: tunnel,
-                    status: snapshot.statusOf(tunnel.id),
-                    onToggle: () =>
-                        _send(context, AgentCommand.toggle(tunnel.id)),
-                    onTrust: (fingerprint) => _send(
-                      context,
-                      AgentCommand.trustHostKey(tunnel.id, fingerprint),
-                    ),
-                    onEdit: () => onEdit(tunnel),
-                    onDelete: () =>
-                        _send(context, AgentCommand.remove(tunnel.id)),
-                  ),
-                  if (index < snapshot.tunnels.length - 1)
-                    Divider(
-                      height: 1,
-                      indent: 6,
-                      endIndent: 6,
-                      color: colors.background,
-                    ),
-                ],
-              ),
-          ],
-        ),
+        Ready(:final snapshot) => _rows(context, snapshot),
       },
+    );
+  }
+
+  Widget _rows(BuildContext context, TunnelsSnapshot snapshot) {
+    final colors = TakaColors.of(context);
+    final rows = snapshot.tunnels.rows;
+
+    return ReorderableRows(
+      spanOf: (index) => rows[index].span,
+      settle: snapshot.tunnels.landingOf,
+      onReorder: (from, to) => _send(
+        context,
+        AgentCommand.arrange([
+          for (final tunnel in snapshot.tunnels.droppedAt(from, to))
+            (id: tunnel.id, group: tunnel.group),
+        ]),
+      ),
+      children: [
+        for (final (index, row) in rows.indexed)
+          switch (row) {
+            GroupHeaderRow(:final group) => _GroupHeader(
+              group,
+              key: ValueKey('group $group'),
+              onRename: (name) => _rename(context, snapshot, group, name),
+            ),
+            GroupEndRow(:final group) => SizedBox(
+              key: ValueKey('end $group'),
+              height: 12,
+            ),
+            TunnelRow(:final tunnel) => Builder(
+              key: ValueKey(tunnel.id),
+              builder: (context) {
+                // Lifted, it shows the group it would land in.
+                final isInGroup =
+                    switch (ReorderableRows.dropIndexOf(context, index)) {
+                      final to? => snapshot.tunnels.groupOnDrop(index, to),
+                      null => tunnel.group,
+                    } !=
+                    null;
+
+                return Column(
+                  children: [
+                    TunnelTile(
+                      tunnel: tunnel,
+                      status: snapshot.statusOf(tunnel.id),
+                      isInGroup: isInGroup,
+                      onToggle: () =>
+                          _send(context, AgentCommand.toggle(tunnel.id)),
+                      onTrust: (fingerprint) => _send(
+                        context,
+                        AgentCommand.trustHostKey(tunnel.id, fingerprint),
+                      ),
+                      onEdit: () => onEdit(tunnel),
+                      onDelete: () =>
+                          _send(context, AgentCommand.remove(tunnel.id)),
+                    ),
+                    if (rows.elementAtOrNull(index + 1)
+                        case TunnelRow(tunnel: Tunnel(:final group))
+                        when group == tunnel.group)
+                      _InGroup(
+                        isInGroup: isInGroup,
+                        child: Divider(
+                          height: 1,
+                          indent: 6,
+                          endIndent: 6,
+                          color: colors.selection,
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          },
+      ],
+    );
+  }
+
+  void _rename(
+    BuildContext context,
+    TunnelsSnapshot snapshot,
+    String group,
+    String name,
+  ) {
+    final typed = groupNamed(name);
+    if (typed == null || typed == group) return;
+    final renamed = groupLike(snapshot.tunnels.groups, typed, except: group);
+
+    _send(
+      context,
+      AgentCommand.arrange([
+        for (final tunnel in snapshot.tunnels)
+          (
+            id: tunnel.id,
+            group: tunnel.group == group ? renamed : tunnel.group,
+          ),
+      ]),
     );
   }
 
   void _send(BuildContext context, AgentCommand command) =>
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
+}
+
+class const _InGroup({
+  required final bool isInGroup,
+  required final Widget child,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    if (!isInGroup) return child;
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 14),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(color: TakaColors.of(context).guide, width: 2),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class const _GroupHeader(
+  final String group, {
+  super.key,
+  required final void Function(String name) onRename,
+}) extends StatefulWidget {
+  @override
+  State<_GroupHeader> createState() => _GroupHeaderState();
+}
+
+class _GroupHeaderState extends State<_GroupHeader> {
+  final _focus = FocusNode();
+  TextEditingController? _editing;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (!_focus.hasFocus) _finish(save: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    _editing?.dispose();
+    super.dispose();
+  }
+
+  void _start() => setState(
+    () => _editing = TextEditingController(text: widget.group)
+      ..selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.group.length,
+      ),
+  );
+
+  void _finish({required bool save}) {
+    final editing = _editing;
+    if (editing == null) return;
+
+    setState(() => _editing = null);
+    if (save) widget.onRename(editing.text);
+    // The field still holds it until it's gone from the tree.
+    WidgetsBinding.instance.addPostFrameCallback((_) => editing.dispose());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = TakaColors.of(context);
+    const style = TextStyle(fontSize: 12, fontWeight: FontWeight.w500);
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
+        child: switch (_editing) {
+          final editing? => CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.escape): () =>
+                  _finish(save: false),
+            },
+            child: TextField(
+              controller: editing,
+              focusNode: _focus,
+              autofocus: true,
+              style: style.copyWith(color: colors.text),
+              decoration: const InputDecoration.collapsed(hintText: ''),
+              onSubmitted: (_) => _finish(save: true),
+            ),
+          ),
+          null => Tooltip(
+            message: 'Rename',
+            child: MouseRegion(
+              cursor: SystemMouseCursors.text,
+              child: GestureDetector(
+                onTap: _start,
+                child: Text(
+                  widget.group,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: style.copyWith(color: colors.textSecondary),
+                ),
+              ),
+            ),
+          ),
+        },
+      ),
+    );
+  }
 }

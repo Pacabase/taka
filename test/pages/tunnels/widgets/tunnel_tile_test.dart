@@ -28,6 +28,7 @@ void main() {
     WidgetTester tester, {
     Tunnel tunnel = unnamed,
     TunnelStatus status = const Stopped(),
+    bool isInGroup = false,
   }) async {
     toggles = 0;
     trusted = [];
@@ -38,6 +39,7 @@ void main() {
           body: TunnelTile(
             tunnel: tunnel,
             status: status,
+            isInGroup: isInGroup,
             onToggle: () => toggles++,
             onTrust: trusted.add,
             onEdit: () {},
@@ -47,6 +49,26 @@ void main() {
       ),
     );
   }
+
+  testWidgets("in a group, it's indented behind a guide line", (tester) async {
+    double left() => tester.getTopLeft(find.text(unnamed.summary)).dx;
+    bool hasGuide() => tester
+        .widgetList<Container>(find.byType(Container))
+        .any(
+          (container) => switch (container.decoration) {
+            BoxDecoration(border: Border(:final left)) => left.width == 2,
+            _ => false,
+          },
+        );
+
+    await pumpTile(tester);
+    final outside = left();
+    expect(hasGuide(), isFalse);
+
+    await pumpTile(tester, isInGroup: true);
+    expect(left() - outside, 16);
+    expect(hasGuide(), isTrue);
+  });
 
   testWidgets('an unnamed tunnel shows its summary once', (tester) async {
     await pumpTile(tester);

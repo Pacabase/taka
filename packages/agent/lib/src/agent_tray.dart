@@ -93,6 +93,15 @@ class AgentTray({
       MenuItemType.normal,
       onClick: () => _run(action),
     )?..accelerator = shortcut == null ? null : _shortcut(shortcut),
+    GroupActionEntry(:final group, :final label, :final connects) => _create(
+      label,
+      MenuItemType.normal,
+      onClick: () => _guard(
+        connects
+            ? _connectAll(group: group)
+            : manager.disconnectAll(group: group),
+      ),
+    ),
     TunnelActionEntry(:final tunnel, :final action, :final label) => _create(
       label,
       MenuItemType.normal,
@@ -138,10 +147,16 @@ class AgentTray({
     if (manager.snapshot.statusOf(id) is UnknownHostKey) onManageTunnels();
   }
 
-  Future<void> _connectAll() async {
-    await manager.connectAll();
-    final statuses = manager.snapshot.statuses.values;
-    if (statuses.any((status) => status is UnknownHostKey)) onManageTunnels();
+  Future<void> _connectAll({String? group}) async {
+    await manager.connectAll(group: group);
+    final snapshot = manager.snapshot;
+    if (snapshot.tunnels.any(
+      (tunnel) =>
+          (group == null || tunnel.group == group) &&
+          snapshot.statusOf(tunnel.id) is UnknownHostKey,
+    )) {
+      onManageTunnels();
+    }
   }
 
   void _run(TrayAction action) => switch (action) {

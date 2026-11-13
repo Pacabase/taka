@@ -9,12 +9,37 @@ import 'package:test/test.dart';
 import 'fakes/fakes.dart';
 
 void main() {
+  test('arrange with a tunnel that is not one is a FormatException', () {
+    expect(
+      () => AgentCommand.fromJson({
+        'command': 'arrange',
+        'tunnels': [42],
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('arrange reads a blank group as none', () {
+    expect(
+      AgentCommand.fromJson({
+        'command': 'arrange',
+        'tunnels': [
+          {'id': 'a1', 'group': ' '},
+        ],
+      }),
+      const AgentCommand.arrange([(id: 'a1', group: null)]),
+    );
+  });
+
   group('AgentCommand', () {
     for (final command in const [
       AgentCommand.save(database),
       AgentCommand.remove('a1'),
       AgentCommand.toggle('b2'),
-      AgentCommand.move('b2', 0),
+      AgentCommand.arrange([
+        (id: 'b2', group: 'Prod'),
+        (id: 'a1', group: null),
+      ]),
       AgentCommand.trustHostKey('a1', 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY'),
       AgentCommand.setLaunchAtLogin(on: true),
       AgentCommand.setDebugLogging(on: false),

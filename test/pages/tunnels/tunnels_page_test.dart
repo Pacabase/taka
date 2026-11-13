@@ -7,6 +7,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:core/core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -86,6 +87,369 @@ void main() {
     ).called(1);
   });
 
+  testWidgets('heads each group, where its first tunnel is', (tester) async {
+    await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            proxy,
+            const Tunnel(
+              id: 'c3',
+              name: 'Cache',
+              localPort: 6379,
+              group: 'Prod',
+            ),
+          ],
+        ),
+      ),
+    );
+
+    double top(String text) => tester.getTopLeft(find.text(text)).dy;
+
+    expect(find.text('Prod'), findsOneWidget);
+    expect(top('Prod'), lessThan(top('Database')));
+    expect(top('Database'), lessThan(top('Cache')));
+    expect(top('Cache'), lessThan(top('Proxy')));
+
+    bool isInGroup(String name) => tester
+        .widget<TunnelTile>(
+          find.ancestor(of: find.text(name), matching: find.byType(TunnelTile)),
+        )
+        .isInGroup;
+    expect(isInGroup('Database'), isTrue);
+    expect(isInGroup('Cache'), isTrue);
+    expect(isInGroup('Proxy'), isFalse);
+  });
+
+  group("a group's header", () {
+    Future<_MockTunnelsBloc> pumpGrouped(WidgetTester tester) => pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'monolith'),
+            proxy,
+            const Tunnel(
+              id: 'c3',
+              name: 'Cache',
+              localPort: 6379,
+              group: 'monolith',
+            ),
+          ],
+        ),
+      ),
+    );
+
+    testWidgets('renames the whole group, even only its case', (tester) async {
+      final bloc = await pumpGrouped(tester);
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), ' Monolith ');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      verify(
+        () => bloc.add(
+          const TunnelsEvent.send(
+            AgentCommand.arrange([
+              (id: 'a1', group: 'Monolith'),
+              (id: 'b2', group: null),
+              (id: 'c3', group: 'Monolith'),
+            ]),
+          ),
+        ),
+      ).called(1);
+    });
+
+    testWidgets("clicking away renames it, into another group's spelling", (
+      tester,
+    ) async {
+      final bloc = await pumpPage(
+        tester,
+        initialState: Ready(
+          TunnelsSnapshot(
+            tunnels: [
+              database.copyWith(group: 'monolith'),
+              proxy,
+              const Tunnel(
+                id: 'c3',
+                name: 'Cache',
+                localPort: 1,
+                group: 'Prod',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'prod');
+      FocusManager.instance.primaryFocus!.unfocus();
+      await tester.pump();
+
+      verify(
+        () => bloc.add(
+          const TunnelsEvent.send(
+            AgentCommand.arrange([
+              (id: 'a1', group: 'Prod'),
+              (id: 'b2', group: null),
+              (id: 'c3', group: 'Prod'),
+            ]),
+          ),
+        ),
+      ).called(1);
+    });
+
+    testWidgets('the same name renames nothing', (tester) async {
+      final bloc = await pumpGrouped(tester);
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      verifyNever(
+        () => bloc.add(
+          const TunnelsEvent.send(
+            AgentCommand.arrange([
+              (id: 'a1', group: 'monolith'),
+              (id: 'b2', group: null),
+              (id: 'c3', group: 'monolith'),
+            ]),
+          ),
+        ),
+      );
+    });
+
+    testWidgets('Esc or a blank name renames nothing', (tester) async {
+      final bloc = await pumpGrouped(tester);
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Other');
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(find.text('monolith'), findsOneWidget);
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), '  ');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      for (final name in ['Other', '  ']) {
+        verifyNever(
+          () => bloc.add(
+            TunnelsEvent.send(
+              AgentCommand.arrange([
+                (id: 'a1', group: name),
+                (id: 'b2', group: null),
+                (id: 'c3', group: name),
+              ]),
+            ),
+          ),
+        );
+      }
+      expect(find.text('monolith'), findsOneWidget);
+    });
+  });
+
+  testWidgets("a group's header carries its tunnels when dragged", (
+    tester,
+  ) async {
+    const cache = Tunnel(
+      id: 'c3',
+      name: 'Cache',
+      localPort: 6379,
+      group: 'Prod',
+    );
+    final bloc = await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            cache,
+            proxy,
+          ],
+        ),
+      ),
+    );
+
+    final drag = await tester.startGesture(
+      tester.getCenter(find.text('Prod')),
+      kind: PointerDeviceKind.mouse,
+    );
+    for (var step = 0; step < 20; step++) {
+      await drag.moveBy(const Offset(0, 10));
+      await tester.pump();
+    }
+    // The lifted copy carries the group's tunnels too.
+    expect(find.text('Cache'), findsNWidgets(2));
+    await drag.up();
+    await tester.pumpAndSettle();
+
+    verify(
+      () => bloc.add(
+        const TunnelsEvent.send(
+          AgentCommand.arrange([
+            (id: 'b2', group: null),
+            (id: 'a1', group: 'Prod'),
+            (id: 'c3', group: 'Prod'),
+          ]),
+        ),
+      ),
+    ).called(1);
+  });
+
+  testWidgets('a dragged tunnel shows the group it would land in', (
+    tester,
+  ) async {
+    final bloc = await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            proxy,
+          ],
+        ),
+      ),
+    );
+    Finder tile(String name) =>
+        find.ancestor(of: find.text(name), matching: find.byType(TunnelTile));
+    bool liftedIsInGroup() =>
+        tester.widget<TunnelTile>(tile('Proxy').last).isInGroup;
+    final into =
+        tester.getCenter(find.byKey(const ValueKey('end Prod')).last).dy -
+        1 -
+        tester.getTopLeft(tile('Proxy')).dy;
+
+    final drag = await tester.startGesture(
+      tester.getCenter(find.text('Proxy')),
+      kind: PointerDeviceKind.mouse,
+    );
+    for (var step = 0; step < 10; step++) {
+      await drag.moveBy(Offset(0, into / 10));
+      await tester.pump();
+    }
+    expect(liftedIsInGroup(), isTrue);
+
+    for (var step = 0; step < 10; step++) {
+      await drag.moveBy(Offset(0, -into / 10));
+      await tester.pump();
+    }
+    expect(liftedIsInGroup(), isFalse);
+    await drag.up();
+    await tester.pumpAndSettle();
+
+    verifyNever(
+      () => bloc.add(
+        const TunnelsEvent.send(
+          AgentCommand.arrange([
+            (id: 'a1', group: 'Prod'),
+            (id: 'b2', group: 'Prod'),
+          ]),
+        ),
+      ),
+    );
+  });
+
+  testWidgets("a tunnel dropped above a group's gap joins it as its last", (
+    tester,
+  ) async {
+    final bloc = await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            proxy,
+          ],
+        ),
+      ),
+    );
+    Finder tile(String name) =>
+        find.ancestor(of: find.text(name), matching: find.byType(TunnelTile));
+    // Proxy's top just above the middle of the gap under Database.
+    final distance =
+        tester.getCenter(find.byKey(const ValueKey('end Prod')).last).dy -
+        1 -
+        tester.getTopLeft(tile('Proxy')).dy;
+
+    final drag = await tester.startGesture(
+      tester.getCenter(find.text('Proxy')),
+      kind: PointerDeviceKind.mouse,
+    );
+    for (var step = 0; step < 10; step++) {
+      await drag.moveBy(Offset(0, distance / 10));
+      await tester.pump();
+    }
+    await drag.up();
+    await tester.pumpAndSettle();
+
+    verify(
+      () => bloc.add(
+        const TunnelsEvent.send(
+          AgentCommand.arrange([
+            (id: 'a1', group: 'Prod'),
+            (id: 'b2', group: 'Prod'),
+          ]),
+        ),
+      ),
+    ).called(1);
+  });
+
+  testWidgets("a tunnel dropped under a group's header joins the group", (
+    tester,
+  ) async {
+    final bloc = await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            proxy,
+          ],
+        ),
+      ),
+    );
+
+    double tileTop(String name) => tester
+        .getTopLeft(
+          find.ancestor(of: find.text(name), matching: find.byType(TunnelTile)),
+        )
+        .dy;
+    // Proxy's top just under Database's: past the header, above Database.
+    final distance = tileTop('Database') - tileTop('Proxy') + 4;
+
+    final drag = await tester.startGesture(
+      tester.getCenter(find.text('Proxy')),
+      kind: PointerDeviceKind.mouse,
+    );
+    for (var step = 0; step < 10; step++) {
+      await drag.moveBy(Offset(0, distance / 10));
+      await tester.pump();
+    }
+    await drag.up();
+    await tester.pumpAndSettle();
+
+    verify(
+      () => bloc.add(
+        const TunnelsEvent.send(
+          AgentCommand.arrange([
+            (id: 'b2', group: 'Prod'),
+            (id: 'a1', group: 'Prod'),
+          ]),
+        ),
+      ),
+    ).called(1);
+  });
+
   testWidgets(
     'lists the tunnels from the top, and dragging one moves it, shown as hovered',
     (tester) async {
@@ -109,7 +473,14 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => bloc.add(const TunnelsEvent.send(AgentCommand.move('a1', 1))),
+        () => bloc.add(
+          const TunnelsEvent.send(
+            AgentCommand.arrange([
+              (id: 'b2', group: null),
+              (id: 'a1', group: null),
+            ]),
+          ),
+        ),
       ).called(1);
     },
   );

@@ -123,6 +123,60 @@ void main() {
     );
   });
 
+  test('puts each group in a submenu, where its first tunnel is', () {
+    const snapshot = TunnelsSnapshot(
+      tunnels: [
+        Tunnel(id: 'a', name: 'Api', localPort: 1, group: 'Prod'),
+        Tunnel(id: 'b', name: 'Local', localPort: 2),
+        Tunnel(id: 'c', name: 'Cache', localPort: 3, group: 'Prod'),
+        Tunnel(id: 'd', name: 'Dev db', localPort: 4, group: 'Dev'),
+      ],
+      statuses: {'a': Connected()},
+    );
+    const prod =
+        'Prod — 1 of 2 connected ▸ '
+        '☑ Api — localhost:1 | ☐ Cache | --- | Disconnect All';
+
+    expect(menu(snapshot).take(6), [
+      '1 of 4 connected',
+      '---',
+      prod,
+      '☐ Local',
+      'Dev — 0 of 1 connected ▸ ☐ Dev db',
+      '---',
+    ]);
+    expect(
+      RegExp(r'(?:▸ |\| )(\w[\w ]*) ▸ Copy')
+          .allMatches(tunnelActions(snapshot))
+          .map((match) => match[1]),
+      ['Api', 'Cache', 'Local', 'Dev db'],
+    );
+  });
+
+  test("shortens a long group's name, not its count", () {
+    final group = 'A very long group name ' * 3;
+    final snapshot = TunnelsSnapshot(
+      tunnels: [Tunnel(id: 'a', name: 'Api', localPort: 1, group: group)],
+    );
+
+    expect(menu(snapshot)[2], endsWith('… — 0 of 1 connected ▸ ☐ Api'));
+    expect(menu(snapshot)[2].split(' ▸ ').first.length, lessThanOrEqualTo(50));
+  });
+
+  test('offers to connect a group when none of it is on', () {
+    const snapshot = TunnelsSnapshot(
+      tunnels: [
+        Tunnel(id: 'a', name: 'Api', localPort: 1, group: 'Prod'),
+        Tunnel(id: 'c', name: 'Cache', localPort: 3, group: 'Prod'),
+      ],
+    );
+
+    expect(
+      menu(snapshot)[2],
+      'Prod — 0 of 2 connected ▸ ☐ Api | ☐ Cache | --- | Connect All',
+    );
+  });
+
   test('keeps each tunnel to its actions, and why it is down', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [database, web, other],

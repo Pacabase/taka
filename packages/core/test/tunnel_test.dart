@@ -158,24 +158,178 @@ void main() {
     });
   });
 
-  group('moved', () {
-    const web = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
-    const tunnels = [database, proxy, web];
+  group('groups', () {
+    const a = Tunnel(id: 'a', localPort: 1, group: 'Prod');
+    const b = Tunnel(id: 'b', localPort: 2);
+    const c = Tunnel(id: 'c', localPort: 3, group: 'Prod');
+    const d = Tunnel(id: 'd', localPort: 4);
+    const e = Tunnel(id: 'e', localPort: 5, group: 'dev');
+    const tunnels = [a, b, c, d, e];
 
-    test('puts a tunnel at the index among the others', () {
-      expect(tunnels.moved('a1', 2), [proxy, web, database]);
-      expect(tunnels.moved('c3', 0), [web, database, proxy]);
-      expect(tunnels.moved('b2', 1), tunnels);
+    test('a group round-trips, and is left out when there is none', () {
+      expect(a.toJson()['group'], 'Prod');
+      expect(Tunnel.fromJson(a.toJson()), a);
+      expect(b.toJson().containsKey('group'), isFalse);
     });
 
-    test('keeps an index past either end in the list', () {
-      expect(tunnels.moved('b2', 9), [database, web, proxy]);
-      expect(tunnels.moved('b2', -1), [proxy, database, web]);
+    test('lists each group once, by name whatever its case', () {
+      expect(tunnels.groups, ['dev', 'Prod']);
+      expect(const [b, d].groups, isEmpty);
     });
 
-    test('leaves the list as it is for a tunnel it does not have', () {
-      expect(tunnels.moved('zz', 0), tunnels);
+    String layout(List<Tunnel> tunnels) => tunnels.rows
+        .map(
+          (row) => switch (row) {
+            GroupHeaderRow(:final group, :final size) => '[$group $size]',
+            TunnelRow(:final tunnel) => tunnel.id,
+            GroupEndRow() => '/',
+          },
+        )
+        .join(' ');
+
+    // Rows: 0 [Prod 2], 1 a, 2 c, 3 /, 4 b, 5 d, 6 [dev 1], 7 e, 8 /.
+    test(
+      'shows each group where its first tunnel is, between a header and a gap',
+      () {
+        expect(tunnels.shown, [a, c, b, d, e]);
+        expect(layout(tunnels), '[Prod 2] a c / b d [dev 1] e /');
+      },
+    );
+
+    group('a dropped tunnel', () {
+      test('dropped above a header is in no group', () {
+        expect(
+          layout(tunnels.droppedAt(4, 0)),
+          'b [Prod 2] a c / d [dev 1] e /',
+        );
+      });
+
+      test("dropped among a group's tunnels joins it", () {
+        expect(
+          layout(tunnels.droppedAt(5, 2)),
+          '[Prod 3] a d c / b [dev 1] e /',
+        );
+      });
+
+      test('dropped right under a header joins that group', () {
+        expect(
+          layout(tunnels.droppedAt(4, 1)),
+          '[Prod 3] b a c / d [dev 1] e /',
+        );
+      });
+
+      test("dropped above a group's gap joins it as its last tunnel", () {
+        expect(
+          layout(tunnels.droppedAt(4, 3)),
+          '[Prod 3] a c b / d [dev 1] e /',
+        );
+      });
+
+      test("dropped below a group's gap lands after the group", () {
+        final dropped = tunnels.droppedAt(1, 3);
+
+        expect(layout(dropped), '[Prod 1] c / a b d [dev 1] e /');
+        expect(dropped.firstWhere((tunnel) => tunnel.id == 'a').group, isNull);
+      });
+
+      test(
+        "taken out of its group, a group's only tunnel leaves no header",
+        () {
+          expect(layout(tunnels.droppedAt(7, 0)), 'e [Prod 2] a c / b d');
+        },
+      );
+
+      test("dropped above the last group's gap joins it", () {
+        expect(
+          layout(tunnels.droppedAt(4, 7)),
+          '[Prod 2] a c / d [dev 2] e b /',
+        );
+        expect(tunnels.groupOnDrop(4, 7), 'dev');
+        expect(tunnels.groupOnDrop(4, 0), isNull);
+      });
+
+      test('dropped past the end lands at the end, in no group', () {
+        expect(tunnels.droppedAt(4, 99).last, b);
+      });
     });
+
+    group('a dropped group', () {
+      test('moves with all its tunnels', () {
+        expect(
+          layout(tunnels.droppedAt(0, 5)),
+          'b d [dev 1] e / [Prod 2] a c /',
+        );
+        expect(
+          layout(tunnels.droppedAt(6, 0)),
+          '[dev 1] e / [Prod 2] a c / b d',
+        );
+      });
+
+      test('can sit between tunnels in no group', () {
+        expect(
+          layout(tunnels.droppedAt(6, 5)),
+          '[Prod 2] a c / b [dev 1] e / d',
+        );
+      });
+
+      test(
+        'dropped inside another group lands next to it, the nearer side',
+        () {
+          expect(
+            layout(tunnels.droppedAt(6, 3)),
+            '[Prod 2] a c / [dev 1] e / b d',
+          );
+          expect(
+            layout(tunnels.droppedAt(6, 1)),
+            '[dev 1] e / [Prod 2] a c / b d',
+          );
+          // Halfway, it goes before.
+          expect(
+            layout(tunnels.droppedAt(6, 2)),
+            '[dev 1] e / [Prod 2] a c / b d',
+          );
+        },
+      );
+
+      test('dropped past the end lands at the end', () {
+        expect(tunnels.droppedAt(0, 99), tunnels.droppedAt(0, 5));
+      });
+    });
+
+    test('groupLike names the group in use, whatever the case', () {
+      expect(groupLike(['Prod', 'dev'], 'prod'), 'Prod');
+      expect(groupLike(['Prod'], 'Staging'), 'Staging');
+      expect(groupLike(['prod'], 'Prod', except: 'prod'), 'Prod');
+    });
+
+    test('a blank group is no group', () {
+      expect(
+        Tunnel.fromJson({'id': 'x', 'localPort': 1, 'group': '  '}).group,
+        isNull,
+      );
+      expect(
+        Tunnel.fromJson({'id': 'x', 'localPort': 1, 'group': ' Prod '}).group,
+        'Prod',
+      );
+    });
+
+    test(
+      'arranges by an order of ids and groups, keeping any it leaves out',
+      () {
+        expect(
+          tunnels.arranged([(id: 'e', group: null), (id: 'a', group: 'dev')]),
+          [e.copyWith(group: null), a.copyWith(group: 'dev'), b, c, d],
+        );
+        expect(
+          tunnels.arranged([
+            (id: 'zz', group: 'x'),
+            (id: 'b', group: 'Prod'),
+            (id: 'b', group: 'dev'),
+          ]),
+          [b.copyWith(group: 'Prod'), a, c, d, e],
+        );
+      },
+    );
   });
 
   group('sshCommand', () {
