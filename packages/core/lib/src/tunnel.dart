@@ -114,15 +114,9 @@ sealed class const Tunnel._() with _$Tunnel {
     _ => true,
   };
 
-  String get _host => switch (reachableAt) {
-    '127.0.0.1' => 'localhost',
-    final address when address.contains(':') => '[$address]',
-    final address => address,
-  };
-
   String get address => switch (kind) {
-    TunnelKind.local => '$_host:$localPort',
-    TunnelKind.socks => 'socks5h://$_host:$localPort',
+    TunnelKind.local => '${_bracketed(reachableAt)}:$localPort',
+    TunnelKind.socks => 'socks5h://${_bracketed(reachableAt)}:$localPort',
     TunnelKind.remote => 'localhost:$remotePort',
   };
 
@@ -162,11 +156,13 @@ sealed class const Tunnel._() with _$Tunnel {
     }
   }
 
+  String get _listen => _bracketed(bindAddress ?? '127.0.0.1');
+
   String get summary => switch (kind) {
     TunnelKind.local =>
-      '$_host:$localPort → '
+      '$_listen:$localPort → '
           '${remoteSocket ?? '$remoteHost:$remotePort'} via $sshHost',
-    TunnelKind.socks => 'SOCKS on $_host:$localPort via $sshHost',
+    TunnelKind.socks => 'SOCKS on $_listen:$localPort via $sshHost',
     TunnelKind.remote =>
       'port $remotePort on $sshHost → ${localHost ?? 'localhost'}:$localPort',
   };
@@ -328,3 +324,6 @@ extension TunnelOrder on List<Tunnel> {
     ];
   }
 }
+
+String _bracketed(String address) =>
+    address.contains(':') ? '[$address]' : address;

@@ -1735,7 +1735,7 @@ void main() {
   group('logs', () {
     const connecting =
         'I/Tunnels: Connecting Production database: '
-        'localhost:15432 → db.internal:5432 via deploy@bastion';
+        '127.0.0.1:15432 → db.internal:5432 via deploy@bastion';
     const denied = 'deploy@bastion: Permission denied (publickey).';
     late List<String> lines;
 

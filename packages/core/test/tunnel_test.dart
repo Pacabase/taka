@@ -127,18 +127,18 @@ void main() {
     test('summary describes a local tunnel', () {
       expect(
         database.summary,
-        'localhost:15432 → db.internal:5432 via deploy@bastion.example.com',
+        '127.0.0.1:15432 → db.internal:5432 via deploy@bastion.example.com',
       );
     });
 
     test('summary describes a SOCKS proxy', () {
-      expect(proxy.summary, 'SOCKS on localhost:1080 via bastion');
+      expect(proxy.summary, 'SOCKS on 127.0.0.1:1080 via bastion');
     });
 
     test('summary describes a tunnel to a socket', () {
       expect(
         docker.summary,
-        'localhost:2375 → /var/run/docker.sock via bastion',
+        '127.0.0.1:2375 → /var/run/docker.sock via bastion',
       );
     });
 
@@ -156,8 +156,8 @@ void main() {
     });
 
     test('address is where a client connects', () {
-      expect(database.address, 'localhost:15432');
-      expect(proxy.address, 'socks5h://localhost:1080');
+      expect(database.address, '127.0.0.1:15432');
+      expect(proxy.address, 'socks5h://127.0.0.1:1080');
       expect(preview.address, 'localhost:8080');
     });
 
@@ -172,10 +172,18 @@ void main() {
       );
     });
 
-    test('a tunnel on every address is still reached on localhost', () {
+    test('a tunnel on every address says so, and is reached on loopback', () {
+      expect(
+        database.copyWith(bindAddress: '0.0.0.0').summary,
+        startsWith('0.0.0.0:15432 → '),
+      );
       expect(
         database.copyWith(bindAddress: '0.0.0.0').address,
-        'localhost:15432',
+        '127.0.0.1:15432',
+      );
+      expect(
+        proxy.copyWith(bindAddress: '::').summary,
+        'SOCKS on [::]:1080 via bastion',
       );
       expect(
         database.copyWith(bindAddress: '0.0.0.0').reachableAt,
