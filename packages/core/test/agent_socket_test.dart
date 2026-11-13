@@ -112,6 +112,7 @@ void main() {
         any(),
         remoteHost: any(named: 'remoteHost'),
         remotePort: any(named: 'remotePort'),
+        bindAddress: any(named: 'bindAddress'),
         localPort: any(named: 'localPort'),
         onLog: any(named: 'onLog'),
         abortTrigger: any(named: 'abortTrigger'),

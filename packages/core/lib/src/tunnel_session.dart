@@ -17,7 +17,8 @@ class TunnelSession({
   required final void Function() onChange,
   required final Future<void> Function()? beforeConnect,
   required final Future<bool> Function()? isLocked,
-  required final Future<void> Function(int localPort)? checkDestination,
+  required final Future<void> Function(String address, int localPort)?
+  checkDestination,
   required final Duration warningLifetime,
   required final List<Duration> retryDelays,
   required final Duration lockedRecheck,
@@ -64,7 +65,7 @@ class TunnelSession({
 
   Future<void> _checkDestination() async {
     try {
-      await checkDestination?.call(tunnel.localPort);
+      await checkDestination?.call(tunnel.reachableAt, tunnel.localPort);
     } on Object catch (exception) {
       _log.w('${tunnel.title}: could not check where it leads ($exception)');
     }
@@ -122,11 +123,13 @@ class TunnelSession({
       if (log case SshForwardFailed(:final reason)) _warn(reason);
     }
 
+    final bindAddress = tunnel.listenAddress;
     final SshTunnel opened;
     switch (tunnel) {
       case Tunnel(kind: TunnelKind.socks):
         opened = await client.openSocksProxy(
           tunnel.target,
+          bindAddress: bindAddress,
           localPort: tunnel.localPort,
           onLog: onLog,
           abortTrigger: abortTrigger,
@@ -147,6 +150,7 @@ class TunnelSession({
         opened = await client.openSocketTunnel(
           tunnel.target,
           remoteSocket: remoteSocket,
+          bindAddress: bindAddress,
           localPort: tunnel.localPort,
           onLog: onLog,
           abortTrigger: abortTrigger,
@@ -156,6 +160,7 @@ class TunnelSession({
           tunnel.target,
           remoteHost: remoteHost,
           remotePort: remotePort,
+          bindAddress: bindAddress,
           localPort: tunnel.localPort,
           onLog: onLog,
           abortTrigger: abortTrigger,

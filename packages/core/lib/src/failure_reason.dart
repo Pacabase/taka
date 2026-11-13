@@ -7,6 +7,11 @@ final _remotePortRefused = RegExp(
 
 const _reasons = [
   (
+    patterns: ["isn't an address of this computer"],
+    short: 'address not on this computer',
+    sentence: "This computer doesn't have the From address.",
+  ),
+  (
     patterns: ['Could not resolve hostname'],
     short: 'server not found',
     sentence: "Can't find the server.",

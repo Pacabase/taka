@@ -22,6 +22,7 @@ void main() {
     any(),
     remoteHost: any(named: 'remoteHost'),
     remotePort: any(named: 'remotePort'),
+    bindAddress: any(named: 'bindAddress'),
     localPort: any(named: 'localPort'),
     onLog: any(named: 'onLog'),
     abortTrigger: any(named: 'abortTrigger'),
@@ -29,6 +30,16 @@ void main() {
 
   Future<SshTunnel> openAnySocksProxy() => client.openSocksProxy(
     any(),
+    bindAddress: any(named: 'bindAddress'),
+    localPort: any(named: 'localPort'),
+    onLog: any(named: 'onLog'),
+    abortTrigger: any(named: 'abortTrigger'),
+  );
+
+  Future<SshTunnel> openAnySocketTunnel() => client.openSocketTunnel(
+    any(),
+    remoteSocket: any(named: 'remoteSocket'),
+    bindAddress: any(named: 'bindAddress'),
     localPort: any(named: 'localPort'),
     onLog: any(named: 'onLog'),
     abortTrigger: any(named: 'abortTrigger'),
@@ -305,15 +316,7 @@ void main() {
 
     test('opens a tunnel to a socket with its fields', () async {
       store = FakeStore([docker]);
-      when(
-        () => client.openSocketTunnel(
-          any(),
-          remoteSocket: any(named: 'remoteSocket'),
-          localPort: any(named: 'localPort'),
-          onLog: any(named: 'onLog'),
-          abortTrigger: any(named: 'abortTrigger'),
-        ),
-      ).thenAnswer((_) async => tunnel);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
       final manager = await loaded();
 
       await manager.toggle('s6');
@@ -332,17 +335,42 @@ void main() {
       expect(tunnel.closeCount, 1);
     });
 
-    test('opens the socket even with a host and port left over', () async {
-      store = FakeStore([docker.copyWith(remoteHost: 'db', remotePort: 5432)]);
-      when(
-        () => client.openSocketTunnel(
+    test('a SOCKS proxy and a socket listen on their bind address', () async {
+      store = FakeStore([
+        proxy.copyWith(bindAddress: '0.0.0.0'),
+        docker.copyWith(bindAddress: '172.17.0.1'),
+      ]);
+      when(openAnySocksProxy).thenAnswer((_) async => tunnel);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
+      final manager = await loaded();
+
+      await manager.toggle('b2');
+      await manager.toggle('s6');
+
+      verify(
+        () => client.openSocksProxy(
           any(),
-          remoteSocket: any(named: 'remoteSocket'),
+          bindAddress: '0.0.0.0',
           localPort: any(named: 'localPort'),
           onLog: any(named: 'onLog'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
-      ).thenAnswer((_) async => tunnel);
+      ).called(1);
+      verify(
+        () => client.openSocketTunnel(
+          any(),
+          remoteSocket: any(named: 'remoteSocket'),
+          bindAddress: '172.17.0.1',
+          localPort: any(named: 'localPort'),
+          onLog: any(named: 'onLog'),
+          abortTrigger: any(named: 'abortTrigger'),
+        ),
+      ).called(1);
+    });
+
+    test('opens the socket even with a host and port left over', () async {
+      store = FakeStore([docker.copyWith(remoteHost: 'db', remotePort: 5432)]);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
       final manager = await loaded();
 
       await manager.toggle('s6');
@@ -562,6 +590,10 @@ void main() {
 
     for (final (error, message) in [
       (const SshPortInUseException(15432), '127.0.0.1:15432 is already in use'),
+      (
+        const SshException("172.17.0.1 isn't an address of this computer"),
+        "172.17.0.1 isn't an address of this computer",
+      ),
       (ArgumentError.value('-x', 'server', 'bad host'), 'bad host'),
       (StateError('boom'), 'Bad state: boom'),
     ]) {
@@ -822,6 +854,7 @@ void main() {
             const SshTarget('elsewhere', user: 'deploy'),
             remoteHost: any(named: 'remoteHost'),
             remotePort: any(named: 'remotePort'),
+            bindAddress: any(named: 'bindAddress'),
             localPort: any(named: 'localPort'),
             onLog: any(named: 'onLog'),
             abortTrigger: any(named: 'abortTrigger'),
@@ -950,7 +983,7 @@ void main() {
       void Function(TunnelManager manager, FakeAsync time) body, {
       Future<void> Function()? beforeConnect,
       Future<bool> Function()? isLocked,
-      Future<void> Function(int localPort)? checkDestination,
+      Future<void> Function(String address, int localPort)? checkDestination,
     }) => fakeAsync((time) {
       opened = [];
       failures = [];
@@ -1021,7 +1054,7 @@ void main() {
 
         expect(opened, hasLength(2));
         expect(checked, [15432]);
-      }, checkDestination: (port) async => checked.add(port));
+      }, checkDestination: (_, port) async => checked.add(port));
     });
 
     test('says Disconnected when ssh gives no reason', () {
@@ -1228,15 +1261,22 @@ void main() {
 
   group('checking where a forward leads', () {
     late List<int> checked;
+    late List<String> checkedAt;
 
     Future<TunnelManager> checking({
-      Future<void> Function(int localPort)? check,
+      Future<void> Function(String address, int localPort)? check,
     }) async {
       checked = [];
+      checkedAt = [];
       final manager = TunnelManager(
         store: store,
         client: client,
-        checkDestination: check ?? (port) async => checked.add(port),
+        checkDestination:
+            check ??
+            (address, port) async {
+              checkedAt.add(address);
+              checked.add(port);
+            },
       );
       addTearDown(manager.close);
       await manager.load();
@@ -1252,17 +1292,36 @@ void main() {
       expect(checked, [15432]);
     });
 
+    for (final (address, reached) in [
+      ('0.0.0.0', '127.0.0.1'),
+      ('::', '::1'),
+      ('172.17.0.1', '172.17.0.1'),
+    ]) {
+      test('listens on $address, and checks it at $reached', () async {
+        store = FakeStore([database.copyWith(bindAddress: address)]);
+        final manager = await checking();
+
+        await manager.toggle('a1');
+        await pumpEventQueue();
+
+        verify(
+          () => client.openTunnel(
+            any(),
+            remoteHost: any(named: 'remoteHost'),
+            remotePort: any(named: 'remotePort'),
+            bindAddress: address,
+            localPort: any(named: 'localPort'),
+            onLog: any(named: 'onLog'),
+            abortTrigger: any(named: 'abortTrigger'),
+          ),
+        ).called(1);
+        expect(checkedAt, [reached]);
+      });
+    }
+
     test('checks a forward to a socket', () async {
       store = FakeStore([docker]);
-      when(
-        () => client.openSocketTunnel(
-          any(),
-          remoteSocket: any(named: 'remoteSocket'),
-          localPort: any(named: 'localPort'),
-          onLog: any(named: 'onLog'),
-          abortTrigger: any(named: 'abortTrigger'),
-        ),
-      ).thenAnswer((_) async => tunnel);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
       final manager = await checking();
 
       await manager.toggle('s6');
@@ -1300,7 +1359,7 @@ void main() {
         return FakeTunnel(15432);
       });
       final check = Completer<void>();
-      final manager = await checking(check: (_) => check.future);
+      final manager = await checking(check: (_, _) => check.future);
       await manager.toggle('a1');
       await manager.toggle('a1');
       await manager.toggle('a1');
@@ -1369,7 +1428,7 @@ void main() {
         return tunnel;
       });
       final manager = await checking(
-        check: (_) async => sshSays(
+        check: (_, _) async => sshSays(
           const SshForwardFailed(
             'channel 2: open failed: connect failed: Connection refused',
             reason: 'Connection refused',
@@ -1388,7 +1447,8 @@ void main() {
 
     test('stays connected when the check itself fails', () async {
       final manager = await checking(
-        check: (_) async => throw const SocketException('Connection refused'),
+        check: (_, _) async =>
+            throw const SocketException('Connection refused'),
       );
 
       await manager.toggle('a1');
@@ -1697,7 +1757,7 @@ void main() {
   group('logs', () {
     const connecting =
         'I/Tunnels: Connecting Production database: '
-        'localhost:15432 → db.internal:5432 via deploy@bastion';
+        '127.0.0.1:15432 → db.internal:5432 via deploy@bastion';
     const denied = 'deploy@bastion: Permission denied (publickey).';
     late List<String> lines;
 
@@ -1711,7 +1771,7 @@ void main() {
       final manager = TunnelManager(
         store: store,
         client: client,
-        checkDestination: (_) async =>
+        checkDestination: (_, _) async =>
             throw const SocketException('Connection refused'),
       );
       addTearDown(manager.close);
