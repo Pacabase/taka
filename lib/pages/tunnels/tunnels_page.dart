@@ -101,10 +101,12 @@ class _TunnelsPageState extends State<TunnelsPage> {
                         initial: _editing,
                         kind: _newKind,
                         hosts: _hosts,
-                        groups: switch (context.read<TunnelsBloc>().state) {
-                          Ready(:final snapshot) => snapshot.tunnels.groups,
-                          _ => const [],
-                        },
+                        groups: context.select(
+                          (TunnelsBloc bloc) => switch (bloc.state) {
+                            Ready(:final snapshot) => snapshot.tunnels.groups,
+                            _ => const <String>[],
+                          },
+                        ),
                         onSave: (tunnel) {
                           context.read<TunnelsBloc>().add(
                             TunnelsEvent.send(AgentCommand.save(tunnel)),
@@ -217,24 +219,23 @@ class const _TunnelList({
               key: ValueKey('end $group'),
               height: 12,
             ),
-            TunnelRow(:final tunnel) => Column(
+            TunnelRow(:final tunnel) => Builder(
               key: ValueKey(tunnel.id),
-              children: [
+              builder: (context) {
                 // Lifted, it shows the group it would land in.
-                Builder(
-                  builder: (context) {
-                    final landing = ReorderableRows.landingOf(context, index);
-                    final group = landing == null
-                        ? tunnel.group
-                        : snapshot.tunnels
-                              .droppedAt(index, landing)
-                              .firstWhere((moved) => moved.id == tunnel.id)
-                              .group;
+                final isInGroup =
+                    switch (ReorderableRows.dropIndexOf(context, index)) {
+                      final to? => snapshot.tunnels.groupOnDrop(index, to),
+                      null => tunnel.group,
+                    } !=
+                    null;
 
-                    return TunnelTile(
+                return Column(
+                  children: [
+                    TunnelTile(
                       tunnel: tunnel,
                       status: snapshot.statusOf(tunnel.id),
-                      isInGroup: group != null,
+                      isInGroup: isInGroup,
                       onToggle: () =>
                           _send(context, AgentCommand.toggle(tunnel.id)),
                       onTrust: (fingerprint) => _send(
@@ -244,22 +245,22 @@ class const _TunnelList({
                       onEdit: () => onEdit(tunnel),
                       onDelete: () =>
                           _send(context, AgentCommand.remove(tunnel.id)),
-                    );
-                  },
-                ),
-                if (rows.elementAtOrNull(index + 1)
-                    case TunnelRow(tunnel: Tunnel(:final group))
-                    when group == tunnel.group)
-                  _InGroup(
-                    isInGroup: tunnel.group != null,
-                    child: Divider(
-                      height: 1,
-                      indent: 6,
-                      endIndent: 6,
-                      color: colors.background,
                     ),
-                  ),
-              ],
+                    if (rows.elementAtOrNull(index + 1)
+                        case TunnelRow(tunnel: Tunnel(:final group))
+                        when group == tunnel.group)
+                      _InGroup(
+                        isInGroup: isInGroup,
+                        child: Divider(
+                          height: 1,
+                          indent: 6,
+                          endIndent: 6,
+                          color: colors.guide,
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           },
       ],
@@ -272,8 +273,9 @@ class const _TunnelList({
     String group,
     String name,
   ) {
-    final renamed = groupNamed(name);
-    if (renamed == null || renamed == group) return;
+    final typed = groupNamed(name);
+    if (typed == null || typed == group) return;
+    final renamed = groupLike(snapshot.tunnels.groups, typed, except: group);
 
     _send(
       context,
@@ -291,7 +293,6 @@ class const _TunnelList({
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
 
-// The divider between two of a group's tunnels keeps its guide line.
 class const _InGroup({
   required final bool isInGroup,
   required final Widget child,
@@ -386,13 +387,16 @@ class _GroupHeaderState extends State<_GroupHeader> {
           ),
           null => Tooltip(
             message: 'Rename',
-            child: GestureDetector(
-              onTap: _start,
-              child: Text(
-                widget.group,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: style.copyWith(color: colors.textSecondary),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.text,
+              child: GestureDetector(
+                onTap: _start,
+                child: Text(
+                  widget.group,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: style.copyWith(color: colors.textSecondary),
+                ),
               ),
             ),
           ),

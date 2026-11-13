@@ -96,7 +96,13 @@ class TunnelManager({
   Future<void> import(List<Tunnel> tunnels) async {
     final imported = [..._tunnels];
     final ids = {for (final saved in imported) saved.id};
-    for (final tunnel in tunnels) {
+    for (final read in tunnels) {
+      final tunnel = read.copyWith(
+        group: switch (read.group) {
+          final group? => groupLike(imported.groups, group),
+          null => null,
+        },
+      );
       // A tunnel already saved stays in the group it has here.
       if (imported.any(
         (saved) => tunnel.copyWith(id: saved.id, group: saved.group) == saved,

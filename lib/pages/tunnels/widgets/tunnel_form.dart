@@ -91,6 +91,7 @@ class _TunnelFormState extends State<TunnelForm> {
                   hosts: widget.groups,
                   hint: 'Optional, such as Production',
                   style: const TextStyle(),
+                  acceptsNew: true,
                   onSubmitted: _save,
                 ),
               ),
@@ -301,11 +302,11 @@ class _TunnelFormState extends State<TunnelForm> {
     },
     remoteSocket: _isSocket ? _toHost.text.trim() : null,
     group: switch (groupNamed(_group.text)) {
-      final typed? =>
-        widget.groups
-                .where((group) => group.toLowerCase() == typed.toLowerCase())
-                .firstOrNull ??
-            typed,
+      final typed? => groupLike(
+        widget.groups,
+        typed,
+        except: widget.initial?.group,
+      ),
       null => null,
     },
   );

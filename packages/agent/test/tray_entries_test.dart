@@ -153,6 +153,16 @@ void main() {
     );
   });
 
+  test("shortens a long group's name, not its count", () {
+    final group = 'A very long group name ' * 3;
+    final snapshot = TunnelsSnapshot(
+      tunnels: [Tunnel(id: 'a', name: 'Api', localPort: 1, group: group)],
+    );
+
+    expect(menu(snapshot)[2], endsWith('… — 0 of 1 connected ▸ ☐ Api'));
+    expect(menu(snapshot)[2].split(' ▸ ').first.length, lessThanOrEqualTo(50));
+  });
+
   test('offers to connect a group when none of it is on', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [

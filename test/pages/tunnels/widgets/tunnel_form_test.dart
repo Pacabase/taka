@@ -328,6 +328,37 @@ void main() {
       expect(find.text('Production'), findsNothing);
     });
 
+    testWidgets('Enter keeps a new name that starts like one in use', (
+      tester,
+    ) async {
+      await pumpForm(tester, groups: ['Production']);
+      await fillLocal(tester);
+      await tester.enterText(field(0), 'Prod');
+      await tester.pump();
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+
+      expect(saved.single.group, 'Prod');
+    });
+
+    testWidgets("changes the case of the tunnel's own group", (tester) async {
+      const tunnel = Tunnel(
+        id: 'a',
+        sshHost: 'db',
+        localPort: 15432,
+        remoteHost: 'localhost',
+        remotePort: 5432,
+        group: 'prod',
+      );
+      await pumpForm(tester, initial: tunnel, groups: ['prod']);
+      await tester.enterText(field(0), 'Prod');
+      await tester.pump();
+
+      await tester.tap(find.text('Save'));
+
+      expect(saved.single.group, 'Prod');
+    });
+
     testWidgets('left empty, Enter saves instead of picking one', (
       tester,
     ) async {
@@ -588,6 +619,16 @@ void main() {
   });
 
   group('the SSH host', () {
+    testWidgets('lists every host while empty', (tester) async {
+      await pumpForm(tester, hosts: ['staging', 'prod']);
+
+      await tester.tap(field(3));
+      await tester.pump();
+
+      expect(find.text('staging'), findsOneWidget);
+      expect(find.text('prod'), findsOneWidget);
+    });
+
     const hosts = ['dev', 'staging', 'prod'];
 
     testWidgets('suggests the hosts from ~/.ssh/config that match', (

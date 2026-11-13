@@ -125,7 +125,10 @@ TrayEntry _groupEntry(String group, TunnelsSnapshot snapshot) {
       .length;
 
   return SubmenuEntry(
-    _shortened('$group — $connected of ${members.length} connected'),
+    // A long name gives way, not the count.
+    switch (' — $connected of ${members.length} connected') {
+      final count => '${_shortened(group, _width - count.length)}$count',
+    },
     [
       for (final tunnel in members)
         _tunnelEntry(tunnel, snapshot.statusOf(tunnel.id)),
@@ -183,9 +186,9 @@ List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
 const _width = 50;
 
 // A menu is as wide as its longest item, and wraps none.
-String _shortened(String label) => label.length <= _width
+String _shortened(String label, [int width = _width]) => label.length <= width
     ? label
-    : '${label.substring(0, _width - 1).trimRight()}…';
+    : '${label.substring(0, width - 1).trimRight()}…';
 
 String trayTooltip(TunnelsSnapshot snapshot) =>
     switch (snapshot.connectedCount) {

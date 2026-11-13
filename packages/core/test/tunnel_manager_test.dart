@@ -189,6 +189,16 @@ void main() {
       },
     );
 
+    test("puts a tunnel in a group in use, whatever the name's case", () async {
+      store = FakeStore([database.copyWith(group: 'Prod')]);
+      final manager = await loaded();
+      const added = Tunnel(id: 'c3', localPort: 8080, group: 'prod');
+
+      await manager.import([added]);
+
+      expect(manager.snapshot.tunnels.last.group, 'Prod');
+    });
+
     test('keeps the group of a tunnel it adds', () async {
       final manager = await loaded();
       const added = Tunnel(id: 'c3', localPort: 8080, group: 'Web');

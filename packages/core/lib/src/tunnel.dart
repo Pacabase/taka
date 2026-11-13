@@ -182,6 +182,17 @@ int _landing(
   return at - header <= end - at ? header : end;
 }
 
+/// The group in [groups] that [typed] names in another case, other than
+/// [except], or [typed] itself, so one group never shows up twice.
+String groupLike(Iterable<String> groups, String typed, {String? except}) =>
+    groups
+        .where(
+          (group) =>
+              group != except && group.toLowerCase() == typed.toLowerCase(),
+        )
+        .firstOrNull ??
+    typed;
+
 String? _groupAt(List<TunnelListRow> rows, int index) =>
     switch (index >= 0 && index < rows.length ? rows[index] : null) {
       TunnelRow(:final tunnel) => tunnel.group,
@@ -223,6 +234,13 @@ extension TunnelOrder on List<Tunnel> {
   int landingOf(int from, int to) {
     final rows = this.rows;
     return _landing(rows, _without(rows, from), from, to);
+  }
+
+  /// The group tunnel row [from] of [rows] would be in, dropped at [to].
+  String? groupOnDrop(int from, int to) {
+    final rows = this.rows;
+    final others = _without(rows, from);
+    return _groupAt(others, _landing(rows, others, from, to));
   }
 
   /// The tunnels once [rows] row [from] is dropped at [to] among the others.

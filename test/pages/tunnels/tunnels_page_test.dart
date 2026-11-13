@@ -164,6 +164,67 @@ void main() {
       ).called(1);
     });
 
+    testWidgets("clicking away renames it, into another group's spelling", (
+      tester,
+    ) async {
+      final bloc = await pumpPage(
+        tester,
+        initialState: Ready(
+          TunnelsSnapshot(
+            tunnels: [
+              database.copyWith(group: 'monolith'),
+              proxy,
+              const Tunnel(
+                id: 'c3',
+                name: 'Cache',
+                localPort: 1,
+                group: 'Prod',
+              ),
+            ],
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'prod');
+      FocusManager.instance.primaryFocus!.unfocus();
+      await tester.pump();
+
+      verify(
+        () => bloc.add(
+          const TunnelsEvent.send(
+            AgentCommand.arrange([
+              (id: 'a1', group: 'Prod'),
+              (id: 'b2', group: null),
+              (id: 'c3', group: 'Prod'),
+            ]),
+          ),
+        ),
+      ).called(1);
+    });
+
+    testWidgets('the same name renames nothing', (tester) async {
+      final bloc = await pumpGrouped(tester);
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      verifyNever(
+        () => bloc.add(
+          const TunnelsEvent.send(
+            AgentCommand.arrange([
+              (id: 'a1', group: 'monolith'),
+              (id: 'b2', group: null),
+              (id: 'c3', group: 'monolith'),
+            ]),
+          ),
+        ),
+      );
+    });
+
     testWidgets('Esc or a blank name renames nothing', (tester) async {
       final bloc = await pumpGrouped(tester);
 
@@ -248,7 +309,7 @@ void main() {
   testWidgets('a dragged tunnel shows the group it would land in', (
     tester,
   ) async {
-    await pumpPage(
+    final bloc = await pumpPage(
       tester,
       initialState: Ready(
         TunnelsSnapshot(
@@ -264,8 +325,8 @@ void main() {
     bool liftedIsInGroup() =>
         tester.widget<TunnelTile>(tile('Proxy').last).isInGroup;
     final into =
-        tester.getBottomLeft(tile('Database')).dy +
-        4 -
+        tester.getCenter(find.byKey(const ValueKey('end Prod')).last).dy -
+        1 -
         tester.getTopLeft(tile('Proxy')).dy;
 
     final drag = await tester.startGesture(
@@ -285,6 +346,17 @@ void main() {
     expect(liftedIsInGroup(), isFalse);
     await drag.up();
     await tester.pumpAndSettle();
+
+    verifyNever(
+      () => bloc.add(
+        const TunnelsEvent.send(
+          AgentCommand.arrange([
+            (id: 'a1', group: 'Prod'),
+            (id: 'b2', group: 'Prod'),
+          ]),
+        ),
+      ),
+    );
   });
 
   testWidgets("a tunnel dropped above a group's gap joins it as its last", (
@@ -305,8 +377,8 @@ void main() {
         find.ancestor(of: find.text(name), matching: find.byType(TunnelTile));
     // Proxy's top just above the middle of the gap under Database.
     final distance =
-        tester.getBottomLeft(tile('Database')).dy +
-        4 -
+        tester.getCenter(find.byKey(const ValueKey('end Prod')).last).dy -
+        1 -
         tester.getTopLeft(tile('Proxy')).dy;
 
     final drag = await tester.startGesture(

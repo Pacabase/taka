@@ -213,6 +213,15 @@ void main() {
     expect(moves, [(1, 0)]);
   });
 
+  testWidgets('a row with no span stays put', (tester) async {
+    await pumpRows(tester, spanOf: (index) => index == 1 ? 0 : 1);
+
+    await drag(tester, 'two', 50);
+
+    expect(moves, isEmpty);
+    expect(find.text('two'), findsOneWidget);
+  });
+
   testWidgets('a short drag of a row with a span moves nothing', (
     tester,
   ) async {

@@ -239,6 +239,15 @@ void main() {
         },
       );
 
+      test("dropped above the last group's gap joins it", () {
+        expect(
+          layout(tunnels.droppedAt(4, 7)),
+          '[Prod 2] a c / d [dev 2] e b /',
+        );
+        expect(tunnels.groupOnDrop(4, 7), 'dev');
+        expect(tunnels.groupOnDrop(4, 0), isNull);
+      });
+
       test('dropped past the end lands at the end, in no group', () {
         expect(tunnels.droppedAt(4, 99).last, b);
       });
@@ -274,12 +283,23 @@ void main() {
             layout(tunnels.droppedAt(6, 1)),
             '[dev 1] e / [Prod 2] a c / b d',
           );
+          // Halfway, it goes before.
+          expect(
+            layout(tunnels.droppedAt(6, 2)),
+            '[dev 1] e / [Prod 2] a c / b d',
+          );
         },
       );
 
       test('dropped past the end lands at the end', () {
         expect(tunnels.droppedAt(0, 99), tunnels.droppedAt(0, 5));
       });
+    });
+
+    test('groupLike names the group in use, whatever the case', () {
+      expect(groupLike(['Prod', 'dev'], 'prod'), 'Prod');
+      expect(groupLike(['Prod'], 'Staging'), 'Staging');
+      expect(groupLike(['prod'], 'Prod', except: 'prod'), 'Prod');
     });
 
     test('a blank group is no group', () {

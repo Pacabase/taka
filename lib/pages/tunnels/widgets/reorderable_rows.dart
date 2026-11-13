@@ -18,7 +18,7 @@ class const ReorderableRows({
 }) extends StatefulWidget {
   /// Where the lifted copy of row [index] would land right now, or null when
   /// it isn't the row being dragged.
-  static int? landingOf(BuildContext context, int index) =>
+  static int? dropIndexOf(BuildContext context, int index) =>
       switch (context.dependOnInheritedWidgetOfExactType<_Landing>()) {
         _Landing(:final from, :final to) when from == index => to,
         _ => null,
