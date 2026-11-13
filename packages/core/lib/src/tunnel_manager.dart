@@ -18,6 +18,9 @@ class TunnelManager({
   final Future<void> Function(int localPort)? checkDestination,
   final Duration warningLifetime = const Duration(seconds: 30),
 
+  /// How long after the check ssh may still say the destination refused it.
+  final Duration checkWindow = const Duration(seconds: 2),
+
   /// A dropped tunnel fails once a try after the last delay fails too.
   final List<Duration> retryDelays = const [
     Duration(seconds: 1),
@@ -202,6 +205,7 @@ class TunnelManager({
       isLocked: isLocked,
       checkDestination: checkDestination,
       warningLifetime: warningLifetime,
+      checkWindow: checkWindow,
       retryDelays: retryDelays,
       lockedRecheck: lockedRecheck,
       stableAfter: stableAfter,

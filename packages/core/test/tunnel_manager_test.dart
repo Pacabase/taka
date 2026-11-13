@@ -1361,29 +1361,80 @@ void main() {
       expect(checked, isEmpty);
     });
 
-    test('shows the refusal the check brings out as a warning', () async {
+    const refused = SshForwardFailed(
+      'channel 2: open failed: connect failed: Connection refused',
+      reason: 'Connection refused',
+    );
+
+    test('fails the tunnel when the check finds nothing behind it', () async {
       late void Function(SshLog log) sshSays;
       when(openAnyTunnel).thenAnswer((invocation) async {
         sshSays =
             invocation.namedArguments[#onLog]! as void Function(SshLog log);
         return tunnel;
       });
-      final manager = await checking(
-        check: (_) async => sshSays(
-          const SshForwardFailed(
-            'channel 2: open failed: connect failed: Connection refused',
-            reason: 'Connection refused',
-          ),
-        ),
-      );
+      final manager = await checking(check: (_) async => sshSays(refused));
 
       await manager.toggle('a1');
       await pumpEventQueue();
 
-      expect(
-        manager.snapshot.statusOf('a1'),
-        const Connected(warning: 'Connection refused'),
-      );
+      expect(manager.snapshot.statusOf('a1'), Failed(refused.line));
+      expect(tunnel.closeCount, 1);
+    });
+
+    test('fails it for a refusal ssh logs just after the check', () {
+      fakeAsync((time) {
+        late void Function(SshLog log) sshSays;
+        when(openAnyTunnel).thenAnswer((invocation) async {
+          sshSays =
+              invocation.namedArguments[#onLog]! as void Function(SshLog log);
+          return tunnel;
+        });
+        final manager = TunnelManager(
+          store: store,
+          client: client,
+          checkDestination: (_) async {},
+        );
+        unawaited(manager.load().then((_) => manager.toggle('a1')));
+        time
+          ..flushMicrotasks()
+          ..elapse(const Duration(milliseconds: 500));
+        sshSays(refused);
+        time.flushMicrotasks();
+
+        expect(manager.snapshot.statusOf('a1'), Failed(refused.line));
+        unawaited(manager.close());
+        time.flushMicrotasks();
+      });
+    });
+
+    test('only warns of a refusal long after the check', () {
+      fakeAsync((time) {
+        late void Function(SshLog log) sshSays;
+        when(openAnyTunnel).thenAnswer((invocation) async {
+          sshSays =
+              invocation.namedArguments[#onLog]! as void Function(SshLog log);
+          return tunnel;
+        });
+        final manager = TunnelManager(
+          store: store,
+          client: client,
+          checkDestination: (_) async {},
+        );
+        unawaited(manager.load().then((_) => manager.toggle('a1')));
+        time
+          ..flushMicrotasks()
+          ..elapse(const Duration(seconds: 5));
+        sshSays(refused);
+        time.flushMicrotasks();
+
+        expect(
+          manager.snapshot.statusOf('a1'),
+          const Connected(warning: 'Connection refused'),
+        );
+        unawaited(manager.close());
+        time.flushMicrotasks();
+      });
     });
 
     test('stays connected when the check itself fails', () async {
