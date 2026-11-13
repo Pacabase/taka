@@ -44,6 +44,15 @@ class const ActionEntry(
   String toString() => [label, if (shortcut != null) '⌘$shortcut'].join(' ');
 }
 
+class const GroupActionEntry(
+  final String group,
+  final String label, {
+  required final bool connects,
+}) extends TrayEntry {
+  @override
+  String toString() => label;
+}
+
 enum TunnelAction { edit, tryAgain }
 
 class const TunnelActionEntry(
@@ -84,11 +93,12 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
       ].join(' · '),
     ),
     const SeparatorEntry(),
-    for (final tunnel in tunnels)
+    for (final tunnel in tunnels.where((tunnel) => tunnel.group == null))
       _tunnelEntry(tunnel, snapshot.statusOf(tunnel.id)),
+    for (final group in tunnels.groups) _groupEntry(group, snapshot),
     const SeparatorEntry(),
     SubmenuEntry('Tunnel Actions', [
-      for (final tunnel in tunnels)
+      for (final tunnel in tunnels.shown)
         SubmenuEntry(
           _shortened(tunnel.title),
           _tunnelActions(tunnel, snapshot.statusOf(tunnel.id)),
@@ -102,6 +112,30 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
     const ActionEntry(TrayAction.manageTunnels, 'Manage Tunnels…'),
     const ActionEntry(TrayAction.quit, 'Quit Taka', shortcut: 'q'),
   ];
+}
+
+TrayEntry _groupEntry(String group, TunnelsSnapshot snapshot) {
+  final members = snapshot.tunnels
+      .where((tunnel) => tunnel.group == group)
+      .toList();
+  final connected = members
+      .where((tunnel) => snapshot.statusOf(tunnel.id) is Connected)
+      .length;
+
+  return SubmenuEntry(
+    _shortened('$group — $connected of ${members.length} connected'),
+    [
+      for (final tunnel in members)
+        _tunnelEntry(tunnel, snapshot.statusOf(tunnel.id)),
+      if (members.length > 1) ...[
+        const SeparatorEntry(),
+        if (members.any((tunnel) => snapshot.statusOf(tunnel.id).isOn))
+          GroupActionEntry(group, 'Disconnect All', connects: false)
+        else
+          GroupActionEntry(group, 'Connect All', connects: true),
+      ],
+    ],
+  );
 }
 
 TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(

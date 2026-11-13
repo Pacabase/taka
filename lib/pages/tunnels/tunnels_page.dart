@@ -101,6 +101,10 @@ class _TunnelsPageState extends State<TunnelsPage> {
                         initial: _editing,
                         kind: _newKind,
                         hosts: _hosts,
+                        groups: switch (context.read<TunnelsBloc>().state) {
+                          Ready(:final snapshot) => snapshot.tunnels.groups,
+                          _ => const [],
+                        },
                         onSave: (tunnel) {
                           context.read<TunnelsBloc>().add(
                             TunnelsEvent.send(AgentCommand.save(tunnel)),
@@ -182,42 +186,81 @@ class const _TunnelList({
             ],
           ),
         ),
-        Ready(:final snapshot) => ReorderableRows(
-          onReorder: (from, to) =>
-              _send(context, AgentCommand.move(snapshot.tunnels[from].id, to)),
-          children: [
-            for (final (index, tunnel) in snapshot.tunnels.indexed)
-              Column(
-                key: ValueKey(tunnel.id),
-                children: [
-                  TunnelTile(
-                    tunnel: tunnel,
-                    status: snapshot.statusOf(tunnel.id),
-                    onToggle: () =>
-                        _send(context, AgentCommand.toggle(tunnel.id)),
-                    onTrust: (fingerprint) => _send(
-                      context,
-                      AgentCommand.trustHostKey(tunnel.id, fingerprint),
-                    ),
-                    onEdit: () => onEdit(tunnel),
-                    onDelete: () =>
-                        _send(context, AgentCommand.remove(tunnel.id)),
-                  ),
-                  if (index < snapshot.tunnels.length - 1)
-                    Divider(
-                      height: 1,
-                      indent: 6,
-                      endIndent: 6,
-                      color: colors.background,
-                    ),
-                ],
-              ),
-          ],
-        ),
+        Ready(:final snapshot) => _rows(context, snapshot),
       },
+    );
+  }
+
+  Widget _rows(BuildContext context, TunnelsSnapshot snapshot) {
+    final colors = TakaColors.of(context);
+    final shown = snapshot.tunnels.shown;
+
+    return ReorderableRows(
+      onReorder: (from, to) {
+        final id = shown[from].id;
+        _send(
+          context,
+          AgentCommand.move(
+            id,
+            snapshot.tunnels.moveIndexFor(id, shownIndex: to),
+          ),
+        );
+      },
+      children: [
+        for (final (index, tunnel) in shown.indexed)
+          Column(
+            key: ValueKey(tunnel.id),
+            children: [
+              if (tunnel.group case final group?
+                  when index == 0 || shown[index - 1].group != group)
+                _GroupHeader(group),
+              TunnelTile(
+                tunnel: tunnel,
+                status: snapshot.statusOf(tunnel.id),
+                onToggle: () => _send(context, AgentCommand.toggle(tunnel.id)),
+                onTrust: (fingerprint) => _send(
+                  context,
+                  AgentCommand.trustHostKey(tunnel.id, fingerprint),
+                ),
+                onEdit: () => onEdit(tunnel),
+                onDelete: () => _send(context, AgentCommand.remove(tunnel.id)),
+              ),
+              if (index < shown.length - 1 &&
+                  shown[index + 1].group == tunnel.group)
+                Divider(
+                  height: 1,
+                  indent: 6,
+                  endIndent: 6,
+                  color: colors.background,
+                ),
+            ],
+          ),
+      ],
     );
   }
 
   void _send(BuildContext context, AgentCommand command) =>
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
+}
+
+class const _GroupHeader(final String group) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
+        child: Text(
+          group,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: TakaColors.of(context).textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
 }

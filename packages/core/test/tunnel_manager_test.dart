@@ -123,6 +123,20 @@ void main() {
       },
     );
 
+    test(
+      'keeps a tunnel that is on connected when only its group changes',
+      () async {
+        final manager = await loaded();
+        await manager.toggle('a1');
+
+        await manager.save(database.copyWith(group: 'Prod'));
+
+        expect(tunnel.closeCount, 0);
+        verify(openAnyTunnel).called(1);
+        expect(manager.snapshot.tunnels.first.group, 'Prod');
+      },
+    );
+
     test('keeps a tunnel that is on connected when only renamed', () async {
       final manager = await loaded();
       await manager.toggle('a1');
@@ -834,6 +848,27 @@ void main() {
 
     expect(manager.snapshot.connectedCount, 2);
     verify(openAnyTunnel).called(1);
+  });
+
+  test('connectAll with a group opens only the tunnels in it', () async {
+    store = FakeStore([database.copyWith(group: 'Prod'), proxy]);
+    final manager = await loaded();
+
+    await manager.connectAll(group: 'Prod');
+
+    expect(manager.snapshot.statusOf('a1'), const Connected());
+    expect(manager.snapshot.statusOf('b2'), const Stopped());
+  });
+
+  test('disconnectAll with a group stops only the tunnels in it', () async {
+    store = FakeStore([database.copyWith(group: 'Prod'), proxy]);
+    final manager = await loaded();
+    await manager.connectAll();
+
+    await manager.disconnectAll(group: 'Prod');
+
+    expect(manager.snapshot.statusOf('a1'), const Stopped());
+    expect(manager.snapshot.statusOf('b2'), const Connected());
   });
 
   test('disconnectAll stops every tunnel that is on', () async {

@@ -76,7 +76,9 @@ class TunnelManager({
 
     final isWanted =
         _isOn(tunnel.id) || _sessions[tunnel.id]?.status is UnknownHostKey;
-    if (isWanted && previous?.copyWith(name: tunnel.name) != tunnel) {
+    final isRenamed =
+        previous?.copyWith(name: tunnel.name, group: tunnel.group) == tunnel;
+    if (isWanted && !isRenamed) {
       final running = _sessions.remove(tunnel.id)!;
       _log.i('Stopping ${running.tunnel.title}');
       await running.stop();
@@ -151,12 +153,17 @@ class TunnelManager({
     ]);
   }
 
-  Future<void> connectAll() => Future.wait(
-    _tunnels.map((tunnel) => tunnel.id).whereNot(_isOn).map(toggle),
-  );
+  /// Every tunnel, or only those in [group].
+  Future<void> connectAll({String? group}) =>
+      Future.wait(_idsIn(group).whereNot(_isOn).map(toggle));
 
-  Future<void> disconnectAll() =>
-      Future.wait([..._sessions.keys].where(_isOn).map(toggle));
+  Future<void> disconnectAll({String? group}) =>
+      Future.wait(_idsIn(group).where(_isOn).map(toggle));
+
+  List<String> _idsIn(String? group) => [
+    for (final tunnel in _tunnels)
+      if (group == null || tunnel.group == group) tunnel.id,
+  ];
 
   // A changes listener may call close again from inside this call.
   Future<void> close() async {

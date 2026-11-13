@@ -86,6 +86,33 @@ void main() {
     ).called(1);
   });
 
+  testWidgets('heads each group, after the tunnels in none', (tester) async {
+    await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            proxy,
+            const Tunnel(
+              id: 'c3',
+              name: 'Cache',
+              localPort: 6379,
+              group: 'Prod',
+            ),
+          ],
+        ),
+      ),
+    );
+
+    double top(String text) => tester.getTopLeft(find.text(text)).dy;
+
+    expect(find.text('Prod'), findsOneWidget);
+    expect(top('Proxy'), lessThan(top('Prod')));
+    expect(top('Prod'), lessThan(top('Database')));
+    expect(top('Database'), lessThan(top('Cache')));
+  });
+
   testWidgets(
     'lists the tunnels from the top, and dragging one moves it, shown as hovered',
     (tester) async {

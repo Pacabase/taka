@@ -158,6 +158,40 @@ void main() {
     });
   });
 
+  group('groups', () {
+    const a = Tunnel(id: 'a', localPort: 1, group: 'Prod');
+    const b = Tunnel(id: 'b', localPort: 2);
+    const c = Tunnel(id: 'c', localPort: 3, group: 'Prod');
+    const d = Tunnel(id: 'd', localPort: 4);
+    const e = Tunnel(id: 'e', localPort: 5, group: 'dev');
+    const tunnels = [a, b, c, d, e];
+
+    test('a group round-trips, and is left out when there is none', () {
+      expect(a.toJson()['group'], 'Prod');
+      expect(Tunnel.fromJson(a.toJson()), a);
+      expect(b.toJson().containsKey('group'), isFalse);
+    });
+
+    test('lists each group once, by name whatever its case', () {
+      expect(tunnels.groups, ['dev', 'Prod']);
+      expect(const [b, d].groups, isEmpty);
+    });
+
+    test('shows the tunnels in no group first, then each group', () {
+      expect(tunnels.shown, [b, d, e, a, c]);
+    });
+
+    test('moves a tunnel to where it was dropped among those shown', () {
+      int to(String id, int shownIndex) =>
+          tunnels.moveIndexFor(id, shownIndex: shownIndex);
+
+      expect(tunnels.moved('d', to('d', 0)).shown, [d, b, e, a, c]);
+      expect(tunnels.moved('c', to('c', 3)).shown, [b, d, e, c, a]);
+      expect(tunnels.moved('a', to('a', 9)).shown, [b, d, e, c, a]);
+      expect(const [a].moveIndexFor('a', shownIndex: 0), 0);
+    });
+  });
+
   group('moved', () {
     const web = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
     const tunnels = [database, proxy, web];

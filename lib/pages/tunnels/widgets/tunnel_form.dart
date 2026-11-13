@@ -12,6 +12,7 @@ class const TunnelForm({
   final Tunnel? initial,
   final TunnelKind kind = TunnelKind.local,
   final List<String> hosts = const [],
+  final List<String> groups = const [],
   required final void Function(Tunnel tunnel) onSave,
   required final void Function() onCancel,
 }) extends StatefulWidget {
@@ -27,7 +28,8 @@ class _TunnelFormState extends State<TunnelForm> {
   late final _toHost = TextEditingController();
   late final _toPort = TextEditingController();
   late final _name = TextEditingController(text: widget.initial?.name);
-  late final _fields = [_fromPort, _sshHost, _toHost, _toPort, _name];
+  late final _group = TextEditingController(text: widget.initial?.group);
+  late final _fields = [_fromPort, _sshHost, _toHost, _toPort, _name, _group];
   ({String host, List<String> leftOut})? _pasted;
   late final _pasteCommand = _PasteCommandAction(onText: _fill);
 
@@ -171,6 +173,19 @@ class _TunnelFormState extends State<TunnelForm> {
                   child: _input(_name, hint: 'Optional'),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.only(left: RouteStep.indent),
+                child: Labelled(
+                  label: 'Group',
+                  child: HostInput(
+                    controller: _group,
+                    hosts: widget.groups,
+                    hint: 'Optional, such as Production',
+                    style: const TextStyle(),
+                    onSubmitted: _save,
+                  ),
+                ),
+              ),
               ListenableBuilder(
                 listenable: _sshHost,
                 builder: (context, _) => switch (_pasted) {
@@ -292,6 +307,7 @@ class _TunnelFormState extends State<TunnelForm> {
       TunnelKind.remote => _port(_fromPort.text),
     },
     remoteSocket: _isSocket ? _toHost.text.trim() : null,
+    group: _group.text.trim().isEmpty ? null : _group.text.trim(),
   );
 }
 

@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:system_ssh/system_ssh.dart';
 
@@ -25,6 +26,7 @@ sealed class const Tunnel._() with _$Tunnel {
     String? remoteHost,
     int? remotePort,
     String? remoteSocket,
+    String? group,
   }) = _Tunnel;
 
   static Tunnel fromJson(Object? json) {
@@ -46,6 +48,7 @@ sealed class const Tunnel._() with _$Tunnel {
         remoteHost: field<String>('remoteHost'),
         remotePort: field<int>('remotePort'),
         remoteSocket: field<String>('remoteSocket'),
+        group: field<String>('group'),
       );
     }
 
@@ -62,6 +65,7 @@ sealed class const Tunnel._() with _$Tunnel {
     'remoteHost': ?remoteHost,
     'remotePort': ?remotePort,
     'remoteSocket': ?remoteSocket,
+    'group': ?group,
   };
 
   SshTarget get target {
@@ -124,6 +128,26 @@ sealed class const Tunnel._() with _$Tunnel {
 }
 
 extension TunnelOrder on List<Tunnel> {
+  List<String> get groups =>
+      {for (final tunnel in this) ?tunnel.group}.sorted(compareAsciiLowerCase);
+
+  /// As the window and tray list them: tunnels in no group, then each group.
+  List<Tunnel> get shown => [
+    ...where((tunnel) => tunnel.group == null),
+    for (final group in groups) ...where((tunnel) => tunnel.group == group),
+  ];
+
+  /// The index for [moved] that puts tunnel [id] at [shownIndex] among the
+  /// others as [shown] lists them.
+  int moveIndexFor(String id, {required int shownIndex}) {
+    final others = shown.where((tunnel) => tunnel.id != id).toList();
+    final rest = where((tunnel) => tunnel.id != id).toList();
+    if (shownIndex >= others.length) {
+      return others.isEmpty ? 0 : rest.indexOf(others.last) + 1;
+    }
+    return rest.indexOf(others[shownIndex.clamp(0, others.length - 1)]);
+  }
+
   List<Tunnel> moved(String id, int index) {
     final from = indexWhere((tunnel) => tunnel.id == id);
     final to = index.clamp(0, length - 1);

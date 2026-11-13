@@ -16,6 +16,7 @@ void main() {
     WidgetTester tester, {
     Tunnel? initial,
     List<String> hosts = const [],
+    List<String> groups = const [],
   }) async {
     saved = [];
     cancels = 0;
@@ -26,6 +27,7 @@ void main() {
           body: TunnelForm(
             initial: initial,
             hosts: hosts,
+            groups: groups,
             onSave: saved.add,
             onCancel: () => cancels++,
           ),
@@ -101,7 +103,7 @@ void main() {
     await tester.enterText(field(2), '/var/run/docker.sock');
     await tester.pump();
 
-    expect(find.byType(TextField), findsNWidgets(4));
+    expect(find.byType(TextField), findsNWidgets(5));
     await tester.tap(find.text('Add'));
 
     expect(
@@ -309,6 +311,56 @@ void main() {
     expect(saved, isEmpty);
   });
 
+  group('the group', () {
+    testWidgets('is saved without the spaces around it', (tester) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+      await tester.enterText(field(5), '  Production  ');
+      await tester.pump();
+
+      await tester.tap(find.text('Add'));
+
+      expect(saved.single.group, 'Production');
+    });
+
+    testWidgets('left empty is no group', (tester) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+      await tester.enterText(field(5), '   ');
+      await tester.pump();
+
+      await tester.tap(find.text('Add'));
+
+      expect(saved.single.group, isNull);
+    });
+
+    testWidgets('suggests the groups in use that match', (tester) async {
+      await pumpForm(tester, groups: ['Production', 'Staging']);
+
+      await tester.enterText(field(5), 'prod');
+      await tester.pump();
+
+      expect(find.text('Production'), findsOneWidget);
+      expect(find.text('Staging'), findsNothing);
+    });
+
+    testWidgets('is kept when a tunnel is edited', (tester) async {
+      const tunnel = Tunnel(
+        id: 'a',
+        sshHost: 'db',
+        localPort: 15432,
+        remoteHost: 'localhost',
+        remotePort: 5432,
+        group: 'Production',
+      );
+      await pumpForm(tester, initial: tunnel);
+
+      await tester.tap(find.text('Save'));
+
+      expect(saved.single, tunnel);
+    });
+  });
+
   testWidgets('editing keeps the id and prefills every field', (tester) async {
     const tunnel = Tunnel(
       id: 'a',
@@ -389,7 +441,7 @@ void main() {
       await pumpForm(tester);
       await paste(tester, 1, 'ssh -L 2375:/var/run/docker.sock bastion');
 
-      expect(find.byType(TextField), findsNWidgets(4));
+      expect(find.byType(TextField), findsNWidgets(5));
       await tester.tap(find.text('Add'));
       expect(saved.single.remoteSocket, '/var/run/docker.sock');
       expect(saved.single.localPort, 2375);
