@@ -12,13 +12,15 @@ final _word = RegExp(
 final _operator = RegExp('^[;&|<>]');
 final _quoted = RegExp(r''''([^']*)'|"((?:\\.|[^"\\])*)"|\\(.)''');
 final _escapedInDoubleQuotes = RegExp(r'\\([$`"\\])');
-// An optional bind address goes unused: Taka listens on 127.0.0.1 only, and
-// so does the SSH host for a remote forward.
+// The SSH host listens on 127.0.0.1 for a remote forward, whatever bind
+// address it names.
 final _portForward = RegExp(
-  r'^(?:[^:\[\]]*:|\[[^\]]*\]:)?(\d+):(?:\[([^\]]+)\]|([^:\[\]]+)):(\d+)$',
+  r'^(?:([^:\[\]]*):|\[([^\]]*)\]:)?(\d+):(?:\[([^\]]+)\]|([^:\[\]]+)):(\d+)$',
 );
-final _socketForward = RegExp(r'^(?:[^:\[\]/]*:|\[[^\]]*\]:)?(\d+):(/[^:]+)$');
-final _socksForward = RegExp(r'^(?:[^:\[\]]*:|\[[^\]]*\]:)?(\d+)$');
+final _socketForward = RegExp(
+  r'^(?:([^:\[\]/]*):|\[([^\]]*)\]:)?(\d+):(/[^:]+)$',
+);
+final _socksForward = RegExp(r'^(?:([^:\[\]]*):|\[([^\]]*)\]:)?(\d+)$');
 
 /// A word that isn't an option has no flag: the host or the remote command.
 typedef _Argument = ({String? flag, String? value});
@@ -156,28 +158,40 @@ Tunnel _tunnel(_Argument forward) => switch ((
 )) {
   ('L', _, _, final socket?) => Tunnel(
     id: '',
-    localPort: _port(socket[1]!),
-    remoteSocket: socket[2],
+    bindAddress: _bindAddress(socket),
+    localPort: _port(socket[3]!),
+    remoteSocket: socket[4],
   ),
   ('L', final local?, _, _) => Tunnel(
     id: '',
-    localPort: _port(local[1]!),
-    remoteHost: local[2] ?? local[3],
-    remotePort: _port(local[4]!),
+    bindAddress: _bindAddress(local),
+    localPort: _port(local[3]!),
+    remoteHost: local[4] ?? local[5],
+    remotePort: _port(local[6]!),
   ),
   ('R', final remote?, _, _) => Tunnel(
     id: '',
     kind: TunnelKind.remote,
-    remotePort: _port(remote[1]!),
-    localHost: remote[2] ?? remote[3],
-    localPort: _port(remote[4]!),
+    remotePort: _port(remote[3]!),
+    localHost: remote[4] ?? remote[5],
+    localPort: _port(remote[6]!),
   ),
   ('D', _, final socks?, _) => Tunnel(
     id: '',
     kind: TunnelKind.socks,
-    localPort: _port(socks[1]!),
+    bindAddress: _bindAddress(socks),
+    localPort: _port(socks[3]!),
   ),
   _ => throw FormatException('Not a forward: ${forward.value}'),
+};
+
+// ssh's `*` or an empty address is every IPv4 one; Taka keeps an IP address
+// and leaves a name such as localhost at the default.
+String? _bindAddress(RegExpMatch forward) => switch (forward[1] ?? forward[2]) {
+  '' || '*' => '0.0.0.0',
+  '127.0.0.1' || null => null,
+  final address when isIpAddress(address) => address,
+  _ => null,
 };
 
 int _port(String digits) => switch (int.parse(digits)) {

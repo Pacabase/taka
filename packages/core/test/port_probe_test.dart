@@ -14,7 +14,7 @@ void main() {
     final accepted = <Socket>[];
     server.listen(accepted.add);
 
-    await probeLocalPort(server.port);
+    await probeLocalPort('127.0.0.1', server.port);
     await pumpEventQueue();
 
     expect(accepted, hasLength(1));
@@ -34,7 +34,10 @@ void main() {
         ..listen(null, onError: close, onDone: close),
     );
 
-    await probeLocalPort(server.port).timeout(const Duration(seconds: 2));
+    await probeLocalPort(
+      '127.0.0.1',
+      server.port,
+    ).timeout(const Duration(seconds: 2));
 
     await closed.future.timeout(const Duration(seconds: 2));
   });
@@ -44,6 +47,9 @@ void main() {
     final port = server.port;
     await server.close();
 
-    await expectLater(probeLocalPort(port), throwsA(isA<SocketException>()));
+    await expectLater(
+      probeLocalPort('127.0.0.1', port),
+      throwsA(isA<SocketException>()),
+    );
   });
 }

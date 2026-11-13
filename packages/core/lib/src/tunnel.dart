@@ -6,12 +6,31 @@ part 'tunnel.freezed.dart';
 
 enum TunnelKind { local, socks, remote }
 
+/// Whether [address] is an IPv4 or IPv6 address, rather than a name.
+bool isIpAddress(String address) {
+  try {
+    address.contains(':')
+        ? Uri.parseIPv6Address(address)
+        : Uri.parseIPv4Address(address);
+    return true;
+  } on FormatException {
+    return false;
+  }
+}
+
+/// Whether only this computer can reach [address].
+bool isLoopbackAddress(String address) =>
+    address == '::1' || address.startsWith('127.');
+
 @freezed
 sealed class const Tunnel._() with _$Tunnel {
   /// [sshHost] is a `~/.ssh/config` alias, a host or `user@host`.
   ///
   /// A local tunnel leads to [remoteHost] and [remotePort], or to the Unix
   /// socket at [remoteSocket] on [sshHost] when that is set.
+  ///
+  /// A local tunnel or SOCKS proxy listens on [bindAddress], an IP address of
+  /// this computer, or 127.0.0.1 when null.
   ///
   /// A remote tunnel has [sshHost] listen on its own [remotePort], and brings
   /// each connection back to [localHost], or localhost when null, on
@@ -21,6 +40,7 @@ sealed class const Tunnel._() with _$Tunnel {
     @Default('') String name,
     @Default(TunnelKind.local) TunnelKind kind,
     @Default('') String sshHost,
+    String? bindAddress,
     String? localHost,
     required int localPort,
     String? remoteHost,
@@ -43,6 +63,7 @@ sealed class const Tunnel._() with _$Tunnel {
         name: field<String>('name') ?? '',
         kind: TunnelKind.values.asNameMap()[fields['kind']] ?? TunnelKind.local,
         sshHost: field<String>('sshHost') ?? '',
+        bindAddress: field<String>('bindAddress'),
         localHost: field<String>('localHost'),
         localPort: localPort,
         remoteHost: field<String>('remoteHost'),
@@ -60,6 +81,7 @@ sealed class const Tunnel._() with _$Tunnel {
     'name': name,
     'kind': kind.name,
     'sshHost': sshHost,
+    'bindAddress': ?bindAddress,
     'localHost': ?localHost,
     'localPort': localPort,
     'remoteHost': ?remoteHost,
@@ -78,9 +100,29 @@ sealed class const Tunnel._() with _$Tunnel {
 
   String get title => name.isNotEmpty ? name : summary;
 
+  /// Where this computer reaches the tunnel: 0.0.0.0 and :: listen on
+  /// loopback too.
+  String get reachableAt => switch (bindAddress) {
+    null || '0.0.0.0' => '127.0.0.1',
+    '::' => '::1',
+    final address => address,
+  };
+
+  /// Whether only this computer can use the tunnel.
+  bool get isLocalOnly => switch (bindAddress) {
+    final address? when kind != TunnelKind.remote => isLoopbackAddress(address),
+    _ => true,
+  };
+
+  String get _host => switch (reachableAt) {
+    '127.0.0.1' => 'localhost',
+    final address when address.contains(':') => '[$address]',
+    final address => address,
+  };
+
   String get address => switch (kind) {
-    TunnelKind.local => 'localhost:$localPort',
-    TunnelKind.socks => 'socks5h://localhost:$localPort',
+    TunnelKind.local => '$_host:$localPort',
+    TunnelKind.socks => 'socks5h://$_host:$localPort',
     TunnelKind.remote => 'localhost:$remotePort',
   };
 
@@ -91,17 +133,23 @@ sealed class const Tunnel._() with _$Tunnel {
         TunnelKind.local => switch (remoteSocket) {
           final remoteSocket? => socketTunnelCommand(
             target,
+            bindAddress: bindAddress ?? '127.0.0.1',
             remoteSocket: remoteSocket,
             localPort: localPort,
           ),
           null => tunnelCommand(
             target,
+            bindAddress: bindAddress ?? '127.0.0.1',
             remoteHost: remoteHost ?? '',
             remotePort: remotePort ?? 0,
             localPort: localPort,
           ),
         },
-        TunnelKind.socks => socksProxyCommand(target, localPort: localPort),
+        TunnelKind.socks => socksProxyCommand(
+          target,
+          bindAddress: bindAddress ?? '127.0.0.1',
+          localPort: localPort,
+        ),
         TunnelKind.remote => remoteTunnelCommand(
           target,
           localHost: localHost ?? 'localhost',
@@ -116,9 +164,9 @@ sealed class const Tunnel._() with _$Tunnel {
 
   String get summary => switch (kind) {
     TunnelKind.local =>
-      'localhost:$localPort → '
+      '$_host:$localPort → '
           '${remoteSocket ?? '$remoteHost:$remotePort'} via $sshHost',
-    TunnelKind.socks => 'SOCKS on localhost:$localPort via $sshHost',
+    TunnelKind.socks => 'SOCKS on $_host:$localPort via $sshHost',
     TunnelKind.remote =>
       'port $remotePort on $sshHost → ${localHost ?? 'localhost'}:$localPort',
   };

@@ -68,6 +68,14 @@ void main() {
       expect(Tunnel.fromJson(toRouter.toJson()), toRouter);
     });
 
+    test('a bind address round-trips, and is left out when there is none', () {
+      final docker = database.copyWith(bindAddress: '172.17.0.1');
+
+      expect(docker.toJson(), containsPair('bindAddress', '172.17.0.1'));
+      expect(Tunnel.fromJson(docker.toJson()), docker);
+      expect(database.toJson(), isNot(contains('bindAddress')));
+    });
+
     test('a tunnel to a socket round-trips', () {
       expect(docker.toJson(), {
         'id': 's6',
@@ -151,6 +159,48 @@ void main() {
       expect(database.address, 'localhost:15432');
       expect(proxy.address, 'socks5h://localhost:1080');
       expect(preview.address, 'localhost:8080');
+    });
+
+    test('address and summary name another address to listen on', () {
+      final docker = database.copyWith(bindAddress: '172.17.0.1');
+
+      expect(docker.address, '172.17.0.1:15432');
+      expect(docker.summary, startsWith('172.17.0.1:15432 → '));
+      expect(
+        proxy.copyWith(bindAddress: 'fd00::1').address,
+        'socks5h://[fd00::1]:1080',
+      );
+    });
+
+    test('a tunnel on every address is still reached on localhost', () {
+      expect(
+        database.copyWith(bindAddress: '0.0.0.0').address,
+        'localhost:15432',
+      );
+      expect(
+        database.copyWith(bindAddress: '0.0.0.0').reachableAt,
+        '127.0.0.1',
+      );
+      expect(proxy.copyWith(bindAddress: '::').address, 'socks5h://[::1]:1080');
+      expect(database.reachableAt, '127.0.0.1');
+    });
+
+    test('only a loopback address keeps a tunnel to this computer', () {
+      for (final address in [null, '127.0.0.1', '127.0.0.2', '::1']) {
+        expect(
+          database.copyWith(bindAddress: address).isLocalOnly,
+          isTrue,
+          reason: '$address',
+        );
+      }
+      for (final address in ['0.0.0.0', '::', '172.17.0.1', '192.168.1.5']) {
+        expect(
+          database.copyWith(bindAddress: address).isLocalOnly,
+          isFalse,
+          reason: address,
+        );
+      }
+      expect(preview.isLocalOnly, isTrue);
     });
 
     test('toString names the id and title', () {
@@ -363,6 +413,22 @@ void main() {
         preview.copyWith(localHost: '192.168.1.1').sshCommand,
         'ssh -N -R 127.0.0.1:8080:192.168.1.1:3000 bastion',
       );
+    });
+
+    test('listens on the bind address', () {
+      expect(
+        database.copyWith(bindAddress: '172.17.0.1').sshCommand,
+        contains('-L 172.17.0.1:15432:db.internal:5432'),
+      );
+      expect(
+        docker.copyWith(bindAddress: '0.0.0.0').sshCommand,
+        contains('-L 0.0.0.0:2375:/var/run/docker.sock'),
+      );
+      expect(
+        proxy.copyWith(bindAddress: '::').sshCommand,
+        contains('-D [::]:1080'),
+      );
+      expect(database.copyWith(bindAddress: 'localhost').sshCommand, isNull);
     });
 
     test('is null for a tunnel ssh cannot open', () {

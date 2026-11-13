@@ -1,8 +1,8 @@
 import 'dart:io';
 
-Future<void> probeLocalPort(int port) async {
+Future<void> probeLocalPort(String address, int port) async {
   final socket = await Socket.connect(
-    InternetAddress.loopbackIPv4,
+    InternetAddress(address),
     port,
     timeout: const Duration(seconds: 3),
   );
