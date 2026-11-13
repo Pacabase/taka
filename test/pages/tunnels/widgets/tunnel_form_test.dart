@@ -173,13 +173,17 @@ void main() {
   });
 
   group('the From address', () {
-    testWidgets('is 127.0.0.1 unless changed, and saved as none', (
+    testWidgets('is empty, with 127.0.0.1 as its hint, and saved as none', (
       tester,
     ) async {
       await pumpForm(tester);
       await fillLocal(tester);
 
-      expect(tester.widget<TextField>(field(2)).controller!.text, '127.0.0.1');
+      expect(tester.widget<TextField>(field(2)).controller!.text, isEmpty);
+      expect(
+        tester.widget<TextField>(field(2)).decoration!.hintText,
+        '127.0.0.1',
+      );
       await tester.tap(find.text('Add'));
       expect(saved.single.bindAddress, isNull);
     });

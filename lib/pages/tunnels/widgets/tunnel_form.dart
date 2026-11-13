@@ -23,7 +23,7 @@ class const TunnelForm({
 class _TunnelFormState extends State<TunnelForm> {
   late TunnelKind _kind = widget.initial?.kind ?? widget.kind;
   // Each field keeps its place on screen, whichever tunnel ends it holds.
-  late final _fromHost = TextEditingController(text: '127.0.0.1');
+  late final _fromHost = TextEditingController();
   late final _fromPort = TextEditingController();
   late final _sshHost = TextEditingController();
   late final _toHost = TextEditingController();
@@ -308,7 +308,7 @@ class _TunnelFormState extends State<TunnelForm> {
       ),
     };
     for (final (field, value) in [
-      (_fromHost, tunnel.bindAddress ?? '127.0.0.1'),
+      (_fromHost, tunnel.bindAddress ?? ''),
       (_fromPort, '${fromPort ?? ''}'),
       (_sshHost, tunnel.sshHost),
       (_toHost, toHost ?? ''),
