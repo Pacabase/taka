@@ -84,25 +84,19 @@ class _TunnelFormState extends State<TunnelForm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 12,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(left: RouteStep.indent),
-                child: Labelled(
-                  label: 'Group',
-                  child: HostInput(
-                    controller: _group,
-                    hosts: widget.groups,
-                    hint: 'Optional, such as Production',
-                    style: const TextStyle(),
-                    onSubmitted: _save,
-                  ),
+              Labelled(
+                label: 'Group',
+                child: HostInput(
+                  controller: _group,
+                  hosts: widget.groups,
+                  hint: 'Optional, such as Production',
+                  style: const TextStyle(),
+                  onSubmitted: _save,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(left: RouteStep.indent),
-                child: Labelled(
-                  label: 'Name',
-                  child: _input(_name, hint: 'Optional', autofocus: true),
-                ),
+              Labelled(
+                label: 'Name',
+                child: _input(_name, hint: 'Optional', autofocus: true),
               ),
               _KindTabs(
                 kind: _kind,
