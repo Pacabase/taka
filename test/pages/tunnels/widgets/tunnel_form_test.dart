@@ -311,6 +311,39 @@ void main() {
     expect(saved, isEmpty);
   });
 
+  group('the colour', () {
+    testWidgets('is saved once picked', (tester) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+
+      await tester.tap(find.byTooltip('Blue'));
+      await tester.pump();
+      await tester.tap(find.text('Add'));
+
+      expect(saved.single.colour, TunnelColour.blue);
+    });
+
+    testWidgets("goes back to the group's when that one is picked", (
+      tester,
+    ) async {
+      const tunnel = Tunnel(
+        id: 'a',
+        sshHost: 'db',
+        localPort: 15432,
+        remoteHost: 'localhost',
+        remotePort: 5432,
+        colour: TunnelColour.red,
+      );
+      await pumpForm(tester, initial: tunnel);
+
+      await tester.tap(find.byTooltip("Its group's colour"));
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+
+      expect(saved.single, tunnel.copyWith(colour: null));
+    });
+  });
+
   group('the group', () {
     testWidgets('is saved without the spaces around it', (tester) async {
       await pumpForm(tester);
