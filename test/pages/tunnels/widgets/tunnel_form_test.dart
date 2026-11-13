@@ -228,7 +228,7 @@ void main() {
     testWidgets('must be an IP address', (tester) async {
       await pumpForm(tester);
       await fillLocal(tester);
-      await tester.enterText(field(2), 'localhost');
+      await tester.enterText(field(2), 'my-laptop');
       await tester.pump();
 
       expect(
@@ -237,6 +237,40 @@ void main() {
       );
       expect(addEnabled(tester), isFalse);
     });
+
+    testWidgets('says nothing about an address half typed', (tester) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+      await tester.enterText(field(2), '192.168.');
+      await tester.pump();
+
+      expect(find.textContaining('IP address'), findsNothing);
+      expect(addEnabled(tester), isFalse);
+    });
+
+    for (final (typed, kept) in [('*', '0.0.0.0'), ('[::1]', '::1')]) {
+      testWidgets('saves $typed as $kept', (tester) async {
+        await pumpForm(tester);
+        await fillLocal(tester);
+        await tester.enterText(field(2), typed);
+        await tester.pump();
+        await tester.tap(find.text('Add'));
+
+        expect(saved.single.bindAddress, kept);
+      });
+    }
+
+    for (final address in ['127.0.0.1', 'localhost']) {
+      testWidgets('saves $address as the default', (tester) async {
+        await pumpForm(tester);
+        await fillLocal(tester);
+        await tester.enterText(field(2), address);
+        await tester.pump();
+        await tester.tap(find.text('Add'));
+
+        expect(saved.single.bindAddress, isNull);
+      });
+    }
 
     testWidgets('another loopback address needs no note', (tester) async {
       await pumpForm(tester);
@@ -264,14 +298,34 @@ void main() {
       expect(saved.single, tunnel);
     });
 
-    testWidgets('is fixed for an exposed port, and not saved', (tester) async {
+    testWidgets('keeps the steps as far apart as on an exposed port', (
+      tester,
+    ) async {
+      double gap() =>
+          tester.getTopLeft(find.text('SSH host')).dy -
+          tester.getTopLeft(find.textContaining('From')).dy;
       await pumpForm(tester);
-      await fillLocal(tester);
-      await tester.enterText(field(2), '0.0.0.0');
+      final forward = gap();
       await tester.tap(find.text('Expose a port'));
       await tester.pump();
 
-      expect(find.textContaining('with no login'), findsNothing);
+      expect(forward, gap());
+    });
+
+    testWidgets('is fixed for an exposed port, and not saved', (tester) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+      await tester.enterText(field(2), 'my-laptop');
+      await tester.tap(find.text('Expose a port'));
+      await tester.pump();
+
+      expect(find.textContaining('IP address'), findsNothing);
+      expect(addEnabled(tester), isTrue);
+      await tester.tap(find.text('Forward a port'));
+      await tester.pump();
+      expect(find.text('my-laptop'), findsOneWidget);
+      await tester.tap(find.text('Expose a port'));
+      await tester.pump();
       await tester.tap(find.text('Add'));
       expect(saved.single.bindAddress, isNull);
     });

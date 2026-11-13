@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:collection/collection.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:system_ssh/system_ssh.dart';
@@ -18,9 +20,26 @@ bool isIpAddress(String address) {
   }
 }
 
-/// Whether only this computer can reach [address].
+/// [typed] as a tunnel keeps it: null for the default 127.0.0.1, 0.0.0.0 for
+/// ssh's `*`, and an IPv6 address without its brackets.
+String? bindAddressNamed(String? typed) => switch (typed?.trim()) {
+  null || '' || '127.0.0.1' || 'localhost' => null,
+  '*' => '0.0.0.0',
+  final address when address.startsWith('[') && address.endsWith(']') =>
+    address.substring(1, address.length - 1),
+  final address => address,
+};
+
+/// Whether only this computer can reach [address], however it's written.
 bool isLoopbackAddress(String address) =>
-    address == '::1' || address.startsWith('127.');
+    InternetAddress.tryParse(address)?.isLoopback ?? false;
+
+/// Whether [address] is every IPv4 or every IPv6 address, as 0.0.0.0 or ::.
+bool isEveryAddress(String address) =>
+    switch (InternetAddress.tryParse(address)) {
+      final parsed? => parsed == .anyIPv4 || parsed == .anyIPv6,
+      null => false,
+    };
 
 @freezed
 sealed class const Tunnel._() with _$Tunnel {
@@ -63,7 +82,7 @@ sealed class const Tunnel._() with _$Tunnel {
         name: field<String>('name') ?? '',
         kind: TunnelKind.values.asNameMap()[fields['kind']] ?? TunnelKind.local,
         sshHost: field<String>('sshHost') ?? '',
-        bindAddress: field<String>('bindAddress'),
+        bindAddress: bindAddressNamed(field<String>('bindAddress')),
         localHost: field<String>('localHost'),
         localPort: localPort,
         remoteHost: field<String>('remoteHost'),
@@ -102,17 +121,13 @@ sealed class const Tunnel._() with _$Tunnel {
 
   /// Where this computer reaches the tunnel: 0.0.0.0 and :: listen on
   /// loopback too.
-  String get reachableAt => switch (bindAddress) {
-    null || '0.0.0.0' => '127.0.0.1',
-    '::' => '::1',
+  String get reachableAt => switch (listenAddress) {
+    final address when isEveryAddress(address) =>
+      address.contains(':') ? '::1' : '127.0.0.1',
     final address => address,
   };
 
-  /// Whether only this computer can use the tunnel.
-  bool get isLocalOnly => switch (bindAddress) {
-    final address? when kind != TunnelKind.remote => isLoopbackAddress(address),
-    _ => true,
-  };
+  String get listenAddress => bindAddress ?? '127.0.0.1';
 
   String get address => switch (kind) {
     TunnelKind.local => '${_bracketed(reachableAt)}:$localPort',
@@ -127,13 +142,13 @@ sealed class const Tunnel._() with _$Tunnel {
         TunnelKind.local => switch (remoteSocket) {
           final remoteSocket? => socketTunnelCommand(
             target,
-            bindAddress: bindAddress ?? '127.0.0.1',
+            bindAddress: listenAddress,
             remoteSocket: remoteSocket,
             localPort: localPort,
           ),
           null => tunnelCommand(
             target,
-            bindAddress: bindAddress ?? '127.0.0.1',
+            bindAddress: listenAddress,
             remoteHost: remoteHost ?? '',
             remotePort: remotePort ?? 0,
             localPort: localPort,
@@ -141,7 +156,7 @@ sealed class const Tunnel._() with _$Tunnel {
         },
         TunnelKind.socks => socksProxyCommand(
           target,
-          bindAddress: bindAddress ?? '127.0.0.1',
+          bindAddress: listenAddress,
           localPort: localPort,
         ),
         TunnelKind.remote => remoteTunnelCommand(
@@ -156,7 +171,7 @@ sealed class const Tunnel._() with _$Tunnel {
     }
   }
 
-  String get _listen => _bracketed(bindAddress ?? '127.0.0.1');
+  String get _listen => _bracketed(listenAddress);
 
   String get summary => switch (kind) {
     TunnelKind.local =>

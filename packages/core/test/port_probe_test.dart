@@ -20,6 +20,23 @@ void main() {
     expect(accepted, hasLength(1));
   });
 
+  test('connects to an IPv6 address', () async {
+    final ServerSocket server;
+    try {
+      server = await ServerSocket.bind(InternetAddress.loopbackIPv6, 0);
+    } on SocketException {
+      return markTestSkipped('no IPv6 loopback');
+    }
+    addTearDown(server.close);
+    final accepted = <Socket>[];
+    server.listen(accepted.add);
+
+    await probeLocalPort('::1', server.port);
+    await pumpEventQueue();
+
+    expect(accepted, hasLength(1));
+  });
+
   test('closes the connection at once', () async {
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     addTearDown(server.close);

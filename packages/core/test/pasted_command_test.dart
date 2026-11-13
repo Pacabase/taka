@@ -261,6 +261,19 @@ void main() {
       );
     });
 
+    test('-g opens a forward with no address to other computers', () {
+      expect(
+        parseSshCommand('ssh -g -L 15432:db:5432 bastion')?.tunnel.bindAddress,
+        '0.0.0.0',
+      );
+      expect(
+        parseSshCommand('ssh -g -L 172.17.0.1:15432:db:5432 bastion')
+            ?.tunnel
+            .bindAddress,
+        '172.17.0.1',
+      );
+    });
+
     test('a socket forward on another address', () {
       expect(
         parseSshCommand('ssh -L 0.0.0.0:2375:/var/run/docker.sock bastion')
@@ -295,13 +308,12 @@ void main() {
         'options a tunnel cannot keep',
         'ssh -i ~/.ssh/key.pem -J jump -o ServerAliveInterval=30 -A -g '
             '-L 15432:db:5432 deploy@bastion',
-        [
-          '-i ~/.ssh/key.pem',
-          '-J jump',
-          '-o ServerAliveInterval=30',
-          '-A',
-          '-g',
-        ],
+        ['-i ~/.ssh/key.pem', '-J jump', '-o ServerAliveInterval=30', '-A'],
+      ),
+      (
+        '-g, which an exposed port cannot keep',
+        'ssh -g -R 8080:localhost:3000 bastion',
+        ['-g'],
       ),
       (
         'a server port against its flag',

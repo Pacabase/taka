@@ -123,7 +123,7 @@ class TunnelSession({
       if (log case SshForwardFailed(:final reason)) _warn(reason);
     }
 
-    final bindAddress = tunnel.bindAddress ?? '127.0.0.1';
+    final bindAddress = tunnel.listenAddress;
     final SshTunnel opened;
     switch (tunnel) {
       case Tunnel(kind: TunnelKind.socks):

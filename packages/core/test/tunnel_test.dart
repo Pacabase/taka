@@ -193,22 +193,18 @@ void main() {
       expect(database.reachableAt, '127.0.0.1');
     });
 
-    test('only a loopback address keeps a tunnel to this computer', () {
-      for (final address in [null, '127.0.0.1', '127.0.0.2', '::1']) {
+    test('reaches every address on loopback however it is written', () {
+      for (final (address, reached) in [
+        ('::0', '::1'),
+        ('0:0:0:0:0:0:0:0', '::1'),
+        ('172.17.0.1', '172.17.0.1'),
+      ]) {
         expect(
-          database.copyWith(bindAddress: address).isLocalOnly,
-          isTrue,
-          reason: '$address',
-        );
-      }
-      for (final address in ['0.0.0.0', '::', '172.17.0.1', '192.168.1.5']) {
-        expect(
-          database.copyWith(bindAddress: address).isLocalOnly,
-          isFalse,
+          database.copyWith(bindAddress: address).reachableAt,
+          reached,
           reason: address,
         );
       }
-      expect(preview.isLocalOnly, isTrue);
     });
 
     test('toString names the id and title', () {
@@ -388,6 +384,49 @@ void main() {
         );
       },
     );
+  });
+
+  group('addresses', () {
+    for (final (typed, kept) in [
+      (null, null),
+      ('', null),
+      (' 127.0.0.1 ', null),
+      ('localhost', null),
+      ('*', '0.0.0.0'),
+      ('[::1]', '::1'),
+      ('172.17.0.1', '172.17.0.1'),
+    ]) {
+      test('keeps ${typed == null ? 'none' : "'$typed'"} as $kept', () {
+        expect(bindAddressNamed(typed), kept);
+      });
+    }
+
+    test('a saved default address reads as none', () {
+      expect(
+        Tunnel.fromJson({...database.toJson(), 'bindAddress': '127.0.0.1'}),
+        database,
+      );
+    });
+
+    for (final (address, isIp, isLoopback, isEvery) in [
+      ('127.0.0.1', true, true, false),
+      ('127.0.0.2', true, true, false),
+      ('::1', true, true, false),
+      ('0:0:0:0:0:0:0:1', true, true, false),
+      ('0.0.0.0', true, false, true),
+      ('::', true, false, true),
+      ('::0', true, false, true),
+      ('172.17.0.1', true, false, false),
+      ('localhost', false, false, false),
+      ('1.2.3', false, false, false),
+      ('fe80::1%en0', false, false, false),
+    ]) {
+      test(address, () {
+        expect(isIpAddress(address), isIp, reason: 'isIpAddress');
+        expect(isLoopbackAddress(address), isLoopback, reason: 'isLoopback');
+        expect(isEveryAddress(address), isEvery, reason: 'isEveryAddress');
+      });
+    }
   });
 
   group('sshCommand', () {

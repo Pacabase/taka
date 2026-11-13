@@ -7,6 +7,8 @@ import 'package:taka/pages/tunnels/widgets/route_step.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 
+final _notInAddress = RegExp('[^0-9a-fA-F.:]');
+
 class const TunnelForm({
   super.key,
   final Tunnel? initial,
@@ -47,6 +49,21 @@ class _TunnelFormState extends State<TunnelForm> {
   bool get _isRemote => _kind == TunnelKind.remote;
 
   bool get _isSocket => _isLocal && _toHost.text.trim().startsWith('/');
+
+  String? get _bindAddress => bindAddressNamed(_fromHost.text);
+
+  // Quiet while an address is half typed; Add stays off until it's whole.
+  String? get _fromNote => switch (_bindAddress) {
+    null => null,
+    final address when address.contains(_notInAddress) =>
+      'Use an IP address, such as 172.17.0.1.',
+    final address when !isIpAddress(address) || isLoopbackAddress(address) =>
+      null,
+    final address when isEveryAddress(address) =>
+      'Other computers on your networks can use this tunnel, with no login.',
+    final address =>
+      'Anything that can reach $address can use this tunnel, with no login.',
+  };
 
   // sshCommand is null for a tunnel system_ssh would refuse to open.
   bool get _isValid =>
@@ -115,55 +132,56 @@ class _TunnelFormState extends State<TunnelForm> {
               RouteStep(
                 label: _isRemote ? 'From, on the SSH host' : 'From',
                 hasNext: true,
-                child: Row(
-                  spacing: 6,
-                  children: [
-                    Expanded(
-                      // The SSH host listens on its own 127.0.0.1.
-                      child: _isRemote
-                          ? Opacity(
-                              opacity: 0.5,
-                              child: FieldBox(
-                                child: Text(
-                                  '127.0.0.1',
-                                  style: mono.copyWith(
-                                    color: colors.textSecondary,
+                child: ListenableBuilder(
+                  listenable: _fromHost,
+                  child: Row(
+                    spacing: 6,
+                    children: [
+                      Expanded(
+                        // The SSH host listens on its own 127.0.0.1.
+                        child: _isRemote
+                            ? Opacity(
+                                opacity: 0.5,
+                                child: FieldBox(
+                                  child: Text(
+                                    '127.0.0.1',
+                                    style: mono.copyWith(
+                                      color: colors.textSecondary,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            )
-                          : _input(_fromHost, hint: '127.0.0.1', style: mono),
-                    ),
-                    const _Colon(),
-                    SizedBox(
-                      width: 72,
-                      child: _input(
-                        _fromPort,
-                        hint: switch (_kind) {
-                          TunnelKind.local => '5432',
-                          TunnelKind.socks => '1080',
-                          TunnelKind.remote => '8080',
-                        },
-                        style: mono,
+                              )
+                            : _input(_fromHost, hint: '127.0.0.1', style: mono),
                       ),
-                    ),
-                  ],
+                      const _Colon(),
+                      SizedBox(
+                        width: 72,
+                        child: _input(
+                          _fromPort,
+                          hint: switch (_kind) {
+                            TunnelKind.local => '5432',
+                            TunnelKind.socks => '1080',
+                            TunnelKind.remote => '8080',
+                          },
+                          style: mono,
+                        ),
+                      ),
+                    ],
+                  ),
+                  builder: (context, row) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 4,
+                    children: [
+                      row!,
+                      if (_fromNote case final note? when !_isRemote)
+                        Text(
+                          note,
+                          style: TextStyle(fontSize: 12, color: colors.orange),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-              if (!_isRemote)
-                ListenableBuilder(
-                  listenable: _fromHost,
-                  builder: (context, _) => switch (_fromNote) {
-                    final note? => Padding(
-                      padding: const EdgeInsets.only(left: RouteStep.indent),
-                      child: Text(
-                        note,
-                        style: TextStyle(fontSize: 12, color: colors.orange),
-                      ),
-                    ),
-                    null => const SizedBox.shrink(),
-                  },
-                ),
               RouteStep(
                 label: 'SSH host',
                 hasNext: _kind != TunnelKind.socks,
@@ -277,22 +295,6 @@ class _TunnelFormState extends State<TunnelForm> {
     }
     return false;
   }
-
-  String? get _bindAddress => switch (_fromHost.text.trim()) {
-    '' || '127.0.0.1' => null,
-    final address => address,
-  };
-
-  String? get _fromNote => switch (_bindAddress) {
-    null => null,
-    final address when !isIpAddress(address) =>
-      'Use an IP address, such as 172.17.0.1.',
-    final address when isLoopbackAddress(address) => null,
-    '0.0.0.0' || '::' =>
-      'Other computers on your networks can use this tunnel, with no login.',
-    final address =>
-      'Anything that can reach $address can use this tunnel, with no login.',
-  };
 
   void _show(Tunnel tunnel) {
     final (fromPort, toHost, toPort) = switch (tunnel.kind) {

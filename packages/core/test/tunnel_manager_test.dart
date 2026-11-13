@@ -36,6 +36,15 @@ void main() {
     abortTrigger: any(named: 'abortTrigger'),
   );
 
+  Future<SshTunnel> openAnySocketTunnel() => client.openSocketTunnel(
+    any(),
+    remoteSocket: any(named: 'remoteSocket'),
+    bindAddress: any(named: 'bindAddress'),
+    localPort: any(named: 'localPort'),
+    onLog: any(named: 'onLog'),
+    abortTrigger: any(named: 'abortTrigger'),
+  );
+
   Future<SshTunnel> abortable(Invocation invocation) async {
     await (invocation.namedArguments[#abortTrigger]! as Future<void>);
     throw const SshTunnelAbortedException();
@@ -307,16 +316,7 @@ void main() {
 
     test('opens a tunnel to a socket with its fields', () async {
       store = FakeStore([docker]);
-      when(
-        () => client.openSocketTunnel(
-          any(),
-          remoteSocket: any(named: 'remoteSocket'),
-          bindAddress: any(named: 'bindAddress'),
-          localPort: any(named: 'localPort'),
-          onLog: any(named: 'onLog'),
-          abortTrigger: any(named: 'abortTrigger'),
-        ),
-      ).thenAnswer((_) async => tunnel);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
       final manager = await loaded();
 
       await manager.toggle('s6');
@@ -335,18 +335,42 @@ void main() {
       expect(tunnel.closeCount, 1);
     });
 
-    test('opens the socket even with a host and port left over', () async {
-      store = FakeStore([docker.copyWith(remoteHost: 'db', remotePort: 5432)]);
-      when(
-        () => client.openSocketTunnel(
+    test('a SOCKS proxy and a socket listen on their bind address', () async {
+      store = FakeStore([
+        proxy.copyWith(bindAddress: '0.0.0.0'),
+        docker.copyWith(bindAddress: '172.17.0.1'),
+      ]);
+      when(openAnySocksProxy).thenAnswer((_) async => tunnel);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
+      final manager = await loaded();
+
+      await manager.toggle('b2');
+      await manager.toggle('s6');
+
+      verify(
+        () => client.openSocksProxy(
           any(),
-          remoteSocket: any(named: 'remoteSocket'),
-          bindAddress: any(named: 'bindAddress'),
+          bindAddress: '0.0.0.0',
           localPort: any(named: 'localPort'),
           onLog: any(named: 'onLog'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
-      ).thenAnswer((_) async => tunnel);
+      ).called(1);
+      verify(
+        () => client.openSocketTunnel(
+          any(),
+          remoteSocket: any(named: 'remoteSocket'),
+          bindAddress: '172.17.0.1',
+          localPort: any(named: 'localPort'),
+          onLog: any(named: 'onLog'),
+          abortTrigger: any(named: 'abortTrigger'),
+        ),
+      ).called(1);
+    });
+
+    test('opens the socket even with a host and port left over', () async {
+      store = FakeStore([docker.copyWith(remoteHost: 'db', remotePort: 5432)]);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
       final manager = await loaded();
 
       await manager.toggle('s6');
@@ -566,6 +590,10 @@ void main() {
 
     for (final (error, message) in [
       (const SshPortInUseException(15432), '127.0.0.1:15432 is already in use'),
+      (
+        const SshException("172.17.0.1 isn't an address of this computer"),
+        "172.17.0.1 isn't an address of this computer",
+      ),
       (ArgumentError.value('-x', 'server', 'bad host'), 'bad host'),
       (StateError('boom'), 'Bad state: boom'),
     ]) {
@@ -1264,10 +1292,13 @@ void main() {
       expect(checked, [15432]);
     });
 
-    test(
-      'listens on the bind address, and checks where it is reached',
-      () async {
-        store = FakeStore([database.copyWith(bindAddress: '0.0.0.0')]);
+    for (final (address, reached) in [
+      ('0.0.0.0', '127.0.0.1'),
+      ('::', '::1'),
+      ('172.17.0.1', '172.17.0.1'),
+    ]) {
+      test('listens on $address, and checks it at $reached', () async {
+        store = FakeStore([database.copyWith(bindAddress: address)]);
         final manager = await checking();
 
         await manager.toggle('a1');
@@ -1278,28 +1309,19 @@ void main() {
             any(),
             remoteHost: any(named: 'remoteHost'),
             remotePort: any(named: 'remotePort'),
-            bindAddress: '0.0.0.0',
+            bindAddress: address,
             localPort: any(named: 'localPort'),
             onLog: any(named: 'onLog'),
             abortTrigger: any(named: 'abortTrigger'),
           ),
         ).called(1);
-        expect(checkedAt, ['127.0.0.1']);
-      },
-    );
+        expect(checkedAt, [reached]);
+      });
+    }
 
     test('checks a forward to a socket', () async {
       store = FakeStore([docker]);
-      when(
-        () => client.openSocketTunnel(
-          any(),
-          remoteSocket: any(named: 'remoteSocket'),
-          bindAddress: any(named: 'bindAddress'),
-          localPort: any(named: 'localPort'),
-          onLog: any(named: 'onLog'),
-          abortTrigger: any(named: 'abortTrigger'),
-        ),
-      ).thenAnswer((_) async => tunnel);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
       final manager = await checking();
 
       await manager.toggle('s6');
