@@ -157,7 +157,9 @@ Future<void> _import(
   if (file == null) return;
 
   try {
-    final (:tunnels, on: _) = decodeTunnels(await file.readAsString());
+    final (:tunnels, on: _, groupColours: _) = decodeTunnels(
+      await file.readAsString(),
+    );
     send(AgentCommand.importTunnels(tunnels));
   } on FormatException {
     messenger.showSnackBar(

@@ -10,6 +10,7 @@ import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/widgets/colour_dot.dart';
 
 import '../fake_agent.dart';
 
@@ -28,6 +29,7 @@ void main() {
     WidgetTester tester, {
     Tunnel tunnel = unnamed,
     TunnelStatus status = const Stopped(),
+    TunnelColour? colour,
   }) async {
     toggles = 0;
     trusted = [];
@@ -38,6 +40,7 @@ void main() {
           body: TunnelTile(
             tunnel: tunnel,
             status: status,
+            colour: colour,
             onToggle: () => toggles++,
             onTrust: trusted.add,
             onEdit: () {},
@@ -47,6 +50,16 @@ void main() {
       ),
     );
   }
+
+  testWidgets('shows its colour as a dot, and no dot without one', (
+    tester,
+  ) async {
+    await pumpTile(tester, colour: TunnelColour.blue);
+    expect(find.byType(ColourDot), findsOneWidget);
+
+    await pumpTile(tester);
+    expect(find.byType(ColourDot), findsNothing);
+  });
 
   testWidgets('an unnamed tunnel shows its summary once', (tester) async {
     await pumpTile(tester);

@@ -1,4 +1,5 @@
 import 'package:core/src/tunnel.dart';
+import 'package:core/src/tunnel_colour.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'agent_command.freezed.dart';
@@ -14,6 +15,10 @@ sealed class const AgentCommand._() with _$AgentCommand {
   const factory move(String id, int index) = MoveTunnel;
 
   const factory trustHostKey(String id, String fingerprint) = TrustHostKey;
+
+  /// [colour] null takes the group's colour away.
+  const factory setGroupColour(String group, TunnelColour? colour) =
+      SetGroupColour;
 
   const factory importTunnels(List<Tunnel> tunnels) = ImportTunnels;
 
@@ -41,6 +46,9 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'fingerprint': final String fingerprint,
     } =>
       TrustHostKey(id, fingerprint),
+    {'command': 'groupColour', 'group': final String group} &&
+        final Map<Object?, Object?> fields =>
+      SetGroupColour(group, TunnelColour.fromName(fields['colour'])),
     {'command': 'import', 'tunnels': final List<Object?> tunnels} =>
       ImportTunnels(tunnels.map(Tunnel.fromJson).toList()),
     {'command': 'export', 'path': final String path} => ExportTunnels(path),
@@ -66,6 +74,11 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'command': 'trustHostKey',
       'id': id,
       'fingerprint': fingerprint,
+    },
+    SetGroupColour(:final group, :final colour) => {
+      'command': 'groupColour',
+      'group': group,
+      'colour': ?colour?.name,
     },
     ImportTunnels(:final tunnels) => {
       'command': 'import',
