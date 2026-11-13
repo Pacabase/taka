@@ -80,9 +80,14 @@ class TunnelManager({
 
     final isWanted =
         _isOn(tunnel.id) || _sessions[tunnel.id]?.status is UnknownHostKey;
-    final isRenamed =
-        previous?.copyWith(name: tunnel.name, group: tunnel.group) == tunnel;
-    if (isWanted && !isRenamed) {
+    final isRelabelled =
+        previous?.copyWith(
+          name: tunnel.name,
+          group: tunnel.group,
+          colour: tunnel.colour,
+        ) ==
+        tunnel;
+    if (isWanted && !isRelabelled) {
       final running = _sessions.remove(tunnel.id)!;
       _log.i('Stopping ${running.tunnel.title}');
       await running.stop();

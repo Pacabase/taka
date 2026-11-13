@@ -137,6 +137,19 @@ void main() {
       },
     );
 
+    test(
+      'keeps a tunnel that is on connected when only its colour changes',
+      () async {
+        final manager = await loaded();
+        await manager.toggle('a1');
+
+        await manager.save(database.copyWith(colour: TunnelColour.blue));
+
+        expect(tunnel.closeCount, 0);
+        verify(openAnyTunnel).called(1);
+      },
+    );
+
     test('keeps a tunnel that is on connected when only renamed', () async {
       final manager = await loaded();
       await manager.toggle('a1');
