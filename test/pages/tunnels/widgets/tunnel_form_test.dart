@@ -140,7 +140,7 @@ void main() {
     await tester.tap(find.text('Expose a port'));
     await tester.pump();
     expect(find.text('From, on the SSH host'), findsOneWidget);
-    expect(find.text('To, from this computer'), findsOneWidget);
+    expect(find.text('To, on this computer'), findsOneWidget);
 
     await tester.enterText(field(0), '8080');
     await tester.enterText(field(1), 'bastion');
@@ -160,6 +160,53 @@ void main() {
           .having((tunnel) => tunnel.localHost, 'localHost', isNull)
           .having((tunnel) => tunnel.localPort, 'localPort', 3000)
           .having((tunnel) => tunnel.remoteHost, 'remoteHost', isNull),
+    );
+  });
+
+  testWidgets('switching tabs keeps each port where it was typed', (
+    tester,
+  ) async {
+    await pumpForm(tester);
+    await fillLocal(tester);
+
+    await tester.tap(find.text('Expose a port'));
+    await tester.pump();
+    await tester.tap(find.text('Add'));
+
+    expect(
+      saved.single,
+      isA<Tunnel>()
+          .having((tunnel) => tunnel.kind, 'kind', TunnelKind.remote)
+          .having((tunnel) => tunnel.remotePort, 'remotePort', 15432)
+          .having((tunnel) => tunnel.localHost, 'localHost', 'localhost')
+          .having((tunnel) => tunnel.localPort, 'localPort', 5432)
+          .having((tunnel) => tunnel.remoteHost, 'remoteHost', isNull),
+    );
+  });
+
+  testWidgets('switching back to forwarding keeps the From port', (
+    tester,
+  ) async {
+    await pumpForm(tester);
+    await tester.tap(find.text('Expose a port'));
+    await tester.pump();
+    await tester.enterText(field(0), '8080');
+    await tester.enterText(field(1), 'bastion');
+    await tester.enterText(field(2), '192.168.1.1');
+    await tester.enterText(field(3), '3000');
+
+    await tester.tap(find.text('Forward a port'));
+    await tester.pump();
+    await tester.tap(find.text('Add'));
+
+    expect(
+      saved.single,
+      isA<Tunnel>()
+          .having((tunnel) => tunnel.kind, 'kind', TunnelKind.local)
+          .having((tunnel) => tunnel.localPort, 'localPort', 8080)
+          .having((tunnel) => tunnel.remoteHost, 'remoteHost', '192.168.1.1')
+          .having((tunnel) => tunnel.remotePort, 'remotePort', 3000)
+          .having((tunnel) => tunnel.localHost, 'localHost', isNull),
     );
   });
 
@@ -292,7 +339,7 @@ void main() {
       await pumpForm(tester);
       await paste(tester, 0, 'ssh -R 8080:localhost:3000 bastion');
 
-      expect(find.text('To, from this computer'), findsOneWidget);
+      expect(find.text('To, on this computer'), findsOneWidget);
       await tester.tap(find.text('Add'));
       expect(saved.single.kind, TunnelKind.remote);
       expect(saved.single.remotePort, 8080);
