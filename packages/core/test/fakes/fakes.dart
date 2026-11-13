@@ -78,6 +78,13 @@ const proxy = Tunnel(
   localPort: 1080,
 );
 
+const docker = Tunnel(
+  id: 's6',
+  sshHost: 'bastion',
+  localPort: 2375,
+  remoteSocket: '/var/run/docker.sock',
+);
+
 const preview = Tunnel(
   id: 'r5',
   kind: TunnelKind.remote,

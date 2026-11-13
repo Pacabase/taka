@@ -160,6 +160,26 @@ void main() {
     expect(find.byTooltip('Connection refused'), findsOneWidget);
   });
 
+  testWidgets('a connected socket tunnel says what it could not open', (
+    tester,
+  ) async {
+    await pumpTile(
+      tester,
+      tunnel: const Tunnel(
+        id: 's',
+        sshHost: 'db',
+        localPort: 2375,
+        remoteSocket: '/var/run/docker.sock',
+      ),
+      status: const Connected(warning: 'administratively prohibited'),
+    );
+
+    expect(
+      find.text("Can't open /var/run/docker.sock on the server."),
+      findsOneWidget,
+    );
+  });
+
   testWidgets("a failed tunnel says why plainly, with ssh's words on hover", (
     tester,
   ) async {

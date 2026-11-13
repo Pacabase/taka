@@ -90,4 +90,4 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Health checks** that show a tunnel as connected only once the service behind it answers.
 - [ ] **Network rules** — connect on a given Wi-Fi or VPN, pause while offline.
 - [ ] **On-demand tunnels** that start ssh on the first connection and stop when idle.
-- [ ] **Unix-socket forwards**, and binding to the LAN.
+- [ ] **Binding to the LAN**, so other devices can use a tunnel.

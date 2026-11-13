@@ -92,6 +92,97 @@ void main() {
     expect(saved.single.remoteHost, isNull);
   });
 
+  testWidgets('a path as the destination is a socket, and needs no port', (
+    tester,
+  ) async {
+    await pumpForm(tester);
+    await tester.enterText(field(0), '2375');
+    await tester.enterText(field(1), 'bastion');
+    await tester.enterText(field(2), '/var/run/docker.sock');
+    await tester.pump();
+
+    expect(find.byType(TextField), findsNWidgets(4));
+    await tester.tap(find.text('Add'));
+
+    expect(
+      saved.single,
+      isA<Tunnel>()
+          .having((tunnel) => tunnel.kind, 'kind', TunnelKind.local)
+          .having((tunnel) => tunnel.localPort, 'localPort', 2375)
+          .having((tunnel) => tunnel.remoteHost, 'remoteHost', isNull)
+          .having((tunnel) => tunnel.remotePort, 'remotePort', isNull)
+          .having(
+            (tunnel) => tunnel.remoteSocket,
+            'remoteSocket',
+            '/var/run/docker.sock',
+          ),
+    );
+  });
+
+  for (final path in [
+    '/var/run/docker.sock:2375',
+    r'/run/user/$UID/docker.sock',
+    '/run/%h.sock',
+  ]) {
+    testWidgets('Add stays off for a socket path ssh would refuse: $path', (
+      tester,
+    ) async {
+      await pumpForm(tester);
+      await tester.enterText(field(0), '2375');
+      await tester.enterText(field(1), 'bastion');
+      await tester.enterText(field(2), path);
+      await tester.pump();
+
+      expect(addEnabled(tester), isFalse);
+    });
+  }
+
+  testWidgets('a port typed before the socket path is not saved', (
+    tester,
+  ) async {
+    await pumpForm(tester);
+    await tester.enterText(field(0), '2375');
+    await tester.enterText(field(1), 'bastion');
+    await tester.enterText(field(2), 'localhost');
+    await tester.enterText(field(3), '5432');
+    await tester.enterText(field(2), '/var/run/docker.sock');
+    await tester.pump();
+
+    expect(addEnabled(tester), isTrue);
+    await tester.tap(find.text('Add'));
+    expect(saved.single.remotePort, isNull);
+    expect(saved.single.remoteSocket, '/var/run/docker.sock');
+  });
+
+  testWidgets('a socket path carried into an exposed port turns Add off', (
+    tester,
+  ) async {
+    await pumpForm(tester);
+    await tester.enterText(field(0), '2375');
+    await tester.enterText(field(1), 'bastion');
+    await tester.enterText(field(2), '/var/run/docker.sock');
+    await tester.tap(find.text('Expose a port'));
+    await tester.pump();
+    await tester.enterText(field(3), '5432');
+    await tester.pump();
+
+    expect(addEnabled(tester), isFalse);
+  });
+
+  testWidgets('editing a tunnel to a socket prefills it', (tester) async {
+    const tunnel = Tunnel(
+      id: 's',
+      sshHost: 'bastion',
+      localPort: 2375,
+      remoteSocket: '/var/run/docker.sock',
+    );
+    await pumpForm(tester, initial: tunnel);
+
+    expect(find.text('/var/run/docker.sock'), findsOneWidget);
+    await tester.tap(find.text('Save'));
+    expect(saved.single, tunnel);
+  });
+
   testWidgets('an exposed port needs the SSH host and both ports', (
     tester,
   ) async {
@@ -292,6 +383,16 @@ void main() {
             .having((tunnel) => tunnel.remotePort, 'remotePort', 5432)
             .having((tunnel) => tunnel.name, 'name', ''),
       );
+    }, variant: macOS);
+
+    testWidgets('fills a forward to a socket', (tester) async {
+      await pumpForm(tester);
+      await paste(tester, 1, 'ssh -L 2375:/var/run/docker.sock bastion');
+
+      expect(find.byType(TextField), findsNWidgets(4));
+      await tester.tap(find.text('Add'));
+      expect(saved.single.remoteSocket, '/var/run/docker.sock');
+      expect(saved.single.localPort, 2375);
     }, variant: macOS);
 
     testWidgets('switches to an exposed port', (tester) async {
