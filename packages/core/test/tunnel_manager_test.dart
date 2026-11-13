@@ -867,6 +867,7 @@ void main() {
       void Function(TunnelManager manager, FakeAsync time) body, {
       Future<void> Function()? beforeConnect,
       Future<bool> Function()? isLocked,
+      Future<void> Function(int localPort)? checkDestination,
     }) => fakeAsync((time) {
       opened = [];
       failures = [];
@@ -879,6 +880,7 @@ void main() {
         client: client,
         beforeConnect: beforeConnect,
         isLocked: isLocked,
+        checkDestination: checkDestination,
       );
       unawaited(manager.load().then((_) => manager.toggle('a1')));
       time.flushMicrotasks();
@@ -926,6 +928,17 @@ void main() {
         );
         expect(time.pendingTimers, isEmpty);
       });
+    });
+
+    test('does not check where it leads again when it reconnects', () {
+      final checked = <int>[];
+      dropped((manager, time) {
+        drop(time, closed);
+        time.elapse(const Duration(seconds: 1));
+
+        expect(opened, hasLength(2));
+        expect(checked, [15432]);
+      }, checkDestination: (port) async => checked.add(port));
     });
 
     test('says Disconnected when ssh gives no reason', () {
@@ -1154,6 +1167,94 @@ void main() {
       await pumpEventQueue();
 
       expect(checked, [15432]);
+    });
+
+    test('checks a forward to a socket', () async {
+      store = FakeStore([docker]);
+      when(
+        () => client.openSocketTunnel(
+          any(),
+          remoteSocket: any(named: 'remoteSocket'),
+          localPort: any(named: 'localPort'),
+          onLog: any(named: 'onLog'),
+          abortTrigger: any(named: 'abortTrigger'),
+        ),
+      ).thenAnswer((_) async => tunnel);
+      final manager = await checking();
+
+      await manager.toggle('s6');
+      await pumpEventQueue();
+
+      expect(checked, [2375]);
+    });
+
+    test('checks nothing for an exposed port', () async {
+      store = FakeStore([preview]);
+      when(
+        () => client.openRemoteTunnel(
+          any(),
+          localHost: any(named: 'localHost'),
+          localPort: any(named: 'localPort'),
+          remotePort: any(named: 'remotePort'),
+          onLog: any(named: 'onLog'),
+          abortTrigger: any(named: 'abortTrigger'),
+        ),
+      ).thenAnswer((_) async => FakeRemoteTunnel(8080));
+      final manager = await checking();
+
+      await manager.toggle('r5');
+      await pumpEventQueue();
+
+      expect(checked, isEmpty);
+    });
+
+    test("a stopped tunnel's late refusal leaves the next one alone", () async {
+      final said = <void Function(SshLog log)>[];
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        said.add(
+          invocation.namedArguments[#onLog]! as void Function(SshLog log),
+        );
+        return FakeTunnel(15432);
+      });
+      final check = Completer<void>();
+      final manager = await checking(check: (_) => check.future);
+      await manager.toggle('a1');
+      await manager.toggle('a1');
+      await manager.toggle('a1');
+
+      said.first(
+        const SshForwardFailed(
+          'channel 2: open failed: connect failed: Connection refused',
+          reason: 'Connection refused',
+        ),
+      );
+      check.completeError(const SocketException('Connection refused'));
+      await pumpEventQueue();
+
+      expect(manager.snapshot.statusOf('a1'), const Connected());
+    });
+
+    test('checks again when the tunnel is turned off and on', () async {
+      final manager = await checking();
+      await manager.toggle('a1');
+      await manager.toggle('a1');
+      tunnel = FakeTunnel(15432);
+
+      await manager.toggle('a1');
+      await pumpEventQueue();
+
+      expect(checked, [15432, 15432]);
+    });
+
+    test('checks nothing for a tunnel restored at login', () async {
+      store = FakeStore([database], {'a1'});
+      final manager = await checking();
+
+      await manager.restore();
+      await pumpEventQueue();
+
+      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(checked, isEmpty);
     });
 
     test('checks nothing for a SOCKS proxy', () async {
@@ -1521,6 +1622,29 @@ void main() {
       lines = [];
       Fimber.plantTree(_RecordingTree(lines));
       addTearDown(Fimber.clearAll);
+    });
+
+    test('why where a forward leads could not be checked', () async {
+      final manager = TunnelManager(
+        store: store,
+        client: client,
+        checkDestination: (_) async =>
+            throw const SocketException('Connection refused'),
+      );
+      addTearDown(manager.close);
+      await manager.load();
+
+      await manager.toggle('a1');
+      await pumpEventQueue();
+
+      expect(
+        lines,
+        contains(
+          startsWith(
+            'W/Tunnels: Production database: could not check where it leads',
+          ),
+        ),
+      );
     });
 
     test('a tunnel connecting, connected, stopping and dropped', () async {

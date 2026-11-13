@@ -33,6 +33,7 @@ class TunnelSession({
   late bool _retries = isRestored;
   int _attempts = 0;
   bool _waitsForUnlock = false;
+  bool _hasChecked = false;
 
   TunnelStatus get status => _status;
 
@@ -54,11 +55,13 @@ class TunnelSession({
     onChange();
     _log.i('Connected ${tunnel.title}');
     unawaited(opened.done.then((_) => _drop(null), onError: _drop));
-    if (tunnel.kind == TunnelKind.local) unawaited(_checkDestination());
+    // MySQL blocks a host after many connections that never log in.
+    if (tunnel.kind == TunnelKind.local && !isRestored && !_hasChecked) {
+      _hasChecked = true;
+      unawaited(_checkDestination());
+    }
   }
 
-  // ssh asks the server to reach the destination only once something
-  // connects, so one connection now shows a refusal as a warning at once.
   Future<void> _checkDestination() async {
     try {
       await checkDestination?.call(tunnel.localPort);

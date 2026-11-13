@@ -1,43 +1,42 @@
 @Tags(['unit'])
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:core/core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('connects once, and returns when the other end closes', () async {
+  test('connects once', () async {
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     addTearDown(server.close);
-    var accepted = 0;
-    server.listen((socket) {
-      accepted++;
-      socket.destroy();
-    });
+    final accepted = <Socket>[];
+    server.listen(accepted.add);
 
     await probeLocalPort(server.port);
+    await pumpEventQueue();
 
-    expect(accepted, 1);
+    expect(accepted, hasLength(1));
   });
 
-  test('stops waiting for a service that keeps the connection open', () async {
+  test('closes the connection at once', () async {
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     addTearDown(server.close);
-    final held = <Socket>[];
-    server.listen(held.add);
-    addTearDown(() {
-      for (final socket in held) {
-        socket.destroy();
-      }
-    });
+    final closed = Completer<void>();
+    void close([Object? _]) {
+      if (!closed.isCompleted) closed.complete();
+    }
 
-    await probeLocalPort(
-      server.port,
-      wait: const Duration(milliseconds: 50),
-    ).timeout(const Duration(seconds: 2));
+    server.listen(
+      (socket) => socket
+        ..done.ignore()
+        ..listen(null, onError: close, onDone: close),
+    );
 
-    expect(held, hasLength(1));
+    await probeLocalPort(server.port).timeout(const Duration(seconds: 2));
+
+    await closed.future.timeout(const Duration(seconds: 2));
   });
 
   test('throws when nothing listens on the port', () async {

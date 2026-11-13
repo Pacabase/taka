@@ -1,20 +1,12 @@
-import 'dart:async';
 import 'dart:io';
 
-/// Opens one connection to `127.0.0.1:`[port], then closes it once the other
-/// end does or [wait] has passed.
-Future<void> probeLocalPort(
-  int port, {
-  Duration wait = const Duration(seconds: 3),
-}) async {
+Future<void> probeLocalPort(int port) async {
   final socket = await Socket.connect(
     InternetAddress.loopbackIPv4,
     port,
-    timeout: wait,
+    timeout: const Duration(seconds: 3),
   );
-  try {
-    await socket.drain<void>().timeout(wait, onTimeout: () {});
-  } finally {
-    socket.destroy();
-  }
+  socket
+    ..done.ignore()
+    ..destroy();
 }
