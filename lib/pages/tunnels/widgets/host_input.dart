@@ -8,6 +8,7 @@ class const HostInput({
   required final List<String> hosts,
   required final String hint,
   required final TextStyle style,
+  final bool autofocus = false,
   required final void Function() onSubmitted,
 }) extends StatefulWidget {
   @override
@@ -41,6 +42,7 @@ class _HostInputState extends State<HostInput> {
         focusNode: focus,
         hint: widget.hint,
         style: widget.style,
+        autofocus: widget.autofocus,
         onSubmitted: () {
           final typed = controller.text;
           if (!widget.hosts.contains(typed.trim())) onFieldSubmitted();

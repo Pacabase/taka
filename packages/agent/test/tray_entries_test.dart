@@ -123,7 +123,7 @@ void main() {
     );
   });
 
-  test('puts each group in a submenu, after the tunnels in none', () {
+  test('puts each group in a submenu, where its first tunnel is', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [
         Tunnel(id: 'a', name: 'Api', localPort: 1, group: 'Prod'),
@@ -140,12 +140,12 @@ void main() {
     expect(menu(snapshot).take(6), [
       '1 of 4 connected',
       '---',
+      prod,
       '☐ Local',
       'Dev — 0 of 1 connected ▸ ☐ Dev db',
-      prod,
       '---',
     ]);
-    expect(tunnelActions(snapshot), startsWith('Tunnel Actions ▸ Local ▸ '));
+    expect(tunnelActions(snapshot), startsWith('Tunnel Actions ▸ Api ▸ '));
   });
 
   test('offers to connect a group when none of it is on', () {

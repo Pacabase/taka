@@ -84,6 +84,27 @@ class _TunnelFormState extends State<TunnelForm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 12,
             children: [
+              Padding(
+                padding: const EdgeInsets.only(left: RouteStep.indent),
+                child: Labelled(
+                  label: 'Group',
+                  child: HostInput(
+                    controller: _group,
+                    hosts: widget.groups,
+                    hint: 'Optional, such as Production',
+                    style: const TextStyle(),
+                    autofocus: true,
+                    onSubmitted: _save,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: RouteStep.indent),
+                child: Labelled(
+                  label: 'Name',
+                  child: _input(_name, hint: 'Optional'),
+                ),
+              ),
               _KindTabs(
                 kind: _kind,
                 onPick: (kind) => setState(() => _kind = kind),
@@ -116,7 +137,6 @@ class _TunnelFormState extends State<TunnelForm> {
                           TunnelKind.remote => '8080',
                         },
                         style: mono,
-                        autofocus: true,
                       ),
                     ),
                   ],
@@ -166,26 +186,6 @@ class _TunnelFormState extends State<TunnelForm> {
                     ),
                   ),
                 ),
-              Padding(
-                padding: const EdgeInsets.only(left: RouteStep.indent),
-                child: Labelled(
-                  label: 'Name',
-                  child: _input(_name, hint: 'Optional'),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: RouteStep.indent),
-                child: Labelled(
-                  label: 'Group',
-                  child: HostInput(
-                    controller: _group,
-                    hosts: widget.groups,
-                    hint: 'Optional, such as Production',
-                    style: const TextStyle(),
-                    onSubmitted: _save,
-                  ),
-                ),
-              ),
               ListenableBuilder(
                 listenable: _sshHost,
                 builder: (context, _) => switch (_pasted) {
@@ -234,12 +234,10 @@ class _TunnelFormState extends State<TunnelForm> {
     TextEditingController controller, {
     required String hint,
     TextStyle style = const TextStyle(),
-    bool autofocus = false,
   }) => Input(
     controller: controller,
     hint: hint,
     style: style,
-    autofocus: autofocus,
     onSubmitted: _save,
   );
 

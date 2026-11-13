@@ -13,6 +13,10 @@ sealed class const AgentCommand._() with _$AgentCommand {
 
   const factory move(String id, int index) = MoveTunnel;
 
+  /// Every tunnel, in order, with its group.
+  const factory arrange(List<({String id, String? group})> tunnels) =
+      ArrangeTunnels;
+
   const factory trustHostKey(String id, String fingerprint) = TrustHostKey;
 
   const factory importTunnels(List<Tunnel> tunnels) = ImportTunnels;
@@ -35,6 +39,20 @@ sealed class const AgentCommand._() with _$AgentCommand {
     {'command': 'toggle', 'id': final String id} => ToggleTunnel(id),
     {'command': 'move', 'id': final String id, 'index': final int index} =>
       MoveTunnel(id, index),
+    {'command': 'arrange', 'tunnels': final List<Object?> tunnels} =>
+      ArrangeTunnels([
+        for (final tunnel in tunnels)
+          switch (tunnel) {
+            {'id': final String id} && final Map<Object?, Object?> fields => (
+              id: id,
+              group: switch (fields['group']) {
+                final String group => group,
+                _ => null,
+              },
+            ),
+            _ => throw FormatException('Not a tunnel to arrange: $tunnel'),
+          },
+      ]),
     {
       'command': 'trustHostKey',
       'id': final String id,
@@ -61,6 +79,12 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'command': 'move',
       'id': id,
       'index': index,
+    },
+    ArrangeTunnels(:final tunnels) => {
+      'command': 'arrange',
+      'tunnels': [
+        for (final (:id, :group) in tunnels) {'id': id, 'group': ?group},
+      ],
     },
     TrustHostKey(:final id, :final fingerprint) => {
       'command': 'trustHostKey',

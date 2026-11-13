@@ -93,6 +93,31 @@ void main() {
   );
 
   blocTest<TunnelsBloc, TunnelsState>(
+    'shows an arrangement before the agent answers, and sends it',
+    build: () => TunnelsBloc(agent: agent),
+    seed: () => const Ready(TunnelsSnapshot(tunnels: [database, proxy])),
+    act: (bloc) => bloc.add(
+      const TunnelsEvent.send(
+        AgentCommand.arrange([
+          (id: 'b2', group: 'Prod'),
+          (id: 'a1', group: null),
+        ]),
+      ),
+    ),
+    expect: () => [
+      Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            proxy.copyWith(group: 'Prod'),
+            database,
+          ],
+        ),
+      ),
+    ],
+    verify: (_) => expect(agent.sent, hasLength(1)),
+  );
+
+  blocTest<TunnelsBloc, TunnelsState>(
     'only sends a move while it has no snapshot yet',
     build: () => TunnelsBloc(agent: agent),
     act: (bloc) =>

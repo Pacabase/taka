@@ -193,48 +193,55 @@ class const _TunnelList({
 
   Widget _rows(BuildContext context, TunnelsSnapshot snapshot) {
     final colors = TakaColors.of(context);
-    final shown = snapshot.tunnels.shown;
+    final rows = snapshot.tunnels.rows;
 
     return ReorderableRows(
-      onReorder: (from, to) {
-        final id = shown[from].id;
-        _send(
-          context,
-          AgentCommand.move(
-            id,
-            snapshot.tunnels.moveIndexFor(id, shownIndex: to),
-          ),
-        );
+      spanOf: (index) => switch (rows[index]) {
+        GroupHeaderRow(:final size) => 1 + size,
+        TunnelRow() => 1,
       },
+      onReorder: (from, to) => _send(
+        context,
+        AgentCommand.arrange([
+          for (final tunnel in snapshot.tunnels.droppedAt(from, to))
+            (id: tunnel.id, group: tunnel.group),
+        ]),
+      ),
       children: [
-        for (final (index, tunnel) in shown.indexed)
-          Column(
-            key: ValueKey(tunnel.id),
-            children: [
-              if (tunnel.group case final group?
-                  when index == 0 || shown[index - 1].group != group)
-                _GroupHeader(group),
-              TunnelTile(
-                tunnel: tunnel,
-                status: snapshot.statusOf(tunnel.id),
-                onToggle: () => _send(context, AgentCommand.toggle(tunnel.id)),
-                onTrust: (fingerprint) => _send(
-                  context,
-                  AgentCommand.trustHostKey(tunnel.id, fingerprint),
+        for (final (index, row) in rows.indexed)
+          switch (row) {
+            GroupHeaderRow(:final group) => _GroupHeader(
+              group,
+              key: ValueKey('group $group'),
+            ),
+            TunnelRow(:final tunnel) => Column(
+              key: ValueKey(tunnel.id),
+              children: [
+                TunnelTile(
+                  tunnel: tunnel,
+                  status: snapshot.statusOf(tunnel.id),
+                  onToggle: () =>
+                      _send(context, AgentCommand.toggle(tunnel.id)),
+                  onTrust: (fingerprint) => _send(
+                    context,
+                    AgentCommand.trustHostKey(tunnel.id, fingerprint),
+                  ),
+                  onEdit: () => onEdit(tunnel),
+                  onDelete: () =>
+                      _send(context, AgentCommand.remove(tunnel.id)),
                 ),
-                onEdit: () => onEdit(tunnel),
-                onDelete: () => _send(context, AgentCommand.remove(tunnel.id)),
-              ),
-              if (index < shown.length - 1 &&
-                  shown[index + 1].group == tunnel.group)
-                Divider(
-                  height: 1,
-                  indent: 6,
-                  endIndent: 6,
-                  color: colors.background,
-                ),
-            ],
-          ),
+                if (rows.elementAtOrNull(index + 1)
+                    case TunnelRow(tunnel: Tunnel(:final group))
+                    when group == tunnel.group)
+                  Divider(
+                    height: 1,
+                    indent: 6,
+                    endIndent: 6,
+                    color: colors.background,
+                  ),
+              ],
+            ),
+          },
       ],
     );
   }
@@ -243,7 +250,8 @@ class const _TunnelList({
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
 
-class const _GroupHeader(final String group) extends StatelessWidget {
+class const _GroupHeader(final String group, {super.key})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Align(

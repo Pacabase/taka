@@ -86,7 +86,7 @@ void main() {
     ).called(1);
   });
 
-  testWidgets('heads each group, after the tunnels in none', (tester) async {
+  testWidgets('heads each group, where its first tunnel is', (tester) async {
     await pumpPage(
       tester,
       initialState: Ready(
@@ -108,9 +108,101 @@ void main() {
     double top(String text) => tester.getTopLeft(find.text(text)).dy;
 
     expect(find.text('Prod'), findsOneWidget);
-    expect(top('Proxy'), lessThan(top('Prod')));
     expect(top('Prod'), lessThan(top('Database')));
     expect(top('Database'), lessThan(top('Cache')));
+    expect(top('Cache'), lessThan(top('Proxy')));
+  });
+
+  testWidgets("a group's header carries its tunnels when dragged", (
+    tester,
+  ) async {
+    const cache = Tunnel(
+      id: 'c3',
+      name: 'Cache',
+      localPort: 6379,
+      group: 'Prod',
+    );
+    final bloc = await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            cache,
+            proxy,
+          ],
+        ),
+      ),
+    );
+
+    final drag = await tester.startGesture(
+      tester.getCenter(find.text('Prod')),
+      kind: PointerDeviceKind.mouse,
+    );
+    for (var step = 0; step < 20; step++) {
+      await drag.moveBy(const Offset(0, 10));
+      await tester.pump();
+    }
+    await drag.up();
+    await tester.pumpAndSettle();
+
+    verify(
+      () => bloc.add(
+        const TunnelsEvent.send(
+          AgentCommand.arrange([
+            (id: 'b2', group: null),
+            (id: 'a1', group: 'Prod'),
+            (id: 'c3', group: 'Prod'),
+          ]),
+        ),
+      ),
+    ).called(1);
+  });
+
+  testWidgets("a tunnel dropped under a group's header joins the group", (
+    tester,
+  ) async {
+    final bloc = await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            proxy,
+          ],
+        ),
+      ),
+    );
+
+    double tileTop(String name) => tester
+        .getTopLeft(
+          find.ancestor(of: find.text(name), matching: find.byType(TunnelTile)),
+        )
+        .dy;
+    // Proxy's top just under Database's: past the header, above Database.
+    final distance = tileTop('Database') - tileTop('Proxy') + 4;
+
+    final drag = await tester.startGesture(
+      tester.getCenter(find.text('Proxy')),
+      kind: PointerDeviceKind.mouse,
+    );
+    for (var step = 0; step < 10; step++) {
+      await drag.moveBy(Offset(0, distance / 10));
+      await tester.pump();
+    }
+    await drag.up();
+    await tester.pumpAndSettle();
+
+    verify(
+      () => bloc.add(
+        const TunnelsEvent.send(
+          AgentCommand.arrange([
+            (id: 'b2', group: 'Prod'),
+            (id: 'a1', group: 'Prod'),
+          ]),
+        ),
+      ),
+    ).called(1);
   });
 
   testWidgets(
@@ -136,7 +228,14 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => bloc.add(const TunnelsEvent.send(AgentCommand.move('a1', 1))),
+        () => bloc.add(
+          const TunnelsEvent.send(
+            AgentCommand.arrange([
+              (id: 'b2', group: null),
+              (id: 'a1', group: null),
+            ]),
+          ),
+        ),
       ).called(1);
     },
   );

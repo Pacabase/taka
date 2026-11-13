@@ -56,14 +56,15 @@ extension AgentCommandPatterns on AgentCommand {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SaveTunnel value)?  save,TResult Function( RemoveTunnel value)?  remove,TResult Function( ToggleTunnel value)?  toggle,TResult Function( MoveTunnel value)?  move,TResult Function( TrustHostKey value)?  trustHostKey,TResult Function( ImportTunnels value)?  importTunnels,TResult Function( ExportTunnels value)?  exportTunnels,TResult Function( QuitAgent value)?  quit,TResult Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult Function( SetDebugLogging value)?  setDebugLogging,TResult Function( ShowLogs value)?  showLogs,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SaveTunnel value)?  save,TResult Function( RemoveTunnel value)?  remove,TResult Function( ToggleTunnel value)?  toggle,TResult Function( MoveTunnel value)?  move,TResult Function( ArrangeTunnels value)?  arrange,TResult Function( TrustHostKey value)?  trustHostKey,TResult Function( ImportTunnels value)?  importTunnels,TResult Function( ExportTunnels value)?  exportTunnels,TResult Function( QuitAgent value)?  quit,TResult Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult Function( SetDebugLogging value)?  setDebugLogging,TResult Function( ShowLogs value)?  showLogs,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that);case RemoveTunnel() when remove != null:
 return remove(_that);case ToggleTunnel() when toggle != null:
 return toggle(_that);case MoveTunnel() when move != null:
-return move(_that);case TrustHostKey() when trustHostKey != null:
+return move(_that);case ArrangeTunnels() when arrange != null:
+return arrange(_that);case TrustHostKey() when trustHostKey != null:
 return trustHostKey(_that);case ImportTunnels() when importTunnels != null:
 return importTunnels(_that);case ExportTunnels() when exportTunnels != null:
 return exportTunnels(_that);case QuitAgent() when quit != null:
@@ -88,14 +89,15 @@ return showLogs(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SaveTunnel value)  save,required TResult Function( RemoveTunnel value)  remove,required TResult Function( ToggleTunnel value)  toggle,required TResult Function( MoveTunnel value)  move,required TResult Function( TrustHostKey value)  trustHostKey,required TResult Function( ImportTunnels value)  importTunnels,required TResult Function( ExportTunnels value)  exportTunnels,required TResult Function( QuitAgent value)  quit,required TResult Function( SetLaunchAtLogin value)  setLaunchAtLogin,required TResult Function( SetDebugLogging value)  setDebugLogging,required TResult Function( ShowLogs value)  showLogs,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SaveTunnel value)  save,required TResult Function( RemoveTunnel value)  remove,required TResult Function( ToggleTunnel value)  toggle,required TResult Function( MoveTunnel value)  move,required TResult Function( ArrangeTunnels value)  arrange,required TResult Function( TrustHostKey value)  trustHostKey,required TResult Function( ImportTunnels value)  importTunnels,required TResult Function( ExportTunnels value)  exportTunnels,required TResult Function( QuitAgent value)  quit,required TResult Function( SetLaunchAtLogin value)  setLaunchAtLogin,required TResult Function( SetDebugLogging value)  setDebugLogging,required TResult Function( ShowLogs value)  showLogs,}){
 final _that = this;
 switch (_that) {
 case SaveTunnel():
 return save(_that);case RemoveTunnel():
 return remove(_that);case ToggleTunnel():
 return toggle(_that);case MoveTunnel():
-return move(_that);case TrustHostKey():
+return move(_that);case ArrangeTunnels():
+return arrange(_that);case TrustHostKey():
 return trustHostKey(_that);case ImportTunnels():
 return importTunnels(_that);case ExportTunnels():
 return exportTunnels(_that);case QuitAgent():
@@ -116,14 +118,15 @@ return showLogs(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SaveTunnel value)?  save,TResult? Function( RemoveTunnel value)?  remove,TResult? Function( ToggleTunnel value)?  toggle,TResult? Function( MoveTunnel value)?  move,TResult? Function( TrustHostKey value)?  trustHostKey,TResult? Function( ImportTunnels value)?  importTunnels,TResult? Function( ExportTunnels value)?  exportTunnels,TResult? Function( QuitAgent value)?  quit,TResult? Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult? Function( SetDebugLogging value)?  setDebugLogging,TResult? Function( ShowLogs value)?  showLogs,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SaveTunnel value)?  save,TResult? Function( RemoveTunnel value)?  remove,TResult? Function( ToggleTunnel value)?  toggle,TResult? Function( MoveTunnel value)?  move,TResult? Function( ArrangeTunnels value)?  arrange,TResult? Function( TrustHostKey value)?  trustHostKey,TResult? Function( ImportTunnels value)?  importTunnels,TResult? Function( ExportTunnels value)?  exportTunnels,TResult? Function( QuitAgent value)?  quit,TResult? Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult? Function( SetDebugLogging value)?  setDebugLogging,TResult? Function( ShowLogs value)?  showLogs,}){
 final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that);case RemoveTunnel() when remove != null:
 return remove(_that);case ToggleTunnel() when toggle != null:
 return toggle(_that);case MoveTunnel() when move != null:
-return move(_that);case TrustHostKey() when trustHostKey != null:
+return move(_that);case ArrangeTunnels() when arrange != null:
+return arrange(_that);case TrustHostKey() when trustHostKey != null:
 return trustHostKey(_that);case ImportTunnels() when importTunnels != null:
 return importTunnels(_that);case ExportTunnels() when exportTunnels != null:
 return exportTunnels(_that);case QuitAgent() when quit != null:
@@ -147,13 +150,14 @@ return showLogs(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,TResult Function( String id,  int index)?  move,TResult Function( String id,  String fingerprint)?  trustHostKey,TResult Function( List<Tunnel> tunnels)?  importTunnels,TResult Function( String path)?  exportTunnels,TResult Function()?  quit,TResult Function( bool on)?  setLaunchAtLogin,TResult Function( bool on)?  setDebugLogging,TResult Function()?  showLogs,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,TResult Function( String id,  int index)?  move,TResult Function( List<({String? group, String id,})> tunnels)?  arrange,TResult Function( String id,  String fingerprint)?  trustHostKey,TResult Function( List<Tunnel> tunnels)?  importTunnels,TResult Function( String path)?  exportTunnels,TResult Function()?  quit,TResult Function( bool on)?  setLaunchAtLogin,TResult Function( bool on)?  setDebugLogging,TResult Function()?  showLogs,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that.tunnel);case RemoveTunnel() when remove != null:
 return remove(_that.id);case ToggleTunnel() when toggle != null:
 return toggle(_that.id);case MoveTunnel() when move != null:
-return move(_that.id,_that.index);case TrustHostKey() when trustHostKey != null:
+return move(_that.id,_that.index);case ArrangeTunnels() when arrange != null:
+return arrange(_that.tunnels);case TrustHostKey() when trustHostKey != null:
 return trustHostKey(_that.id,_that.fingerprint);case ImportTunnels() when importTunnels != null:
 return importTunnels(_that.tunnels);case ExportTunnels() when exportTunnels != null:
 return exportTunnels(_that.path);case QuitAgent() when quit != null:
@@ -178,13 +182,14 @@ return showLogs();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,required TResult Function( String id,  int index)  move,required TResult Function( String id,  String fingerprint)  trustHostKey,required TResult Function( List<Tunnel> tunnels)  importTunnels,required TResult Function( String path)  exportTunnels,required TResult Function()  quit,required TResult Function( bool on)  setLaunchAtLogin,required TResult Function( bool on)  setDebugLogging,required TResult Function()  showLogs,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,required TResult Function( String id,  int index)  move,required TResult Function( List<({String? group, String id,})> tunnels)  arrange,required TResult Function( String id,  String fingerprint)  trustHostKey,required TResult Function( List<Tunnel> tunnels)  importTunnels,required TResult Function( String path)  exportTunnels,required TResult Function()  quit,required TResult Function( bool on)  setLaunchAtLogin,required TResult Function( bool on)  setDebugLogging,required TResult Function()  showLogs,}) {final _that = this;
 switch (_that) {
 case SaveTunnel():
 return save(_that.tunnel);case RemoveTunnel():
 return remove(_that.id);case ToggleTunnel():
 return toggle(_that.id);case MoveTunnel():
-return move(_that.id,_that.index);case TrustHostKey():
+return move(_that.id,_that.index);case ArrangeTunnels():
+return arrange(_that.tunnels);case TrustHostKey():
 return trustHostKey(_that.id,_that.fingerprint);case ImportTunnels():
 return importTunnels(_that.tunnels);case ExportTunnels():
 return exportTunnels(_that.path);case QuitAgent():
@@ -205,13 +210,14 @@ return showLogs();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,TResult? Function( String id,  int index)?  move,TResult? Function( String id,  String fingerprint)?  trustHostKey,TResult? Function( List<Tunnel> tunnels)?  importTunnels,TResult? Function( String path)?  exportTunnels,TResult? Function()?  quit,TResult? Function( bool on)?  setLaunchAtLogin,TResult? Function( bool on)?  setDebugLogging,TResult? Function()?  showLogs,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,TResult? Function( String id,  int index)?  move,TResult? Function( List<({String? group, String id,})> tunnels)?  arrange,TResult? Function( String id,  String fingerprint)?  trustHostKey,TResult? Function( List<Tunnel> tunnels)?  importTunnels,TResult? Function( String path)?  exportTunnels,TResult? Function()?  quit,TResult? Function( bool on)?  setLaunchAtLogin,TResult? Function( bool on)?  setDebugLogging,TResult? Function()?  showLogs,}) {final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that.tunnel);case RemoveTunnel() when remove != null:
 return remove(_that.id);case ToggleTunnel() when toggle != null:
 return toggle(_that.id);case MoveTunnel() when move != null:
-return move(_that.id,_that.index);case TrustHostKey() when trustHostKey != null:
+return move(_that.id,_that.index);case ArrangeTunnels() when arrange != null:
+return arrange(_that.tunnels);case TrustHostKey() when trustHostKey != null:
 return trustHostKey(_that.id,_that.fingerprint);case ImportTunnels() when importTunnels != null:
 return importTunnels(_that.tunnels);case ExportTunnels() when exportTunnels != null:
 return exportTunnels(_that.path);case QuitAgent() when quit != null:
@@ -503,6 +509,80 @@ class _$MoveTunnelCopyWithImpl<$Res>
 null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,null == index ? _self.index : index // ignore: cast_nullable_to_non_nullable
 as int,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class ArrangeTunnels extends AgentCommand {
+  const ArrangeTunnels( List<({String? group, String id,})> tunnels): _tunnels = tunnels,super._();
+  
+
+ final  List<({String? group, String id,})> _tunnels;
+ List<({String? group, String id,})> get tunnels {
+  if (_tunnels is EqualUnmodifiableListView) return _tunnels;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_tunnels);
+}
+
+
+/// Create a copy of AgentCommand
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ArrangeTunnelsCopyWith<ArrangeTunnels> get copyWith => _$ArrangeTunnelsCopyWithImpl<ArrangeTunnels>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is ArrangeTunnels&&const DeepCollectionEquality().equals(other.tunnels, _tunnels));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_tunnels));
+}
+
+@override
+String toString() {
+    return 'AgentCommand.arrange(tunnels: $tunnels)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ArrangeTunnelsCopyWith<$Res> implements $AgentCommandCopyWith<$Res> {
+  factory $ArrangeTunnelsCopyWith(ArrangeTunnels value, $Res Function(ArrangeTunnels) _then) = _$ArrangeTunnelsCopyWithImpl;
+@useResult
+$Res call({
+ List<({String? group, String id,})> tunnels
+});
+
+
+
+
+}
+/// @nodoc
+class _$ArrangeTunnelsCopyWithImpl<$Res>
+    implements $ArrangeTunnelsCopyWith<$Res> {
+  _$ArrangeTunnelsCopyWithImpl(this._self, this._then);
+
+  final ArrangeTunnels _self;
+  final $Res Function(ArrangeTunnels) _then;
+
+/// Create a copy of AgentCommand
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? tunnels = null,}) {
+  return _then(ArrangeTunnels(
+null == tunnels ? _self._tunnels : tunnels // ignore: cast_nullable_to_non_nullable
+as List<({String? group, String id,})>,
   ));
 }
 

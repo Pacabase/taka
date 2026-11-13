@@ -177,19 +177,69 @@ void main() {
       expect(const [b, d].groups, isEmpty);
     });
 
-    test('shows the tunnels in no group first, then each group', () {
-      expect(tunnels.shown, [b, d, e, a, c]);
+    String layout(List<Tunnel> tunnels) => tunnels.rows
+        .map(
+          (row) => switch (row) {
+            GroupHeaderRow(:final group, :final size) => '[$group $size]',
+            TunnelRow(:final tunnel) => tunnel.id,
+          },
+        )
+        .join(' ');
+
+    test('shows each group where its first tunnel is, with a header', () {
+      expect(tunnels.shown, [a, c, b, d, e]);
+      expect(layout(tunnels), '[Prod 2] a c b d [dev 1] e');
     });
 
-    test('moves a tunnel to where it was dropped among those shown', () {
-      int to(String id, int shownIndex) =>
-          tunnels.moveIndexFor(id, shownIndex: shownIndex);
+    group('a dropped tunnel', () {
+      test('dropped above a header is in no group', () {
+        expect(layout(tunnels.droppedAt(3, 0)), 'b [Prod 2] a c d [dev 1] e');
+        expect(tunnels.droppedAt(3, 0).first, b);
+      });
 
-      expect(tunnels.moved('d', to('d', 0)).shown, [d, b, e, a, c]);
-      expect(tunnels.moved('c', to('c', 3)).shown, [b, d, e, c, a]);
-      expect(tunnels.moved('a', to('a', 9)).shown, [b, d, e, c, a]);
-      expect(const [a].moveIndexFor('a', shownIndex: 0), 0);
+      test("dropped among a group's tunnels joins it", () {
+        final dropped = tunnels.droppedAt(4, 2);
+
+        expect(layout(dropped), '[Prod 3] a d c b [dev 1] e');
+        expect(dropped.firstWhere((tunnel) => tunnel.id == 'd').group, 'Prod');
+      });
+
+      test('dropped right under a header joins that group', () {
+        expect(layout(tunnels.droppedAt(3, 1)), '[Prod 3] b a c d [dev 1] e');
+      });
+
+      test("dropped below a group's last tunnel leaves the group", () {
+        final dropped = tunnels.droppedAt(1, 2);
+
+        expect(layout(dropped), '[Prod 1] c a b d [dev 1] e');
+        expect(dropped.firstWhere((tunnel) => tunnel.id == 'a').group, isNull);
+      });
     });
+
+    group('a dropped group', () {
+      test('moves with all its tunnels', () {
+        expect(layout(tunnels.droppedAt(0, 4)), 'b d [dev 1] e [Prod 2] a c');
+        expect(layout(tunnels.droppedAt(5, 0)), '[dev 1] e [Prod 2] a c b d');
+      });
+
+      test('can sit between tunnels in no group', () {
+        expect(layout(tunnels.droppedAt(5, 4)), '[Prod 2] a c b [dev 1] e d');
+      });
+
+      test('dropped inside another group lands after it', () {
+        expect(layout(tunnels.droppedAt(5, 2)), '[Prod 2] a c [dev 1] e b d');
+      });
+    });
+
+    test(
+      'arranges by an order of ids and groups, keeping any it leaves out',
+      () {
+        expect(
+          tunnels.arranged([(id: 'e', group: null), (id: 'a', group: 'dev')]),
+          [e.copyWith(group: null), a.copyWith(group: 'dev'), b, c, d],
+        );
+      },
+    );
   });
 
   group('moved', () {

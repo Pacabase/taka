@@ -1774,6 +1774,24 @@ void main() {
     expect(store.tunnels, [proxy, database]);
   });
 
+  test('arrange reorders and regroups the tunnels and saves', () async {
+    final manager = await loaded();
+
+    await manager.arrange([(id: 'b2', group: 'Prod'), (id: 'a1', group: null)]);
+
+    expect(manager.snapshot.tunnels, [proxy.copyWith(group: 'Prod'), database]);
+    expect(store.tunnels, [proxy.copyWith(group: 'Prod'), database]);
+  });
+
+  test('arrange saves nothing when nothing changes', () async {
+    final manager = await loaded();
+    final saves = store.saveCount;
+
+    await manager.arrange([(id: 'a1', group: null), (id: 'b2', group: null)]);
+
+    expect(store.saveCount, saves);
+  });
+
   test('move saves nothing when nothing moves', () async {
     final manager = await loaded();
     final changes = <TunnelsSnapshot>[];

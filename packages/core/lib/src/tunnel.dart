@@ -127,25 +127,101 @@ sealed class const Tunnel._() with _$Tunnel {
   String toString() => 'Tunnel($id, $title)';
 }
 
+/// A row of the tunnel list: a group's header, or a tunnel.
+sealed class const TunnelListRow() {}
+
+class const GroupHeaderRow(final String group, final int size)
+    extends TunnelListRow {}
+
+class const TunnelRow(final Tunnel tunnel) extends TunnelListRow {}
+
 extension TunnelOrder on List<Tunnel> {
+  /// Every group in use, by name.
   List<String> get groups =>
       {for (final tunnel in this) ?tunnel.group}.sorted(compareAsciiLowerCase);
 
-  /// As the window and tray list them: tunnels in no group, then each group.
-  List<Tunnel> get shown => [
-    ...where((tunnel) => tunnel.group == null),
-    for (final group in groups) ...where((tunnel) => tunnel.group == group),
-  ];
+  /// As the window and tray list them: each group where its first tunnel is,
+  /// with all its tunnels together.
+  List<Tunnel> get shown {
+    final seen = <String>{};
+    return [
+      for (final tunnel in this)
+        if (tunnel.group == null)
+          tunnel
+        else if (seen.add(tunnel.group!))
+          ...where((member) => member.group == tunnel.group),
+    ];
+  }
 
-  /// The index for [moved] that puts tunnel [id] at [shownIndex] among the
-  /// others as [shown] lists them.
-  int moveIndexFor(String id, {required int shownIndex}) {
-    final others = shown.where((tunnel) => tunnel.id != id).toList();
-    final rest = where((tunnel) => tunnel.id != id).toList();
-    if (shownIndex >= others.length) {
-      return others.isEmpty ? 0 : rest.indexOf(others.last) + 1;
+  /// [shown], with a header before each group.
+  List<TunnelListRow> get rows {
+    final tunnels = shown;
+    return [
+      for (final (index, tunnel) in tunnels.indexed) ...[
+        if (tunnel.group case final group?
+            when index == 0 || tunnels[index - 1].group != group)
+          GroupHeaderRow(
+            group,
+            tunnels.where((member) => member.group == group).length,
+          ),
+        TunnelRow(tunnel),
+      ],
+    ];
+  }
+
+  /// The tunnels once [rows] row [from] is dropped at [to] among the others:
+  /// a header moves its whole group, and a tunnel takes the group of the
+  /// tunnel it lands above, so one dropped below a group's last tunnel is out.
+  List<Tunnel> droppedAt(int from, int to) {
+    final rows = this.rows;
+    final moving = rows[from];
+    final span = switch (moving) {
+      GroupHeaderRow(:final size) => 1 + size,
+      TunnelRow() => 1,
+    };
+    final others = [...rows]..removeRange(from, from + span);
+    String? groupAt(int index) =>
+        switch (index < others.length ? others[index] : null) {
+          TunnelRow(:final tunnel) => tunnel.group,
+          _ => null,
+        };
+
+    var at = to.clamp(0, others.length);
+    // A group can't land inside another, so it goes after that one.
+    if (moving is GroupHeaderRow) {
+      if (groupAt(at) case final inside?) {
+        while (groupAt(at) == inside) {
+          at++;
+        }
+      }
     }
-    return rest.indexOf(others[shownIndex.clamp(0, others.length - 1)]);
+    final regrouped = switch (moving) {
+      TunnelRow(:final tunnel) => tunnel.copyWith(group: groupAt(at)),
+      GroupHeaderRow() => null,
+    };
+
+    return [
+      for (final row in [
+        ...others.take(at),
+        ...rows.skip(from).take(span),
+        ...others.skip(at),
+      ])
+        if (row case TunnelRow(:final tunnel))
+          if (regrouped != null && tunnel.id == regrouped.id)
+            regrouped
+          else
+            tunnel,
+    ];
+  }
+
+  /// In [order]'s order and groups; tunnels it leaves out keep theirs, after.
+  List<Tunnel> arranged(List<({String id, String? group})> order) {
+    final byId = {for (final tunnel in this) tunnel.id: tunnel};
+    return [
+      for (final (:id, :group) in order)
+        if (byId.remove(id) case final tunnel?) tunnel.copyWith(group: group),
+      ...byId.values,
+    ];
   }
 
   List<Tunnel> moved(String id, int index) {

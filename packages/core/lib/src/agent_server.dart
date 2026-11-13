@@ -123,6 +123,7 @@ class AgentServer(
     RemoveTunnel(:final id) => await _manager.remove(id),
     ToggleTunnel(:final id) => await _manager.toggle(id),
     MoveTunnel(:final id, :final index) => await _manager.move(id, index),
+    ArrangeTunnels(:final tunnels) => await _manager.arrange(tunnels),
     TrustHostKey(:final id, :final fingerprint) => await _manager.trustHostKey(
       id,
       fingerprint,

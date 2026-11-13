@@ -15,6 +15,7 @@ void main() {
   Future<void> pumpRows(
     WidgetTester tester, {
     Map<String, double> heights = const {},
+    int Function(int index)? spanOf,
   }) async {
     moves = [];
     names = ['one', 'two', 'three'];
@@ -26,6 +27,7 @@ void main() {
             builder: (context, setState) {
               setNames = setState;
               return ReorderableRows(
+                spanOf: spanOf,
                 onReorder: (from, to) => setState(() {
                   moves.add((from, to));
                   names.insert(to, names.removeAt(from));
@@ -179,5 +181,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(moves, isEmpty);
+  });
+
+  testWidgets('a row with a span carries the rows after it along', (
+    tester,
+  ) async {
+    await pumpRows(tester, spanOf: (index) => index == 0 ? 2 : 1);
+
+    final gesture = await lift(tester, 'one', 60);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(isLifted(tester, 'two'), isTrue);
+    expect(topOf(tester, 'three'), 0);
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(moves, [(0, 1)]);
   });
 }

@@ -93,9 +93,11 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
       ].join(' · '),
     ),
     const SeparatorEntry(),
-    for (final tunnel in tunnels.where((tunnel) => tunnel.group == null))
-      _tunnelEntry(tunnel, snapshot.statusOf(tunnel.id)),
-    for (final group in tunnels.groups) _groupEntry(group, snapshot),
+    for (final row in tunnels.rows)
+      if (row case GroupHeaderRow(:final group))
+        _groupEntry(group, snapshot)
+      else if (row case TunnelRow(:final tunnel) when tunnel.group == null)
+        _tunnelEntry(tunnel, snapshot.statusOf(tunnel.id)),
     const SeparatorEntry(),
     SubmenuEntry('Tunnel Actions', [
       for (final tunnel in tunnels.shown)

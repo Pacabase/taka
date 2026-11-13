@@ -113,6 +113,14 @@ class TunnelManager({
     await _persist();
   }
 
+  Future<void> arrange(List<({String id, String? group})> order) async {
+    final arranged = _tunnels.arranged(order);
+    if (const ListEquality<Tunnel>().equals(arranged, _tunnels)) return;
+
+    _tunnels = arranged;
+    await _persist();
+  }
+
   Future<void> move(String id, int index) async {
     final moved = _tunnels.moved(id, index);
     if (identical(moved, _tunnels)) return;
