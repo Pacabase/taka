@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:core/src/tunnel.dart';
-import 'package:core/src/tunnel_colour.dart';
 import 'package:core/src/tunnel_session.dart';
 import 'package:core/src/tunnel_store.dart';
 import 'package:core/src/tunnels_snapshot.dart';
@@ -37,22 +36,19 @@ class TunnelManager({
   final Map<String, TunnelSession> _sessions = {};
   final _closed = Completer<void>();
   List<Tunnel> _tunnels = const [];
-  Map<String, TunnelColour> _groupColours = const {};
   Set<String> _savedOn = const {};
   Set<String> _wasOn = const {};
 
   TunnelsSnapshot get snapshot => TunnelsSnapshot(
     tunnels: _tunnels,
     statuses: _sessions.map((id, session) => MapEntry(id, session.status)),
-    groupColours: _coloursInUse,
   );
 
   Stream<TunnelsSnapshot> get changes => _changes.stream;
 
   Future<void> load() async {
-    final (:tunnels, :on, :groupColours) = await store.load();
+    final (:tunnels, :on) = await store.load();
     _tunnels = tunnels;
-    _groupColours = groupColours;
     _wasOn = on;
     _emit();
   }
@@ -81,28 +77,14 @@ class TunnelManager({
 
     final isWanted =
         _isOn(tunnel.id) || _sessions[tunnel.id]?.status is UnknownHostKey;
-    final isRelabelled =
-        previous?.copyWith(
-          name: tunnel.name,
-          group: tunnel.group,
-          colour: tunnel.colour,
-        ) ==
-        tunnel;
-    if (isWanted && !isRelabelled) {
+    final isRenamed =
+        previous?.copyWith(name: tunnel.name, group: tunnel.group) == tunnel;
+    if (isWanted && !isRenamed) {
       final running = _sessions.remove(tunnel.id)!;
       _log.i('Stopping ${running.tunnel.title}');
       await running.stop();
       await _start(tunnel);
     }
-  }
-
-  Future<void> setGroupColour(String group, TunnelColour? colour) async {
-    _groupColours = {
-      for (final MapEntry(key: named, value: kept) in _groupColours.entries)
-        if (named != group) named: kept,
-      group: ?colour,
-    };
-    await _persist();
   }
 
   Future<void> import(List<Tunnel> tunnels) async {
@@ -216,15 +198,6 @@ class TunnelManager({
     return session.connect();
   }
 
-  // A group with no tunnels left loses its colour.
-  Map<String, TunnelColour> get _coloursInUse {
-    final groups = _tunnels.groups.toSet();
-    return {
-      for (final MapEntry(key: group, value: colour) in _groupColours.entries)
-        if (groups.contains(group)) group: colour,
-    };
-  }
-
   bool _isOn(String id) => _sessions[id]?.status.isOn ?? false;
 
   Set<String> get _on => {
@@ -235,7 +208,7 @@ class TunnelManager({
   Future<void> _persist() {
     _savedOn = _on;
     _emit();
-    return store.save(_tunnels, on: _savedOn, groupColours: _coloursInUse);
+    return store.save(_tunnels, on: _savedOn);
   }
 
   // Which tunnels are on is saved when it changes, so a crash restores them too.
@@ -248,7 +221,7 @@ class TunnelManager({
       _savedOn = on;
       unawaited(
         store
-            .save(_tunnels, on: _savedOn, groupColours: _coloursInUse)
+            .save(_tunnels, on: _savedOn)
             .catchError(
               (Object exception) =>
                   _log.w('Could not save which tunnels are on', ex: exception),

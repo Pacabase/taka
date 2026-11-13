@@ -8,13 +8,11 @@ import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
-import 'package:taka/widgets/colour_dot.dart';
 
 class const TunnelTile({
   super.key,
   required final Tunnel tunnel,
   required final TunnelStatus status,
-  final TunnelColour? colour,
   required final void Function() onToggle,
   required final void Function(String fingerprint) onTrust,
   required final void Function() onEdit,
@@ -139,22 +137,11 @@ class _TunnelTileState extends State<TunnelTile> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       spacing: 2,
                       children: [
-                        Row(
-                          spacing: 6,
-                          children: [
-                            if (widget.colour case final colour?)
-                              ColourDot(colour),
-                            Flexible(
-                              child: Text(
-                                tunnel.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
+                        Text(
+                          tunnel.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
                         ?caption,
                       ],

@@ -137,19 +137,6 @@ void main() {
       },
     );
 
-    test(
-      'keeps a tunnel that is on connected when only its colour changes',
-      () async {
-        final manager = await loaded();
-        await manager.toggle('a1');
-
-        await manager.save(database.copyWith(colour: TunnelColour.blue));
-
-        expect(tunnel.closeCount, 0);
-        verify(openAnyTunnel).called(1);
-      },
-    );
-
     test('keeps a tunnel that is on connected when only renamed', () async {
       final manager = await loaded();
       await manager.toggle('a1');
@@ -1785,47 +1772,6 @@ void main() {
 
     expect(manager.snapshot.tunnels, [proxy, database]);
     expect(store.tunnels, [proxy, database]);
-  });
-
-  group('a group colour', () {
-    setUp(() => store = FakeStore([database.copyWith(group: 'Prod'), proxy]));
-
-    test('is saved and shown', () async {
-      final manager = await loaded();
-
-      await manager.setGroupColour('Prod', TunnelColour.blue);
-
-      expect(manager.snapshot.groupColours, {'Prod': TunnelColour.blue});
-      expect(store.groupColours, {'Prod': TunnelColour.blue});
-    });
-
-    test('is taken away with none', () async {
-      final manager = await loaded();
-      await manager.setGroupColour('Prod', TunnelColour.blue);
-
-      await manager.setGroupColour('Prod', null);
-
-      expect(manager.snapshot.groupColours, isEmpty);
-      expect(store.groupColours, isEmpty);
-    });
-
-    test('is read back when the tunnels load', () async {
-      store.groupColours = const {'Prod': TunnelColour.red};
-
-      final manager = await loaded();
-
-      expect(manager.snapshot.groupColours, {'Prod': TunnelColour.red});
-    });
-
-    test('goes once the group has no tunnels left', () async {
-      final manager = await loaded();
-      await manager.setGroupColour('Prod', TunnelColour.blue);
-
-      await manager.remove('a1');
-
-      expect(manager.snapshot.groupColours, isEmpty);
-      expect(store.groupColours, isEmpty);
-    });
   });
 
   test('move saves nothing when nothing moves', () async {

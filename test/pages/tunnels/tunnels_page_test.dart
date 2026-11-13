@@ -113,40 +113,6 @@ void main() {
     expect(top('Database'), lessThan(top('Cache')));
   });
 
-  testWidgets("a group's header sets its colour", (tester) async {
-    final bloc = await pumpPage(
-      tester,
-      initialState: Ready(
-        TunnelsSnapshot(
-          tunnels: [database.copyWith(group: 'Prod')],
-          groupColours: const {'Prod': TunnelColour.green},
-        ),
-      ),
-    );
-
-    await tester.tap(find.text('Prod'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Blue'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Prod'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('No colour'));
-    await tester.pumpAndSettle();
-
-    verify(
-      () => bloc.add(
-        const TunnelsEvent.send(
-          AgentCommand.setGroupColour('Prod', TunnelColour.blue),
-        ),
-      ),
-    ).called(1);
-    verify(
-      () => bloc.add(
-        const TunnelsEvent.send(AgentCommand.setGroupColour('Prod', null)),
-      ),
-    ).called(1);
-  });
-
   testWidgets(
     'lists the tunnels from the top, and dragging one moves it, shown as hovered',
     (tester) async {

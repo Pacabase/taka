@@ -172,17 +172,6 @@ void main() {
       expect(b.toJson().containsKey('group'), isFalse);
     });
 
-    test('a colour round-trips, and one it does not know is none', () {
-      const red = Tunnel(id: 'r', localPort: 1, colour: TunnelColour.red);
-
-      expect(red.toJson()['colour'], 'red');
-      expect(Tunnel.fromJson(red.toJson()), red);
-      expect(
-        Tunnel.fromJson({'id': 'p', 'localPort': 1, 'colour': 'pink'}).colour,
-        isNull,
-      );
-    });
-
     test('lists each group once, by name whatever its case', () {
       expect(tunnels.groups, ['dev', 'Prod']);
       expect(const [b, d].groups, isEmpty);

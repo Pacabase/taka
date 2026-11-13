@@ -94,7 +94,7 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
     ),
     const SeparatorEntry(),
     for (final tunnel in tunnels.where((tunnel) => tunnel.group == null))
-      _tunnelEntry(tunnel, snapshot),
+      _tunnelEntry(tunnel, snapshot.statusOf(tunnel.id)),
     for (final group in tunnels.groups) _groupEntry(group, snapshot),
     const SeparatorEntry(),
     SubmenuEntry('Tunnel Actions', [
@@ -123,14 +123,10 @@ TrayEntry _groupEntry(String group, TunnelsSnapshot snapshot) {
       .length;
 
   return SubmenuEntry(
-    _shortened(
-      _squared(
-        snapshot.groupColours[group],
-        '$group — $connected of ${members.length} connected',
-      ),
-    ),
+    _shortened('$group — $connected of ${members.length} connected'),
     [
-      for (final tunnel in members) _tunnelEntry(tunnel, snapshot),
+      for (final tunnel in members)
+        _tunnelEntry(tunnel, snapshot.statusOf(tunnel.id)),
       if (members.length > 1) ...[
         const SeparatorEntry(),
         if (members.any((tunnel) => snapshot.statusOf(tunnel.id).isOn))
@@ -142,29 +138,20 @@ TrayEntry _groupEntry(String group, TunnelsSnapshot snapshot) {
   );
 }
 
-TrayEntry _tunnelEntry(Tunnel tunnel, TunnelsSnapshot snapshot) {
-  final status = snapshot.statusOf(tunnel.id);
-
-  return TunnelEntry(
-    tunnel,
-    _shortened(
-      _squared(snapshot.colourOf(tunnel), switch (status) {
-        Stopped() => tunnel.title,
-        Connecting() => '${tunnel.title} — connecting…',
-        Connected() when tunnel.kind == TunnelKind.remote =>
-          '${tunnel.title} — port ${tunnel.remotePort} on the server',
-        Connected() => '${tunnel.title} — ${tunnel.address}',
-        Failed(:final message) => '${tunnel.title} — ${shortReason(message)}',
-        Reconnecting() => '${tunnel.title} — reconnecting…',
-        UnknownHostKey() => "${tunnel.title} — check the server's key",
-      }),
-    ),
-    isChecked: status.isOn,
-  );
-}
-
-String _squared(TunnelColour? colour, String label) =>
-    colour == null ? label : '${colour.square} $label';
+TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
+  tunnel,
+  _shortened(switch (status) {
+    Stopped() => tunnel.title,
+    Connecting() => '${tunnel.title} — connecting…',
+    Connected() when tunnel.kind == TunnelKind.remote =>
+      '${tunnel.title} — port ${tunnel.remotePort} on the server',
+    Connected() => '${tunnel.title} — ${tunnel.address}',
+    Failed(:final message) => '${tunnel.title} — ${shortReason(message)}',
+    Reconnecting() => '${tunnel.title} — reconnecting…',
+    UnknownHostKey() => "${tunnel.title} — check the server's key",
+  }),
+  isChecked: status.isOn,
+);
 
 List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
   final whyDown = [

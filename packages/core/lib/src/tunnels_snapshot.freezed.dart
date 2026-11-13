@@ -539,7 +539,7 @@ as String,
 /// @nodoc
 mixin _$TunnelsSnapshot {
 
- List<Tunnel> get tunnels; Map<String, TunnelStatus> get statuses; Map<String, TunnelColour> get groupColours;
+ List<Tunnel> get tunnels; Map<String, TunnelStatus> get statuses;
 /// Create a copy of TunnelsSnapshot
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -551,20 +551,20 @@ $TunnelsSnapshotCopyWith<TunnelsSnapshot> get copyWith => _$TunnelsSnapshotCopyW
 @override
 bool operator ==(Object other) {
   final _this = this as TunnelsSnapshot;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TunnelsSnapshot&&const DeepCollectionEquality().equals(other.tunnels, _this.tunnels)&&const DeepCollectionEquality().equals(other.statuses, _this.statuses)&&const DeepCollectionEquality().equals(other.groupColours, _this.groupColours));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TunnelsSnapshot&&const DeepCollectionEquality().equals(other.tunnels, _this.tunnels)&&const DeepCollectionEquality().equals(other.statuses, _this.statuses));
 }
 
 
 @override
 int get hashCode {
   final _this = this as TunnelsSnapshot;
-  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.tunnels),const DeepCollectionEquality().hash(_this.statuses),const DeepCollectionEquality().hash(_this.groupColours));
+  return Object.hash(runtimeType,const DeepCollectionEquality().hash(_this.tunnels),const DeepCollectionEquality().hash(_this.statuses));
 }
 
 @override
 String toString() {
   final _this = this as TunnelsSnapshot;
-  return 'TunnelsSnapshot(tunnels: ${_this.tunnels}, statuses: ${_this.statuses}, groupColours: ${_this.groupColours})';
+  return 'TunnelsSnapshot(tunnels: ${_this.tunnels}, statuses: ${_this.statuses})';
 }
 
 
@@ -575,7 +575,7 @@ abstract mixin class $TunnelsSnapshotCopyWith<$Res>  {
   factory $TunnelsSnapshotCopyWith(TunnelsSnapshot value, $Res Function(TunnelsSnapshot) _then) = _$TunnelsSnapshotCopyWithImpl;
 @useResult
 $Res call({
- List<Tunnel> tunnels, Map<String, TunnelStatus> statuses, Map<String, TunnelColour> groupColours
+ List<Tunnel> tunnels, Map<String, TunnelStatus> statuses
 });
 
 
@@ -592,12 +592,11 @@ class _$TunnelsSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of TunnelsSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? tunnels = null,Object? statuses = null,Object? groupColours = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? tunnels = null,Object? statuses = null,}) {
   return _then(TunnelsSnapshot(
 tunnels: null == tunnels ? _self.tunnels : tunnels // ignore: cast_nullable_to_non_nullable
 as List<Tunnel>,statuses: null == statuses ? _self.statuses : statuses // ignore: cast_nullable_to_non_nullable
-as Map<String, TunnelStatus>,groupColours: null == groupColours ? _self.groupColours : groupColours // ignore: cast_nullable_to_non_nullable
-as Map<String, TunnelColour>,
+as Map<String, TunnelStatus>,
   ));
 }
 
@@ -679,10 +678,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Tunnel> tunnels,  Map<String, TunnelStatus> statuses,  Map<String, TunnelColour> groupColours)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Tunnel> tunnels,  Map<String, TunnelStatus> statuses)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TunnelsSnapshot() when $default != null:
-return $default(_that.tunnels,_that.statuses,_that.groupColours);case _:
+return $default(_that.tunnels,_that.statuses);case _:
   return orElse();
 
 }
@@ -700,10 +699,10 @@ return $default(_that.tunnels,_that.statuses,_that.groupColours);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Tunnel> tunnels,  Map<String, TunnelStatus> statuses,  Map<String, TunnelColour> groupColours)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Tunnel> tunnels,  Map<String, TunnelStatus> statuses)  $default,) {final _that = this;
 switch (_that) {
 case _TunnelsSnapshot():
-return $default(_that.tunnels,_that.statuses,_that.groupColours);}
+return $default(_that.tunnels,_that.statuses);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -717,10 +716,10 @@ return $default(_that.tunnels,_that.statuses,_that.groupColours);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Tunnel> tunnels,  Map<String, TunnelStatus> statuses,  Map<String, TunnelColour> groupColours)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Tunnel> tunnels,  Map<String, TunnelStatus> statuses)?  $default,) {final _that = this;
 switch (_that) {
 case _TunnelsSnapshot() when $default != null:
-return $default(_that.tunnels,_that.statuses,_that.groupColours);case _:
+return $default(_that.tunnels,_that.statuses);case _:
   return null;
 
 }
@@ -732,7 +731,7 @@ return $default(_that.tunnels,_that.statuses,_that.groupColours);case _:
 
 
 class _TunnelsSnapshot extends TunnelsSnapshot {
-  const _TunnelsSnapshot({ List<Tunnel> tunnels = const [],  Map<String, TunnelStatus> statuses = const {},  Map<String, TunnelColour> groupColours = const {}}): _tunnels = tunnels,_statuses = statuses,_groupColours = groupColours,super._();
+  const _TunnelsSnapshot({ List<Tunnel> tunnels = const [],  Map<String, TunnelStatus> statuses = const {}}): _tunnels = tunnels,_statuses = statuses,super._();
   
 
  final  List<Tunnel> _tunnels;
@@ -749,13 +748,6 @@ class _TunnelsSnapshot extends TunnelsSnapshot {
   return EqualUnmodifiableMapView(_statuses);
 }
 
- final  Map<String, TunnelColour> _groupColours;
-@override@JsonKey() Map<String, TunnelColour> get groupColours {
-  if (_groupColours is EqualUnmodifiableMapView) return _groupColours;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableMapView(_groupColours);
-}
-
 
 /// Create a copy of TunnelsSnapshot
 /// with the given fields replaced by the non-null parameter values.
@@ -767,18 +759,18 @@ _$TunnelsSnapshotCopyWith<_TunnelsSnapshot> get copyWith => __$TunnelsSnapshotCo
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TunnelsSnapshot&&const DeepCollectionEquality().equals(other.tunnels, _tunnels)&&const DeepCollectionEquality().equals(other.statuses, _statuses)&&const DeepCollectionEquality().equals(other.groupColours, _groupColours));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TunnelsSnapshot&&const DeepCollectionEquality().equals(other.tunnels, _tunnels)&&const DeepCollectionEquality().equals(other.statuses, _statuses));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_tunnels),const DeepCollectionEquality().hash(_statuses),const DeepCollectionEquality().hash(_groupColours));
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_tunnels),const DeepCollectionEquality().hash(_statuses));
 }
 
 @override
 String toString() {
-    return 'TunnelsSnapshot(tunnels: $tunnels, statuses: $statuses, groupColours: $groupColours)';
+    return 'TunnelsSnapshot(tunnels: $tunnels, statuses: $statuses)';
 }
 
 
@@ -789,7 +781,7 @@ abstract mixin class _$TunnelsSnapshotCopyWith<$Res> implements $TunnelsSnapshot
   factory _$TunnelsSnapshotCopyWith(_TunnelsSnapshot value, $Res Function(_TunnelsSnapshot) _then) = __$TunnelsSnapshotCopyWithImpl;
 @override @useResult
 $Res call({
- List<Tunnel> tunnels, Map<String, TunnelStatus> statuses, Map<String, TunnelColour> groupColours
+ List<Tunnel> tunnels, Map<String, TunnelStatus> statuses
 });
 
 
@@ -806,12 +798,11 @@ class __$TunnelsSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of TunnelsSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? tunnels = null,Object? statuses = null,Object? groupColours = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? tunnels = null,Object? statuses = null,}) {
   return _then(_TunnelsSnapshot(
 tunnels: null == tunnels ? _self._tunnels : tunnels // ignore: cast_nullable_to_non_nullable
 as List<Tunnel>,statuses: null == statuses ? _self._statuses : statuses // ignore: cast_nullable_to_non_nullable
-as Map<String, TunnelStatus>,groupColours: null == groupColours ? _self._groupColours : groupColours // ignore: cast_nullable_to_non_nullable
-as Map<String, TunnelColour>,
+as Map<String, TunnelStatus>,
   ));
 }
 

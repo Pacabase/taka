@@ -12,7 +12,6 @@ import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
 import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_colors.dart';
-import 'package:taka/widgets/colour_dot.dart';
 
 class const TunnelsPage({
   super.key,
@@ -214,18 +213,10 @@ class const _TunnelList({
             children: [
               if (tunnel.group case final group?
                   when index == 0 || shown[index - 1].group != group)
-                _GroupHeader(
-                  group,
-                  colour: snapshot.groupColours[group],
-                  onColour: (colour) => _send(
-                    context,
-                    AgentCommand.setGroupColour(group, colour),
-                  ),
-                ),
+                _GroupHeader(group),
               TunnelTile(
                 tunnel: tunnel,
                 status: snapshot.statusOf(tunnel.id),
-                colour: snapshot.colourOf(tunnel),
                 onToggle: () => _send(context, AgentCommand.toggle(tunnel.id)),
                 onTrust: (fingerprint) => _send(
                   context,
@@ -252,50 +243,21 @@ class const _TunnelList({
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
 
-class const _GroupHeader(
-  final String group, {
-  required final TunnelColour? colour,
-  required final void Function(TunnelColour? colour) onColour,
-}) extends StatelessWidget {
+class const _GroupHeader(final String group) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
-        // A record, since a menu item whose value is null counts as no pick.
-        child: PopupMenuButton<(TunnelColour?,)>(
-          tooltip: 'Colour for $group',
-          onSelected: (picked) => onColour(picked.$1),
-          itemBuilder: (_) => [
-            for (final colour in TunnelColour.values)
-              PopupMenuItem(
-                value: (colour,),
-                child: Row(
-                  spacing: 8,
-                  children: [ColourDot(colour), Text(colour.label)],
-                ),
-              ),
-            const PopupMenuItem(value: (null,), child: Text('No colour')),
-          ],
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 6,
-            children: [
-              if (colour case final colour?) ColourDot(colour),
-              Flexible(
-                child: Text(
-                  group,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: TakaColors.of(context).textSecondary,
-                  ),
-                ),
-              ),
-            ],
+        child: Text(
+          group,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: TakaColors.of(context).textSecondary,
           ),
         ),
       ),
