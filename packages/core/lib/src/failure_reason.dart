@@ -1,4 +1,5 @@
 import 'package:core/src/tunnel.dart';
+import 'package:core/src/tunnels_snapshot.dart';
 
 final _portInUse = RegExp(r':(\d+) is already in use');
 final _remotePortRefused = RegExp(
@@ -53,19 +54,6 @@ const _reasons = [
 ];
 
 ({String short, String sentence})? _reasonOf(String message) {
-  // Within a longer message, such as a ProxyJump's, the line is another hop's.
-  if (message.contains(': open failed: ') && !message.contains('\n')) {
-    return message.contains('administratively prohibited')
-        ? (
-            short: "server won't forward",
-            sentence: "The server doesn't allow this tunnel.",
-          )
-        : (
-            short: "can't reach where it leads",
-            sentence: "The server can't reach where this tunnel leads.",
-          );
-  }
-
   if (_portInUse.firstMatch(message)?[1] case final port?) {
     return (
       short: 'port $port in use',
@@ -105,3 +93,25 @@ String forwardWarning(Tunnel tunnel) => switch (tunnel) {
   Tunnel(:final remoteHost, :final remotePort) =>
     "Can't reach $remoteHost:$remotePort through the server.",
 };
+
+/// [failure] in a few words for narrow places.
+String failureShort(Tunnel tunnel, Failed failure) => switch (failure) {
+  Failed(isForward: false, :final message) => shortReason(message),
+  Failed(:final message) when message.contains(_prohibited) =>
+    "server won't forward",
+  _ => switch (tunnel.remoteSocket) {
+    final socket? => "can't open $socket",
+    null => "can't reach ${tunnel.remoteHost}:${tunnel.remotePort}",
+  },
+};
+
+/// [failure] as a plain sentence, naming what the tunnel couldn't reach.
+String failureSentence(Tunnel tunnel, Failed failure) => switch (failure) {
+  Failed(isForward: false, :final message) => plainReason(message),
+  Failed(:final message) when message.contains(_prohibited) =>
+    "The server doesn't allow this tunnel.",
+  _ => forwardWarning(tunnel),
+};
+
+// ssh's reason when the server's config forbids the forward.
+const _prohibited = 'administratively prohibited';

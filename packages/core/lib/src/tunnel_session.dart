@@ -252,9 +252,9 @@ class TunnelSession({
     _ => '$exception',
   };
 
-  void _fail(String message) {
+  void _fail(String message, {bool isForward = false}) {
     _log.w('${tunnel.title} failed: $message');
-    _status = Failed(message);
+    _status = Failed(message, isForward: isForward);
     onChange();
   }
 
@@ -267,7 +267,7 @@ class TunnelSession({
             _log.w('${tunnel.title}: could not close ssh ($exception)'),
       ),
     );
-    _fail(line);
+    _fail(line, isForward: true);
   }
 
   // A stopping session has left the manager's sessions but is still Connected.

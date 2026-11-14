@@ -1436,7 +1436,10 @@ void main() {
       await manager.toggle('a1');
       await pumpEventQueue();
 
-      expect(manager.snapshot.statusOf('a1'), Failed(refused.line));
+      expect(
+        manager.snapshot.statusOf('a1'),
+        Failed(refused.line, isForward: true),
+      );
       expect(tunnel.closeCount, 1);
     });
 
@@ -1482,7 +1485,10 @@ void main() {
             ..flushMicrotasks()
             ..elapse(const Duration(minutes: 5));
 
-          expect(manager.snapshot.statusOf('a1'), Failed(refused.line));
+          expect(
+            manager.snapshot.statusOf('a1'),
+            Failed(refused.line, isForward: true),
+          );
           expect(tunnel.closeCount, 1);
           expect(opens, 1);
         });
@@ -1507,7 +1513,10 @@ void main() {
           sshSays(refused);
           time.flushMicrotasks();
 
-          expect(manager.snapshot.statusOf('a1'), Failed(refused.line));
+          expect(
+            manager.snapshot.statusOf('a1'),
+            Failed(refused.line, isForward: true),
+          );
           unawaited(manager.close());
           time.flushMicrotasks();
         });
@@ -1536,7 +1545,10 @@ void main() {
           time.flushMicrotasks();
 
           expect(opens, 2);
-          expect(manager.snapshot.statusOf('a1'), Failed(refused.line));
+          expect(
+            manager.snapshot.statusOf('a1'),
+            Failed(refused.line, isForward: true),
+          );
         });
       });
 

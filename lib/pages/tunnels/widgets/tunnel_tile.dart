@@ -60,10 +60,10 @@ class _TunnelTileState extends State<TunnelTile> {
     }
 
     final caption = switch (status) {
-      Failed(:final message) => captioned(
-        plainReason(message),
+      final Failed failure => captioned(
+        failureSentence(tunnel, failure),
         colors.red,
-        details: message,
+        details: failure.message,
       ),
       Connecting() => captioned('Connecting…', colors.orange),
       UnknownHostKey() => null,

@@ -151,7 +151,8 @@ TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
     Connected() when tunnel.kind == TunnelKind.remote =>
       '${tunnel.title} — port ${tunnel.remotePort} on the server',
     Connected() => '${tunnel.title} — ${tunnel.address}',
-    Failed(:final message) => '${tunnel.title} — ${shortReason(message)}',
+    final Failed failure =>
+      '${tunnel.title} — ${failureShort(tunnel, failure)}',
     Reconnecting() => '${tunnel.title} — reconnecting…',
     UnknownHostKey() => "${tunnel.title} — check the server's key",
   }),
@@ -160,9 +161,9 @@ TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
 
 List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
   final whyDown = [
-    if (status
-        case Failed(message: final reason) || Reconnecting(:final reason))
-      InfoEntry(plainReason(reason)),
+    if (status case final Failed failure)
+      InfoEntry(failureSentence(tunnel, failure)),
+    if (status case Reconnecting(:final reason)) InfoEntry(plainReason(reason)),
     if (status is Failed)
       TunnelActionEntry(tunnel, TunnelAction.tryAgain, 'Try Again'),
     if (status case UnknownHostKey(:final host))

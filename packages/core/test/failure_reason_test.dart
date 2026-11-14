@@ -34,16 +34,6 @@ void main() {
       "Can't reach the server.",
     ),
     (
-      'channel 3: open failed: administratively prohibited: open failed',
-      "server won't forward",
-      "The server doesn't allow this tunnel.",
-    ),
-    (
-      'channel 2: open failed: connect failed: Connection refused',
-      "can't reach where it leads",
-      "The server can't reach where this tunnel leads.",
-    ),
-    (
       'ssh: connect to host bastion port 22: Connection refused',
       "can't reach the server",
       "Can't reach the server.",
@@ -183,6 +173,61 @@ void main() {
         ),
         "A site through the SOCKS proxy couldn't be reached.",
       );
+    });
+  });
+
+  group('a forward the server could not make', () {
+    const database = Tunnel(
+      id: 'a1',
+      sshHost: 'bastion',
+      localPort: 15432,
+      remoteHost: 'db.internal',
+      remotePort: 5432,
+    );
+    const docker = Tunnel(
+      id: 's6',
+      sshHost: 'bastion',
+      localPort: 2375,
+      remoteSocket: '/var/run/docker.sock',
+    );
+    const refused = Failed(
+      'channel 2: open failed: connect failed: Connection refused',
+      isForward: true,
+    );
+
+    test('names what the tunnel could not reach', () {
+      expect(failureShort(database, refused), "can't reach db.internal:5432");
+      expect(
+        failureSentence(database, refused),
+        "Can't reach db.internal:5432 through the server.",
+      );
+      expect(failureShort(docker, refused), "can't open /var/run/docker.sock");
+      expect(
+        failureSentence(docker, refused),
+        "Can't open /var/run/docker.sock on the server.",
+      );
+    });
+
+    test('says when the server forbids the forward', () {
+      const forbidden = Failed(
+        'channel 3: open failed: administratively prohibited: open failed',
+        isForward: true,
+      );
+
+      expect(failureShort(database, forbidden), "server won't forward");
+      expect(
+        failureSentence(database, forbidden),
+        "The server doesn't allow this tunnel.",
+      );
+    });
+
+    test('reads any other failure from what ssh said', () {
+      const unreachable = Failed(
+        'ssh: connect to host bastion port 22: Connection refused',
+      );
+
+      expect(failureShort(database, unreachable), "can't reach the server");
+      expect(failureSentence(database, unreachable), "Can't reach the server.");
     });
   });
 }

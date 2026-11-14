@@ -210,6 +210,29 @@ void main() {
     );
   });
 
+  test('names the destination of a forward the server could not make', () {
+    const refused = Failed(
+      'channel 2: open failed: connect failed: Connection refused',
+      isForward: true,
+    );
+    final snapshot = TunnelsSnapshot(
+      tunnels: [database],
+      statuses: {'a1': refused},
+    );
+
+    expect(
+      menu(snapshot),
+      contains("☐ Production database — can't reach db.internal:5432"),
+    );
+    expect(
+      tunnelActions(snapshot),
+      startsWith(
+        'Tunnel Actions ▸ Production database ▸ '
+        "Can't reach db.internal:5432 through the server. | Try Again",
+      ),
+    );
+  });
+
   test("says plainly why a tunnel is down, never in ssh's words", () {
     String actionsWhen(TunnelStatus status) => tunnelActions(
       TunnelsSnapshot(tunnels: [web], statuses: {'c3': status}),
