@@ -163,36 +163,6 @@ void main() {
     expect(menu(snapshot)[2].split(' ▸ ').first.length, lessThanOrEqualTo(50));
   });
 
-  test('puts the colour square before a tunnel and a group', () {
-    const snapshot = TunnelsSnapshot(
-      tunnels: [
-        Tunnel(id: 'a', name: 'Api', localPort: 1, group: 'Prod'),
-        Tunnel(
-          id: 'c',
-          name: 'Cache',
-          localPort: 3,
-          group: 'Prod',
-          colour: TunnelColour.red,
-        ),
-        Tunnel(
-          id: 'l',
-          name: 'Local',
-          localPort: 2,
-          colour: TunnelColour.green,
-        ),
-      ],
-      groupColours: {'Prod': TunnelColour.blue},
-    );
-
-    expect(menu(snapshot).sublist(2, 4), [
-      '🟦 Prod — 0 of 2 connected ▸ ☐ Api | ☐ Cache | --- | Connect All',
-      '☐ 🟩 Local',
-    ]);
-    expect(menu(snapshot.copyWith(groupColours: const {})).sublist(2, 3), [
-      'Prod — 0 of 2 connected ▸ ☐ Api | ☐ 🟥 Cache | --- | Connect All',
-    ]);
-  });
-
   test('offers to connect a group when none of it is on', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [

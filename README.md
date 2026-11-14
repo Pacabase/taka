@@ -71,7 +71,7 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### Windows (0.3)
 
-- [ ] **Windows support** — the agent's transport, paths, an installer and `winget`, and real coloured icons in the tray, where menus can't draw emoji in colour.
+- [ ] **Windows support** — the agent's transport, paths, an installer and `winget`.
 
 ### Logins (0.4)
 

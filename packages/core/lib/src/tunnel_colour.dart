@@ -1,15 +1,10 @@
 enum TunnelColour {
-  red('🟥'),
-  orange('🟧'),
-  yellow('🟨'),
-  green('🟩'),
-  blue('🟦'),
-  purple('🟪');
-
-  const TunnelColour(this.square);
-
-  /// The emoji square menus show it as, since they can't draw a colour.
-  final String square;
+  red,
+  orange,
+  yellow,
+  green,
+  blue,
+  purple;
 
   static TunnelColour? fromName(Object? name) => _byName[name];
 
