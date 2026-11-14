@@ -17,7 +17,8 @@ class TunnelSession({
   required final void Function() onChange,
   required final Future<void> Function()? beforeConnect,
   required final Future<bool> Function()? isLocked,
-  required final Future<void> Function(int localPort)? checkDestination,
+  required final Future<void> Function(String address, int localPort)?
+  checkDestination,
   required final Duration warningLifetime,
   required final Duration checkWindow,
   required final List<Duration> retryDelays,
@@ -70,7 +71,7 @@ class TunnelSession({
 
     _isChecking = true;
     try {
-      await check(tunnel.localPort);
+      await check(tunnel.reachableAt, tunnel.localPort);
       // ssh says the destination refused a moment after the check's own
       // connection has closed.
       await Future<void>.delayed(checkWindow);
@@ -135,11 +136,13 @@ class TunnelSession({
       }
     }
 
+    final bindAddress = tunnel.listenAddress;
     final SshTunnel opened;
     switch (tunnel) {
       case Tunnel(kind: TunnelKind.socks):
         opened = await client.openSocksProxy(
           tunnel.target,
+          bindAddress: bindAddress,
           localPort: tunnel.localPort,
           onLog: onLog,
           abortTrigger: abortTrigger,
@@ -160,6 +163,7 @@ class TunnelSession({
         opened = await client.openSocketTunnel(
           tunnel.target,
           remoteSocket: remoteSocket,
+          bindAddress: bindAddress,
           localPort: tunnel.localPort,
           onLog: onLog,
           abortTrigger: abortTrigger,
@@ -169,6 +173,7 @@ class TunnelSession({
           tunnel.target,
           remoteHost: remoteHost,
           remotePort: remotePort,
+          bindAddress: bindAddress,
           localPort: tunnel.localPort,
           onLog: onLog,
           abortTrigger: abortTrigger,

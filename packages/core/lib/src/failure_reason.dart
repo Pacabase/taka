@@ -13,6 +13,11 @@ const _reasons = [
     sentence: "The server can't reach where this tunnel leads.",
   ),
   (
+    patterns: ["isn't an address of this computer"],
+    short: 'address not on this computer',
+    sentence: "This computer doesn't have the From address.",
+  ),
+  (
     patterns: ['Could not resolve hostname'],
     short: 'server not found',
     sentence: "Can't find the server.",

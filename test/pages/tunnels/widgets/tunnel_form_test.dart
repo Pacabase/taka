@@ -45,10 +45,10 @@ void main() {
     WidgetTester tester, {
     String remotePort = '5432',
   }) async {
-    await tester.enterText(field(2), '15432');
-    await tester.enterText(field(3), 'db');
-    await tester.enterText(field(4), 'localhost');
-    await tester.enterText(field(5), remotePort);
+    await tester.enterText(field(3), '15432');
+    await tester.enterText(field(4), 'db');
+    await tester.enterText(field(5), 'localhost');
+    await tester.enterText(field(6), remotePort);
     await tester.pump();
   }
 
@@ -61,7 +61,7 @@ void main() {
     await fillLocal(tester, remotePort: '70000');
     expect(addEnabled(tester), isFalse);
 
-    await tester.enterText(field(5), '5432');
+    await tester.enterText(field(6), '5432');
     await tester.pump();
     expect(addEnabled(tester), isTrue);
 
@@ -88,8 +88,8 @@ void main() {
     await tester.pump();
     expect(find.text('To'), findsNothing);
 
-    await tester.enterText(field(2), '1080');
-    await tester.enterText(field(3), 'user@jump');
+    await tester.enterText(field(3), '1080');
+    await tester.enterText(field(4), 'user@jump');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     expect(saved.single.kind, TunnelKind.socks);
     expect(saved.single.remoteHost, isNull);
@@ -99,12 +99,12 @@ void main() {
     tester,
   ) async {
     await pumpForm(tester);
-    await tester.enterText(field(2), '2375');
-    await tester.enterText(field(3), 'bastion');
-    await tester.enterText(field(4), '/var/run/docker.sock');
+    await tester.enterText(field(3), '2375');
+    await tester.enterText(field(4), 'bastion');
+    await tester.enterText(field(5), '/var/run/docker.sock');
     await tester.pump();
 
-    expect(find.byType(TextField), findsNWidgets(5));
+    expect(find.byType(TextField), findsNWidgets(6));
     await tester.tap(find.text('Add'));
 
     expect(
@@ -131,9 +131,9 @@ void main() {
       tester,
     ) async {
       await pumpForm(tester);
-      await tester.enterText(field(2), '2375');
-      await tester.enterText(field(3), 'bastion');
-      await tester.enterText(field(4), path);
+      await tester.enterText(field(3), '2375');
+      await tester.enterText(field(4), 'bastion');
+      await tester.enterText(field(5), path);
       await tester.pump();
 
       expect(addEnabled(tester), isFalse);
@@ -144,11 +144,11 @@ void main() {
     tester,
   ) async {
     await pumpForm(tester);
-    await tester.enterText(field(2), '2375');
-    await tester.enterText(field(3), 'bastion');
-    await tester.enterText(field(4), 'localhost');
-    await tester.enterText(field(5), '5432');
-    await tester.enterText(field(4), '/var/run/docker.sock');
+    await tester.enterText(field(3), '2375');
+    await tester.enterText(field(4), 'bastion');
+    await tester.enterText(field(5), 'localhost');
+    await tester.enterText(field(6), '5432');
+    await tester.enterText(field(5), '/var/run/docker.sock');
     await tester.pump();
 
     expect(addEnabled(tester), isTrue);
@@ -161,15 +161,174 @@ void main() {
     tester,
   ) async {
     await pumpForm(tester);
-    await tester.enterText(field(2), '2375');
-    await tester.enterText(field(3), 'bastion');
-    await tester.enterText(field(4), '/var/run/docker.sock');
+    await tester.enterText(field(3), '2375');
+    await tester.enterText(field(4), 'bastion');
+    await tester.enterText(field(5), '/var/run/docker.sock');
     await tester.tap(find.text('Expose a port'));
     await tester.pump();
     await tester.enterText(field(5), '5432');
     await tester.pump();
 
     expect(addEnabled(tester), isFalse);
+  });
+
+  group('the From address', () {
+    testWidgets('is empty, with 127.0.0.1 as its hint, and saved as none', (
+      tester,
+    ) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+
+      expect(tester.widget<TextField>(field(2)).controller!.text, isEmpty);
+      expect(
+        tester.widget<TextField>(field(2)).decoration!.hintText,
+        '127.0.0.1',
+      );
+      await tester.tap(find.text('Add'));
+      expect(saved.single.bindAddress, isNull);
+    });
+
+    testWidgets('can be another address, with a note on who can use it', (
+      tester,
+    ) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+      await tester.enterText(field(2), '172.17.0.1');
+      await tester.pump();
+
+      expect(
+        find.text(
+          'Anything that can reach 172.17.0.1 can use this tunnel, '
+          'with no login.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Add'));
+      expect(saved.single.bindAddress, '172.17.0.1');
+    });
+
+    testWidgets('on every address says other computers can use it', (
+      tester,
+    ) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+      await tester.enterText(field(2), '0.0.0.0');
+      await tester.pump();
+
+      expect(
+        find.text(
+          'Other computers on your networks can use this tunnel, '
+          'with no login.',
+        ),
+        findsOneWidget,
+      );
+      expect(addEnabled(tester), isTrue);
+    });
+
+    testWidgets('must be an IP address', (tester) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+      await tester.enterText(field(2), 'my-laptop');
+      await tester.pump();
+
+      expect(
+        find.text('Use an IP address, such as 172.17.0.1.'),
+        findsOneWidget,
+      );
+      expect(addEnabled(tester), isFalse);
+    });
+
+    testWidgets('says nothing about an address half typed', (tester) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+      await tester.enterText(field(2), '192.168.');
+      await tester.pump();
+
+      expect(find.textContaining('IP address'), findsNothing);
+      expect(addEnabled(tester), isFalse);
+    });
+
+    for (final (typed, kept) in [('*', '0.0.0.0'), ('[::1]', '::1')]) {
+      testWidgets('saves $typed as $kept', (tester) async {
+        await pumpForm(tester);
+        await fillLocal(tester);
+        await tester.enterText(field(2), typed);
+        await tester.pump();
+        await tester.tap(find.text('Add'));
+
+        expect(saved.single.bindAddress, kept);
+      });
+    }
+
+    for (final address in ['127.0.0.1', 'localhost']) {
+      testWidgets('saves $address as the default', (tester) async {
+        await pumpForm(tester);
+        await fillLocal(tester);
+        await tester.enterText(field(2), address);
+        await tester.pump();
+        await tester.tap(find.text('Add'));
+
+        expect(saved.single.bindAddress, isNull);
+      });
+    }
+
+    testWidgets('another loopback address needs no note', (tester) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+      await tester.enterText(field(2), '127.0.0.2');
+      await tester.pump();
+
+      expect(find.textContaining('with no login'), findsNothing);
+      await tester.tap(find.text('Add'));
+      expect(saved.single.bindAddress, '127.0.0.2');
+    });
+
+    testWidgets('is kept when a tunnel is edited', (tester) async {
+      const tunnel = Tunnel(
+        id: 'p',
+        kind: TunnelKind.socks,
+        sshHost: 'bastion',
+        bindAddress: '0.0.0.0',
+        localPort: 1080,
+      );
+      await pumpForm(tester, initial: tunnel);
+
+      expect(find.text('0.0.0.0'), findsOneWidget);
+      await tester.tap(find.text('Save'));
+      expect(saved.single, tunnel);
+    });
+
+    testWidgets('keeps the steps as far apart as on an exposed port', (
+      tester,
+    ) async {
+      double gap() =>
+          tester.getTopLeft(find.text('SSH host')).dy -
+          tester.getTopLeft(find.textContaining('From')).dy;
+      await pumpForm(tester);
+      final forward = gap();
+      await tester.tap(find.text('Expose a port'));
+      await tester.pump();
+
+      expect(forward, gap());
+    });
+
+    testWidgets('is fixed for an exposed port, and not saved', (tester) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+      await tester.enterText(field(2), 'my-laptop');
+      await tester.tap(find.text('Expose a port'));
+      await tester.pump();
+
+      expect(find.textContaining('IP address'), findsNothing);
+      expect(addEnabled(tester), isTrue);
+      await tester.tap(find.text('Forward a port'));
+      await tester.pump();
+      expect(find.text('my-laptop'), findsOneWidget);
+      await tester.tap(find.text('Expose a port'));
+      await tester.pump();
+      await tester.tap(find.text('Add'));
+      expect(saved.single.bindAddress, isNull);
+    });
   });
 
   testWidgets('editing a tunnel to a socket prefills it', (tester) async {
@@ -315,7 +474,7 @@ void main() {
 
   testWidgets('Enter does not save an invalid tunnel', (tester) async {
     await pumpForm(tester);
-    await tester.enterText(field(2), '15432');
+    await tester.enterText(field(3), '15432');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     expect(saved, isEmpty);
   });
@@ -465,8 +624,8 @@ void main() {
     );
 
     expect(find.text('To'), findsNothing);
-    await tester.enterText(field(2), '1080');
-    await tester.enterText(field(3), 'user@jump');
+    await tester.enterText(field(3), '1080');
+    await tester.enterText(field(4), 'user@jump');
     await tester.testTextInput.receiveAction(TextInputAction.done);
 
     expect(saved.single.kind, TunnelKind.socks);
@@ -514,10 +673,19 @@ void main() {
       await pumpForm(tester);
       await paste(tester, 3, 'ssh -L 2375:/var/run/docker.sock bastion');
 
-      expect(find.byType(TextField), findsNWidgets(5));
+      expect(find.byType(TextField), findsNWidgets(6));
       await tester.tap(find.text('Add'));
       expect(saved.single.remoteSocket, '/var/run/docker.sock');
       expect(saved.single.localPort, 2375);
+    }, variant: macOS);
+
+    testWidgets('keeps the address a forward listens on', (tester) async {
+      await pumpForm(tester);
+      await paste(tester, 3, 'ssh -L 172.17.0.1:15432:db:5432 bastion');
+
+      expect(find.text('172.17.0.1'), findsOneWidget);
+      await tester.tap(find.text('Add'));
+      expect(saved.single.bindAddress, '172.17.0.1');
     }, variant: macOS);
 
     testWidgets('switches to an exposed port', (tester) async {
@@ -581,16 +749,16 @@ void main() {
         tester.widget<TextField>(field(1)).controller!.text,
         'ssh to prod',
       );
-      expect(tester.widget<TextField>(field(3)).controller!.text, isEmpty);
+      expect(tester.widget<TextField>(field(4)).controller!.text, isEmpty);
     }, variant: macOS);
 
     testWidgets('is not filled in while typed', (tester) async {
       await pumpForm(tester);
 
-      await tester.enterText(field(3), 'ssh -L 15432:db:5432 deploy@bastion');
+      await tester.enterText(field(4), 'ssh -L 15432:db:5432 deploy@bastion');
       await tester.pump();
 
-      expect(tester.widget<TextField>(field(2)).controller!.text, isEmpty);
+      expect(tester.widget<TextField>(field(3)).controller!.text, isEmpty);
     });
 
     testWidgets('says what it left out while the host stays', (tester) async {
@@ -601,7 +769,7 @@ void main() {
       await paste(tester, 3, 'ssh -i key.pem -L 15432:db:5432 deploy@bastion');
       expect(find.text(note), findsOneWidget);
 
-      await tester.enterText(field(3), 'prod');
+      await tester.enterText(field(4), 'prod');
       await tester.pump();
       expect(find.text(note), findsNothing);
     }, variant: macOS);
@@ -622,7 +790,7 @@ void main() {
     testWidgets('lists every host while empty', (tester) async {
       await pumpForm(tester, hosts: ['staging', 'prod']);
 
-      await tester.tap(field(3));
+      await tester.tap(field(4));
       await tester.pump();
 
       expect(find.text('staging'), findsOneWidget);
@@ -636,7 +804,7 @@ void main() {
     ) async {
       await pumpForm(tester, hosts: hosts);
 
-      await tester.enterText(field(3), 'a');
+      await tester.enterText(field(4), 'a');
       await tester.pump();
 
       expect(find.text('staging'), findsOneWidget);
@@ -650,26 +818,26 @@ void main() {
       variant: TargetPlatformVariant.only(TargetPlatform.macOS),
       (tester) async {
         await pumpForm(tester, hosts: hosts);
-        await tester.enterText(field(3), 'pr');
+        await tester.enterText(field(4), 'pr');
         await tester.pump();
 
         await tester.tap(find.text('prod'));
         await tester.pump();
 
-        expect(tester.widget<TextField>(field(3)).controller!.text, 'prod');
+        expect(tester.widget<TextField>(field(4)).controller!.text, 'prod');
       },
     );
 
     testWidgets('Enter picks the suggestion instead of adding', (tester) async {
       await pumpForm(tester, hosts: hosts);
       await fillLocal(tester);
-      await tester.enterText(field(3), 'de');
+      await tester.enterText(field(4), 'de');
       await tester.pump();
 
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
 
-      expect(tester.widget<TextField>(field(3)).controller!.text, 'dev');
+      expect(tester.widget<TextField>(field(4)).controller!.text, 'dev');
       expect(saved, isEmpty);
     });
 
@@ -678,7 +846,7 @@ void main() {
     ) async {
       await pumpForm(tester, hosts: ['db', 'db-prod']);
       await fillLocal(tester);
-      await tester.enterText(field(3), 'db');
+      await tester.enterText(field(4), 'db');
       await tester.pump();
 
       await tester.testTextInput.receiveAction(TextInputAction.done);
@@ -688,7 +856,7 @@ void main() {
 
     testWidgets('Esc closes the suggestions before the form', (tester) async {
       await pumpForm(tester, hosts: hosts);
-      await tester.enterText(field(3), 'a');
+      await tester.enterText(field(4), 'a');
       await tester.pump();
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);

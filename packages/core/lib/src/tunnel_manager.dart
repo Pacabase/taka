@@ -15,7 +15,7 @@ class TunnelManager({
   required final SshClient client,
   final Future<void> Function()? beforeConnect,
   final Future<bool> Function()? isLocked,
-  final Future<void> Function(int localPort)? checkDestination,
+  final Future<void> Function(String address, int localPort)? checkDestination,
   final Duration warningLifetime = const Duration(seconds: 30),
 
   /// How long after the check ssh may still say the destination refused it.

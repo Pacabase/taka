@@ -7,6 +7,8 @@ import 'package:taka/pages/tunnels/widgets/route_step.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 
+final _notInAddress = RegExp('[^0-9a-fA-F.:]');
+
 class const TunnelForm({
   super.key,
   final Tunnel? initial,
@@ -23,13 +25,22 @@ class const TunnelForm({
 class _TunnelFormState extends State<TunnelForm> {
   late TunnelKind _kind = widget.initial?.kind ?? widget.kind;
   // Each field keeps its place on screen, whichever tunnel ends it holds.
+  late final _fromHost = TextEditingController();
   late final _fromPort = TextEditingController();
   late final _sshHost = TextEditingController();
   late final _toHost = TextEditingController();
   late final _toPort = TextEditingController();
   late final _name = TextEditingController(text: widget.initial?.name);
   late final _group = TextEditingController(text: widget.initial?.group);
-  late final _fields = [_fromPort, _sshHost, _toHost, _toPort, _name, _group];
+  late final _fields = [
+    _fromHost,
+    _fromPort,
+    _sshHost,
+    _toHost,
+    _toPort,
+    _name,
+    _group,
+  ];
   ({String host, List<String> leftOut})? _pasted;
   late final _pasteCommand = _PasteCommandAction(onText: _fill);
 
@@ -38,6 +49,21 @@ class _TunnelFormState extends State<TunnelForm> {
   bool get _isRemote => _kind == TunnelKind.remote;
 
   bool get _isSocket => _isLocal && _toHost.text.trim().startsWith('/');
+
+  String? get _bindAddress => bindAddressNamed(_fromHost.text);
+
+  // Quiet while an address is half typed; Add stays off until it's whole.
+  String? get _fromNote => switch (_bindAddress) {
+    null => null,
+    final address when address.contains(_notInAddress) =>
+      'Use an IP address, such as 172.17.0.1.',
+    final address when !isIpAddress(address) || isLoopbackAddress(address) =>
+      null,
+    final address when isEveryAddress(address) =>
+      'Other computers on your networks can use this tunnel, with no login.',
+    final address =>
+      'Anything that can reach $address can use this tunnel, with no login.',
+  };
 
   // sshCommand is null for a tunnel system_ssh would refuse to open.
   bool get _isValid =>
@@ -89,7 +115,7 @@ class _TunnelFormState extends State<TunnelForm> {
                 child: HostInput(
                   controller: _group,
                   hosts: widget.groups,
-                  hint: 'Optional, such as Production',
+                  hint: 'Optional',
                   style: const TextStyle(),
                   acceptsNew: true,
                   onSubmitted: _save,
@@ -106,34 +132,54 @@ class _TunnelFormState extends State<TunnelForm> {
               RouteStep(
                 label: _isRemote ? 'From, on the SSH host' : 'From',
                 hasNext: true,
-                child: Row(
-                  spacing: 6,
-                  children: [
-                    Expanded(
-                      child: Opacity(
-                        opacity: 0.5,
-                        child: FieldBox(
-                          child: Text(
-                            '127.0.0.1',
-                            style: mono.copyWith(color: colors.textSecondary),
-                          ),
+                child: ListenableBuilder(
+                  listenable: _fromHost,
+                  child: Row(
+                    spacing: 6,
+                    children: [
+                      Expanded(
+                        // The SSH host listens on its own 127.0.0.1.
+                        child: _isRemote
+                            ? Opacity(
+                                opacity: 0.5,
+                                child: FieldBox(
+                                  child: Text(
+                                    '127.0.0.1',
+                                    style: mono.copyWith(
+                                      color: colors.textSecondary,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : _input(_fromHost, hint: '127.0.0.1', style: mono),
+                      ),
+                      const _Colon(),
+                      SizedBox(
+                        width: 72,
+                        child: _input(
+                          _fromPort,
+                          hint: switch (_kind) {
+                            TunnelKind.local => '5432',
+                            TunnelKind.socks => '1080',
+                            TunnelKind.remote => '8080',
+                          },
+                          style: mono,
                         ),
                       ),
-                    ),
-                    const _Colon(),
-                    SizedBox(
-                      width: 72,
-                      child: _input(
-                        _fromPort,
-                        hint: switch (_kind) {
-                          TunnelKind.local => '5432',
-                          TunnelKind.socks => '1080',
-                          TunnelKind.remote => '8080',
-                        },
-                        style: mono,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  builder: (context, row) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 4,
+                    children: [
+                      row!,
+                      if (_fromNote case final note? when !_isRemote)
+                        Text(
+                          note,
+                          style: TextStyle(fontSize: 12, color: colors.orange),
+                        ),
+                    ],
+                  ),
                 ),
               ),
               RouteStep(
@@ -264,6 +310,7 @@ class _TunnelFormState extends State<TunnelForm> {
       ),
     };
     for (final (field, value) in [
+      (_fromHost, tunnel.bindAddress ?? ''),
       (_fromPort, '${fromPort ?? ''}'),
       (_sshHost, tunnel.sshHost),
       (_toHost, toHost ?? ''),
@@ -290,6 +337,7 @@ class _TunnelFormState extends State<TunnelForm> {
     name: _name.text.trim(),
     kind: _kind,
     sshHost: _sshHost.text.trim(),
+    bindAddress: _isRemote ? null : _bindAddress,
     localHost: _isRemote && _toHost.text.trim().isNotEmpty
         ? _toHost.text.trim()
         : null,

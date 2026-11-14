@@ -12,6 +12,16 @@ void main() {
       'Port 8080 is already in use.',
     ),
     (
+      '172.17.0.1:8080 is already in use',
+      'port 8080 in use',
+      'Port 8080 is already in use.',
+    ),
+    (
+      "172.17.0.1 isn't an address of this computer",
+      'address not on this computer',
+      "This computer doesn't have the From address.",
+    ),
+    (
       'Error: remote port forwarding failed for listen port 8080',
       "server won't open port 8080",
       "The server won't open port 8080: it's taken there, "
