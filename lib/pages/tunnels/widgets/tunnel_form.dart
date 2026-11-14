@@ -53,10 +53,17 @@ class _TunnelFormState extends State<TunnelForm> {
 
   bool get _isSocket => _isLocal && _toHost.text.trim().startsWith('/');
 
-  TunnelColour? get _groupColour => switch (groupNamed(_group.text)) {
-    final typed? => widget.groupColours[groupLike(widget.groups, typed)],
+  // Retyped in another case, the group a tunnel is edited in is new.
+  String? get _typedGroup => switch (groupNamed(_group.text)) {
+    final typed? => groupLike(
+      widget.groups,
+      typed,
+      except: widget.initial?.group,
+    ),
     null => null,
   };
+
+  TunnelColour? get _groupColour => widget.groupColours[_typedGroup];
 
   String? get _bindAddress => bindAddressNamed(_fromHost.text);
 
@@ -253,7 +260,6 @@ class _TunnelFormState extends State<TunnelForm> {
                   _ => const SizedBox.shrink(),
                 },
               ),
-              // A coloured group's tunnels take its colour.
               ListenableBuilder(
                 listenable: _group,
                 builder: (context, _) => _groupColour == null
@@ -370,14 +376,7 @@ class _TunnelFormState extends State<TunnelForm> {
       TunnelKind.remote => _port(_fromPort.text),
     },
     remoteSocket: _isSocket ? _toHost.text.trim() : null,
-    group: switch (groupNamed(_group.text)) {
-      final typed? => groupLike(
-        widget.groups,
-        typed,
-        except: widget.initial?.group,
-      ),
-      null => null,
-    },
+    group: _typedGroup,
     colour: _colour,
   );
 }

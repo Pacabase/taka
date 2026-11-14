@@ -136,7 +136,6 @@ TrayEntry _groupEntry(String group, TunnelsSnapshot snapshot) {
         _tunnelEntry(
           tunnel,
           snapshot,
-          // The group's own square says the colour.
           isSquared: snapshot.groupColours[group] == null,
         ),
       if (members.length > 1) ...[

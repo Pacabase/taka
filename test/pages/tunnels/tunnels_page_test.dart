@@ -155,7 +155,7 @@ void main() {
       addTearDown(mouse.removePointer);
       await mouse.moveTo(tester.getCenter(find.text('monolith')));
       await tester.pump();
-      await tester.tap(find.byTooltip('Edit group'));
+      await tester.tap(find.byTooltip('Edit monolith'));
       await tester.pumpAndSettle();
     }
 
@@ -165,7 +165,7 @@ void main() {
           .widget<Visibility>(
             find
                 .ancestor(
-                  of: find.byTooltip('Edit group'),
+                  of: find.byTooltip('Edit monolith'),
                   matching: find.byType(Visibility),
                 )
                 .first,
@@ -178,6 +178,47 @@ void main() {
       await mouse.moveTo(tester.getCenter(find.text('monolith')));
       await tester.pump();
       expect(shown(), isTrue);
+
+      await mouse.moveTo(Offset.zero);
+      await tester.pump();
+      expect(shown(), isFalse);
+    });
+
+    testWidgets('is reached from the keyboard', (tester) async {
+      await pumpGrouped(tester);
+      final edit = find.byTooltip('Edit monolith');
+      bool focused() => Focus.of(tester.element(edit)).hasFocus;
+
+      for (var press = 0; press < 20 && !focused(); press++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      expect(focused(), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit group'), findsOneWidget);
+    });
+
+    testWidgets('closes when the group goes away', (tester) async {
+      final states = StreamController<TunnelsState>();
+      addTearDown(states.close);
+      await pumpPage(
+        tester,
+        initialState: const Ready(
+          TunnelsSnapshot(
+            tunnels: [Tunnel(id: 'a1', localPort: 1, group: 'monolith')],
+          ),
+        ),
+        states: states.stream,
+      );
+      await openEdit(tester);
+      expect(find.text('Edit group'), findsOneWidget);
+
+      states.add(const Ready(TunnelsSnapshot(tunnels: [proxy])));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tunnels'), findsOneWidget);
     });
 
     testWidgets('names and colours the group in one save', (tester) async {
@@ -502,7 +543,14 @@ void main() {
 
       // The guide line is the 2px left edge of the tile's inner box.
       expect(
-        tester.getCenter(find.byType(ColourDot).first).dx,
+        tester
+            .getCenter(
+              find.descendant(
+                of: find.byKey(const ValueKey('group Prod')),
+                matching: find.byType(ColourDot),
+              ),
+            )
+            .dx,
         tester.getTopLeft(guide).dx + 1,
       );
       final dots = tester.widgetList<ColourDot>(find.byType(ColourDot));

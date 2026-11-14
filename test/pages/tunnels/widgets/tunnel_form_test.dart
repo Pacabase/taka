@@ -499,6 +499,21 @@ void main() {
       expect(find.byTooltip('No colour'), findsOneWidget);
     });
 
+    testWidgets("is the group's for a new tunnel typed into it in any case", (
+      tester,
+    ) async {
+      await pumpForm(
+        tester,
+        groups: const ['Prod'],
+        groupColours: const {'Prod': TunnelColour.blue},
+      );
+
+      await tester.enterText(field(0), 'prod');
+      await tester.pump();
+
+      expect(find.text('Colour'), findsNothing);
+    });
+
     testWidgets("is the group's in a coloured group, and comes back out", (
       tester,
     ) async {
@@ -519,13 +534,27 @@ void main() {
       );
 
       expect(find.text('Colour'), findsNothing);
+      await tester.tap(find.text('Save'));
+      expect(saved.single.colour, TunnelColour.red);
+
+      // Retyped in another case, it's a group of its own, as when saved.
       await tester.enterText(field(0), 'prod');
       await tester.pump();
-      expect(find.text('Colour'), findsNothing);
+      expect(find.text('Colour'), findsOneWidget);
       await tester.enterText(field(0), 'Staging');
       await tester.pump();
       expect(find.text('Colour'), findsOneWidget);
-      expect(find.byTooltip('Red'), findsOneWidget);
+      expect(
+        tester
+            .widgetList<Semantics>(
+              find.descendant(
+                of: find.byTooltip('Red'),
+                matching: find.byType(Semantics),
+              ),
+            )
+            .any((semantics) => semantics.properties.selected ?? false),
+        isTrue,
+      );
     });
   });
 

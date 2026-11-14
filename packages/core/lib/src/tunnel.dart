@@ -68,7 +68,7 @@ sealed class const Tunnel._() with _$Tunnel {
     String? remoteSocket,
     String? group,
 
-    /// Shown instead of its group's colour, when set.
+    /// Shown when its group has no colour of its own.
     TunnelColour? colour,
   }) = _Tunnel;
 

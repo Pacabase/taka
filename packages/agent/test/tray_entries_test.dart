@@ -188,6 +188,9 @@ void main() {
       '🟦 Prod — 0 of 2 connected ▸ ☐ Api | ☐ Cache | --- | Connect All',
       '☐ 🟩 Local',
     ]);
+    expect(menu(snapshot.copyWith(groupColours: const {})).sublist(2, 3), [
+      'Prod — 0 of 2 connected ▸ ☐ Api | ☐ 🟥 Cache | --- | Connect All',
+    ]);
   });
 
   test('offers to connect a group when none of it is on', () {

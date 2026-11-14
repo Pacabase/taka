@@ -206,6 +206,17 @@ void main() {
       },
     );
 
+    test('brings a group colour named with stray spaces', () async {
+      final manager = await loaded();
+
+      await manager.import(
+        [const Tunnel(id: 'c3', localPort: 6379, group: 'cache')],
+        groupColours: const {' cache ': TunnelColour.green},
+      );
+
+      expect(manager.snapshot.groupColours, {'cache': TunnelColour.green});
+    });
+
     test('brings group colours, but keeps the ones set here', () async {
       store = FakeStore([database.copyWith(group: 'Prod'), proxy])
         ..groupColours = const {'Prod': TunnelColour.red};
@@ -2166,6 +2177,37 @@ void main() {
         'Live',
       ]);
       expect(manager.snapshot.groupColours, {'Live': TunnelColour.blue});
+    });
+
+    test('of a group joined with none picked stays that group\'s', () async {
+      store = FakeStore([
+        database.copyWith(group: 'Prod'),
+        proxy.copyWith(group: 'Live'),
+      ]);
+      final manager = await loaded();
+      await manager.editGroup('Live', name: 'Live', colour: TunnelColour.red);
+
+      await manager.editGroup('Prod', name: 'live', colour: null);
+
+      expect(manager.snapshot.groupColours, {'Live': TunnelColour.red});
+    });
+
+    test('saves nothing when nothing changes', () async {
+      final manager = await loaded();
+      final saves = store.saveCount;
+
+      await manager.editGroup('Prod', name: 'Prod', colour: null);
+
+      expect(store.saveCount, saves);
+    });
+
+    test('keeps the name for a blank one', () async {
+      final manager = await loaded();
+
+      await manager.editGroup('Prod', name: '  ', colour: TunnelColour.blue);
+
+      expect(manager.snapshot.tunnels.first.group, 'Prod');
+      expect(manager.snapshot.groupColours, {'Prod': TunnelColour.blue});
     });
 
     test(

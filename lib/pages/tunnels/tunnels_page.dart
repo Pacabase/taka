@@ -27,7 +27,7 @@ class const TunnelsPage({
 class _TunnelsPageState extends State<TunnelsPage> {
   var _isFormOpen = false;
   Tunnel? _editing;
-  String? _editingGroup;
+  ({String group, TunnelColour? colour})? _editingGroup;
   var _newKind = TunnelKind.local;
   var _hosts = const <String>[];
   late final StreamSubscription<OpenTunnel> _tunnelRequests;
@@ -65,27 +65,40 @@ class _TunnelsPageState extends State<TunnelsPage> {
     _openForm(tunnel);
   }
 
+  bool get _isOpen => _isFormOpen || _editingGroup != null;
+
   @override
   Widget build(BuildContext context) {
-    return BlocListener<TunnelsBloc, TunnelsState>(
-      listenWhen: (_, state) => state is Closed,
-      listener: (_, _) => unawaited(
-        ServicesBinding.instance.exitApplication(AppExitType.required),
-      ),
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<TunnelsBloc, TunnelsState>(
+          listenWhen: (_, state) => state is Closed,
+          listener: (_, _) => unawaited(
+            ServicesBinding.instance.exitApplication(AppExitType.required),
+          ),
+        ),
+        // A group whose tunnels went, from the tray say, has nothing to edit.
+        BlocListener<TunnelsBloc, TunnelsState>(
+          listenWhen: (_, state) => switch ((_editingGroup, state)) {
+            ((:final group, colour: _), Ready(:final snapshot)) =>
+              !snapshot.tunnels.groups.contains(group),
+            _ => false,
+          },
+          listener: (_, _) => _closeForm(),
+        ),
+      ],
       child: Scaffold(
         body: Column(
           children: [
             TunnelsHeader(
-              title: switch ((_isFormOpen, _editing)) {
-                _ when _editingGroup != null => 'Edit group',
-                (false, _) => 'Tunnels',
-                (true, null) => 'New tunnel',
-                (true, _?) => 'Edit tunnel',
+              title: switch ((_editingGroup, _isFormOpen, _editing)) {
+                (_?, _, _) => 'Edit group',
+                (null, false, _) => 'Tunnels',
+                (null, true, null) => 'New tunnel',
+                (null, true, _?) => 'Edit tunnel',
               },
-              isFormOpen: _isFormOpen || _editingGroup != null,
-              onPressed: _isFormOpen || _editingGroup != null
-                  ? _closeForm
-                  : _openForm,
+              isFormOpen: _isOpen,
+              onPressed: _isOpen ? _closeForm : _openForm,
               onSettings: () =>
                   Navigator.pushNamed(context, TakaApp.settingsRoute),
             ),
@@ -103,15 +116,10 @@ class _TunnelsPageState extends State<TunnelsPage> {
                   ),
                 ),
                 child: switch (_editingGroup) {
-                  final group? => GroupForm(
+                  (:final group, :final colour) => GroupForm(
                     key: ValueKey('group $group'),
                     group: group,
-                    colour: context.select(
-                      (TunnelsBloc bloc) => switch (bloc.state) {
-                        Ready(:final snapshot) => snapshot.groupColours[group],
-                        _ => null,
-                      },
-                    ),
+                    colour: colour,
                     onSave: (name, colour) {
                       context.read<TunnelsBloc>().add(
                         TunnelsEvent.send(
@@ -154,8 +162,9 @@ class _TunnelsPageState extends State<TunnelsPage> {
                   null => _TunnelList(
                     key: const ValueKey('list'),
                     onEdit: _openForm,
-                    onEditGroup: (group) =>
-                        setState(() => _editingGroup = group),
+                    onEditGroup: (group, colour) => setState(
+                      () => _editingGroup = (group: group, colour: colour),
+                    ),
                     onAdd: (kind) => _openForm(null, kind),
                   ),
                 },
@@ -191,7 +200,7 @@ class _TunnelsPageState extends State<TunnelsPage> {
 class const _TunnelList({
   super.key,
   required final void Function(Tunnel tunnel) onEdit,
-  required final void Function(String group) onEditGroup,
+  required final void Function(String group, TunnelColour? colour) onEditGroup,
   required final void Function(TunnelKind kind) onAdd,
 }) extends StatelessWidget {
   @override
@@ -258,7 +267,7 @@ class const _TunnelList({
               group,
               key: ValueKey('group $group'),
               colour: snapshot.groupColours[group],
-              onEdit: () => onEditGroup(group),
+              onEdit: () => onEditGroup(group, snapshot.groupColours[group]),
             ),
             GroupEndRow(:final group) => SizedBox(
               key: ValueKey('end $group'),
@@ -285,7 +294,6 @@ class const _TunnelList({
                     TunnelTile(
                       tunnel: tunnel,
                       status: snapshot.statusOf(tunnel.id),
-                      // In a coloured group, its guide line says the colour.
                       colour: groupColour == null ? tunnel.colour : null,
                       guide: guide,
                       onToggle: () =>
@@ -398,11 +406,11 @@ class _GroupHeaderState extends State<_GroupHeader> {
               Visibility.maintain(
                 visible: _hovered || _focused,
                 child: IconButton(
-                  tooltip: 'Edit group',
+                  tooltip: 'Edit ${widget.group}',
                   onPressed: widget.onEdit,
                   constraints: const BoxConstraints.tightFor(
                     width: 24,
-                    height: 24,
+                    height: 20,
                   ),
                   padding: EdgeInsets.zero,
                   icon: AppIcon(AppIcons.pencil, color: colors.textSecondary),

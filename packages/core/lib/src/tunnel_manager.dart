@@ -128,7 +128,8 @@ class TunnelManager({
     final coloured = {
       for (final MapEntry(key: named, value: kept) in _groupColours.entries)
         if (named != group && named != renamed) named: kept,
-      renamed: ?colour,
+      // A group joined with no colour picked keeps its own.
+      renamed: ?(colour ?? (renamed == group ? null : _groupColours[renamed])),
     };
     if (const ListEquality<Tunnel>().equals(regrouped, _tunnels) &&
         const MapEquality<String, TunnelColour>().equals(
@@ -178,7 +179,8 @@ class TunnelManager({
     // A group that has a colour here keeps it.
     final coloured = {
       for (final MapEntry(key: group, value: colour) in groupColours.entries)
-        groupLike(imported.groups, group): colour,
+        if (groupNamed(group) case final named?)
+          groupLike(imported.groups, named): colour,
       ..._groupColours,
     };
     if (imported.length == _tunnels.length &&
