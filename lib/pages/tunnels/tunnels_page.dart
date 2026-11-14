@@ -250,7 +250,8 @@ class const _TunnelList({
                     TunnelTile(
                       tunnel: tunnel,
                       status: snapshot.statusOf(tunnel.id),
-                      colour: groupColour ?? tunnel.colour,
+                      // In a coloured group, its guide line says the colour.
+                      colour: groupColour == null ? tunnel.colour : null,
                       guide: guide,
                       onToggle: () =>
                           _send(context, AgentCommand.toggle(tunnel.id)),
@@ -369,7 +370,8 @@ class _GroupHeaderState extends State<_GroupHeader> {
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
+        // The dot's 20px button centres it on the guide line below.
+        padding: const EdgeInsets.fromLTRB(5, 12, 12, 2),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           spacing: 2,

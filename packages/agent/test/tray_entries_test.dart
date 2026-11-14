@@ -185,7 +185,7 @@ void main() {
     );
 
     expect(menu(snapshot).sublist(2, 4), [
-      '🟦 Prod — 0 of 2 connected ▸ ☐ 🟦 Api | ☐ 🟦 Cache | --- | Connect All',
+      '🟦 Prod — 0 of 2 connected ▸ ☐ Api | ☐ Cache | --- | Connect All',
       '☐ 🟩 Local',
     ]);
   });

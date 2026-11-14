@@ -132,7 +132,13 @@ TrayEntry _groupEntry(String group, TunnelsSnapshot snapshot) {
             '$count',
     },
     [
-      for (final tunnel in members) _tunnelEntry(tunnel, snapshot),
+      for (final tunnel in members)
+        _tunnelEntry(
+          tunnel,
+          snapshot,
+          // The group's own square says the colour.
+          isSquared: snapshot.groupColours[group] == null,
+        ),
       if (members.length > 1) ...[
         const SeparatorEntry(),
         if (members.any((tunnel) => snapshot.statusOf(tunnel.id).isOn))
@@ -144,13 +150,17 @@ TrayEntry _groupEntry(String group, TunnelsSnapshot snapshot) {
   );
 }
 
-TrayEntry _tunnelEntry(Tunnel tunnel, TunnelsSnapshot snapshot) {
+TrayEntry _tunnelEntry(
+  Tunnel tunnel,
+  TunnelsSnapshot snapshot, {
+  bool isSquared = true,
+}) {
   final status = snapshot.statusOf(tunnel.id);
 
   return TunnelEntry(
     tunnel,
     _shortened(
-      _squared(snapshot.colourOf(tunnel), switch (status) {
+      _squared(isSquared ? snapshot.colourOf(tunnel) : null, switch (status) {
         Stopped() => tunnel.title,
         Connecting() => '${tunnel.title} — connecting…',
         Connected() when tunnel.kind == TunnelKind.remote =>

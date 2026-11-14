@@ -17,6 +17,7 @@ import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/widgets/colour_dot.dart';
 
 void main() {
   const database = Tunnel(
@@ -334,9 +335,9 @@ void main() {
       await tester.pump();
     }
     expect(liftedIsInGroup(), isTrue);
-    // It takes the group's colour, as its guide line and its dot.
+    // It takes the group's colour as its guide line, with no dot of its own.
     expect(lifted().guide, colors.tunnel(TunnelColour.blue));
-    expect(lifted().colour, TunnelColour.blue);
+    expect(lifted().colour, isNull);
 
     for (var step = 0; step < 10; step++) {
       await drag.moveBy(Offset(0, -into / 10));
@@ -449,6 +450,47 @@ void main() {
       ),
     ).called(1);
   });
+
+  testWidgets(
+    "a coloured group's dot sits on its guide line, and its tunnels have none",
+    (tester) async {
+      await pumpPage(
+        tester,
+        initialState: Ready(
+          TunnelsSnapshot(
+            tunnels: [
+              database.copyWith(group: 'Prod', colour: TunnelColour.red),
+              proxy.copyWith(colour: TunnelColour.green),
+            ],
+            groupColours: const {'Prod': TunnelColour.blue},
+          ),
+        ),
+      );
+      final guide = find.descendant(
+        of: find.ancestor(
+          of: find.text('Database'),
+          matching: find.byType(TunnelTile),
+        ),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Container &&
+              widget.decoration is BoxDecoration &&
+              (widget.decoration! as BoxDecoration).border is Border,
+        ),
+      );
+
+      // The guide line is the 2px left edge of the tile's inner box.
+      expect(
+        tester.getCenter(find.byType(ColourDot).first).dx,
+        tester.getTopLeft(guide).dx + 1,
+      );
+      final dots = tester.widgetList<ColourDot>(find.byType(ColourDot));
+      expect(dots.map((dot) => dot.colour), [
+        TunnelColour.blue,
+        TunnelColour.green,
+      ]);
+    },
+  );
 
   testWidgets("the dot by a group's name sets its colour", (tester) async {
     final bloc = await pumpPage(
