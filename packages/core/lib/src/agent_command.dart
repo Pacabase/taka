@@ -17,12 +17,13 @@ sealed class const AgentCommand._() with _$AgentCommand {
 
   const factory trustHostKey(String id, String fingerprint) = TrustHostKey;
 
-  /// [colour] null takes the group's colour away.
-  const factory setGroupColour(String group, TunnelColour? colour) =
-      SetGroupColour;
-
-  /// [from] becomes [to], or the spelling of a group in use like it.
-  const factory renameGroup(String from, String to) = RenameGroup;
+  /// [name] renames [group], to the spelling of a group in use like it;
+  /// [colour] null takes its colour away.
+  const factory editGroup(
+    String group, {
+    required String name,
+    required TunnelColour? colour,
+  }) = EditGroup;
 
   const factory importTunnels(
     List<Tunnel> tunnels, {
@@ -65,15 +66,17 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'fingerprint': final String fingerprint,
     } =>
       TrustHostKey(id, fingerprint),
-    {'command': 'groupColour', 'group': final String group} &&
-        final Map<Object?, Object?> fields =>
-      SetGroupColour(group, TunnelColour.fromName(fields['colour'])),
     {
-      'command': 'renameGroup',
-      'from': final String from,
-      'to': final String to,
-    } =>
-      RenameGroup(from, to),
+          'command': 'editGroup',
+          'group': final String group,
+          'name': final String name,
+        } &&
+        final Map<Object?, Object?> fields =>
+      EditGroup(
+        group,
+        name: name,
+        colour: TunnelColour.fromName(fields['colour']),
+      ),
     {'command': 'import', 'tunnels': final List<Object?> tunnels} &&
         final Map<Object?, Object?> fields =>
       ImportTunnels(
@@ -105,15 +108,11 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'id': id,
       'fingerprint': fingerprint,
     },
-    SetGroupColour(:final group, :final colour) => {
-      'command': 'groupColour',
+    EditGroup(:final group, :final name, :final colour) => {
+      'command': 'editGroup',
       'group': group,
+      'name': name,
       'colour': ?colour?.name,
-    },
-    RenameGroup(:final from, :final to) => {
-      'command': 'renameGroup',
-      'from': from,
-      'to': to,
     },
     ImportTunnels(:final tunnels, :final groupColours) => {
       'command': 'import',

@@ -6,12 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
+import 'package:taka/pages/tunnels/widgets/group_form.dart';
 import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_form.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
 import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/widgets/app_icon.dart';
 import 'package:taka/widgets/colour_dot.dart';
 
 class const TunnelsPage({
@@ -25,6 +27,7 @@ class const TunnelsPage({
 class _TunnelsPageState extends State<TunnelsPage> {
   var _isFormOpen = false;
   Tunnel? _editing;
+  String? _editingGroup;
   var _newKind = TunnelKind.local;
   var _hosts = const <String>[];
   late final StreamSubscription<OpenTunnel> _tunnelRequests;
@@ -74,12 +77,15 @@ class _TunnelsPageState extends State<TunnelsPage> {
           children: [
             TunnelsHeader(
               title: switch ((_isFormOpen, _editing)) {
+                _ when _editingGroup != null => 'Edit group',
                 (false, _) => 'Tunnels',
                 (true, null) => 'New tunnel',
                 (true, _?) => 'Edit tunnel',
               },
-              isFormOpen: _isFormOpen,
-              onPressed: _isFormOpen ? _closeForm : _openForm,
+              isFormOpen: _isFormOpen || _editingGroup != null,
+              onPressed: _isFormOpen || _editingGroup != null
+                  ? _closeForm
+                  : _openForm,
               onSettings: () =>
                   Navigator.pushNamed(context, TakaApp.settingsRoute),
             ),
@@ -96,37 +102,63 @@ class _TunnelsPageState extends State<TunnelsPage> {
                     child: child,
                   ),
                 ),
-                child: _isFormOpen
-                    ? TunnelForm(
-                        key: ValueKey(_editing?.id ?? 'new ${_newKind.name}'),
-                        initial: _editing,
-                        kind: _newKind,
-                        hosts: _hosts,
-                        groups: context.select(
-                          (TunnelsBloc bloc) => switch (bloc.state) {
-                            Ready(:final snapshot) => snapshot.tunnels.groups,
-                            _ => const <String>[],
-                          },
+                child: switch (_editingGroup) {
+                  final group? => GroupForm(
+                    key: ValueKey('group $group'),
+                    group: group,
+                    colour: context.select(
+                      (TunnelsBloc bloc) => switch (bloc.state) {
+                        Ready(:final snapshot) => snapshot.groupColours[group],
+                        _ => null,
+                      },
+                    ),
+                    onSave: (name, colour) {
+                      context.read<TunnelsBloc>().add(
+                        TunnelsEvent.send(
+                          AgentCommand.editGroup(
+                            group,
+                            name: name,
+                            colour: colour,
+                          ),
                         ),
-                        groupColours: context.select(
-                          (TunnelsBloc bloc) => switch (bloc.state) {
-                            Ready(:final snapshot) => snapshot.groupColours,
-                            _ => const <String, TunnelColour>{},
-                          },
-                        ),
-                        onSave: (tunnel) {
-                          context.read<TunnelsBloc>().add(
-                            TunnelsEvent.send(AgentCommand.save(tunnel)),
-                          );
-                          _closeForm();
-                        },
-                        onCancel: _closeForm,
-                      )
-                    : _TunnelList(
-                        key: const ValueKey('list'),
-                        onEdit: _openForm,
-                        onAdd: (kind) => _openForm(null, kind),
-                      ),
+                      );
+                      _closeForm();
+                    },
+                    onCancel: _closeForm,
+                  ),
+                  null when _isFormOpen => TunnelForm(
+                    key: ValueKey(_editing?.id ?? 'new ${_newKind.name}'),
+                    initial: _editing,
+                    kind: _newKind,
+                    hosts: _hosts,
+                    groups: context.select(
+                      (TunnelsBloc bloc) => switch (bloc.state) {
+                        Ready(:final snapshot) => snapshot.tunnels.groups,
+                        _ => const <String>[],
+                      },
+                    ),
+                    groupColours: context.select(
+                      (TunnelsBloc bloc) => switch (bloc.state) {
+                        Ready(:final snapshot) => snapshot.groupColours,
+                        _ => const <String, TunnelColour>{},
+                      },
+                    ),
+                    onSave: (tunnel) {
+                      context.read<TunnelsBloc>().add(
+                        TunnelsEvent.send(AgentCommand.save(tunnel)),
+                      );
+                      _closeForm();
+                    },
+                    onCancel: _closeForm,
+                  ),
+                  null => _TunnelList(
+                    key: const ValueKey('list'),
+                    onEdit: _openForm,
+                    onEditGroup: (group) =>
+                        setState(() => _editingGroup = group),
+                    onAdd: (kind) => _openForm(null, kind),
+                  ),
+                },
               ),
             ),
           ],
@@ -139,6 +171,7 @@ class _TunnelsPageState extends State<TunnelsPage> {
   void _openForm([Tunnel? tunnel, TunnelKind kind = TunnelKind.local]) {
     setState(() {
       _isFormOpen = true;
+      _editingGroup = null;
       _editing = tunnel;
       _newKind = kind;
     });
@@ -149,12 +182,16 @@ class _TunnelsPageState extends State<TunnelsPage> {
     );
   }
 
-  void _closeForm() => setState(() => _isFormOpen = false);
+  void _closeForm() => setState(() {
+    _isFormOpen = false;
+    _editingGroup = null;
+  });
 }
 
 class const _TunnelList({
   super.key,
   required final void Function(Tunnel tunnel) onEdit,
+  required final void Function(String group) onEditGroup,
   required final void Function(TunnelKind kind) onAdd,
 }) extends StatelessWidget {
   @override
@@ -221,9 +258,7 @@ class const _TunnelList({
               group,
               key: ValueKey('group $group'),
               colour: snapshot.groupColours[group],
-              onColour: (colour) =>
-                  _send(context, AgentCommand.setGroupColour(group, colour)),
-              onRename: (name) => _rename(context, group, name),
+              onEdit: () => onEditGroup(group),
             ),
             GroupEndRow(:final group) => SizedBox(
               key: ValueKey('end $group'),
@@ -284,13 +319,6 @@ class const _TunnelList({
     );
   }
 
-  void _rename(BuildContext context, String group, String name) {
-    final typed = groupNamed(name);
-    if (typed == null || typed == group) return;
-
-    _send(context, AgentCommand.renameGroup(group, typed));
-  }
-
   void _send(BuildContext context, AgentCommand command) =>
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
@@ -318,124 +346,70 @@ class const _GroupHeader(
   final String group, {
   super.key,
   required final TunnelColour? colour,
-  required final void Function(TunnelColour? colour) onColour,
-  required final void Function(String name) onRename,
+  required final void Function() onEdit,
 }) extends StatefulWidget {
   @override
   State<_GroupHeader> createState() => _GroupHeaderState();
 }
 
 class _GroupHeaderState extends State<_GroupHeader> {
-  final _focus = FocusNode();
-  TextEditingController? _editing;
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(() {
-      if (!_focus.hasFocus) _finish(save: true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _focus.dispose();
-    _editing?.dispose();
-    super.dispose();
-  }
-
-  void _start() => setState(
-    () => _editing = TextEditingController(text: widget.group)
-      ..selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: widget.group.length,
-      ),
-  );
-
-  void _finish({required bool save}) {
-    final editing = _editing;
-    if (editing == null) return;
-
-    setState(() => _editing = null);
-    if (save) widget.onRename(editing.text);
-    // The field still holds it until it's gone from the tree.
-    WidgetsBinding.instance.addPostFrameCallback((_) => editing.dispose());
-  }
+  var _hovered = false;
+  var _focused = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = TakaColors.of(context);
-    const style = TextStyle(fontSize: 12, fontWeight: FontWeight.w500);
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        // The dot's 20px button centres it on the guide line below.
-        padding: const EdgeInsets.fromLTRB(5, 12, 12, 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 2,
-          children: [
-            // Hidden while renaming, keeping its place: a pick would go to
-            // the old name.
-            Visibility.maintain(
-              visible: _editing == null,
-              // A record, since a menu item whose value is null counts as no pick.
-              child: PopupMenuButton<(TunnelColour?,)>(
-                tooltip: 'Colour for ${widget.group}',
-                padding: EdgeInsets.zero,
-                onSelected: (picked) => widget.onColour(picked.$1),
-                itemBuilder: (_) => [
-                  for (final colour in TunnelColour.values)
-                    PopupMenuItem(
-                      value: (colour,),
-                      child: Row(
-                        spacing: 8,
-                        children: [ColourDot(colour), Text(colour.label)],
-                      ),
-                    ),
-                  const PopupMenuItem(value: (null,), child: Text('No colour')),
-                ],
-                child: SizedBox.square(
-                  dimension: 20,
-                  child: Center(child: ColourDot(widget.colour)),
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Padding(
+          // The dot's 20px box centres it on the guide line below.
+          padding: const EdgeInsets.fromLTRB(5, 12, 6, 2),
+          child: Row(
+            spacing: 2,
+            children: [
+              SizedBox.square(
+                dimension: 20,
+                child: Center(
+                  child: switch (widget.colour) {
+                    final colour? => ColourDot(colour),
+                    null => null,
+                  },
                 ),
               ),
-            ),
-            Flexible(
-              child: switch (_editing) {
-                final editing? => CallbackShortcuts(
-                  bindings: {
-                    const SingleActivator(LogicalKeyboardKey.escape): () =>
-                        _finish(save: false),
-                  },
-                  child: TextField(
-                    controller: editing,
-                    focusNode: _focus,
-                    autofocus: true,
-                    style: style.copyWith(color: colors.text),
-                    decoration: const InputDecoration.collapsed(hintText: ''),
-                    onSubmitted: (_) => _finish(save: true),
+              Expanded(
+                child: Text(
+                  widget.group,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: colors.textSecondary,
                   ),
                 ),
-                null => Tooltip(
-                  message: 'Rename',
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.text,
-                    child: GestureDetector(
-                      onTap: _start,
-                      child: Text(
-                        widget.group,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: style.copyWith(color: colors.textSecondary),
-                      ),
-                    ),
+              ),
+              // Kept in place, so the header doesn't grow on hover.
+              Visibility.maintain(
+                visible: _hovered || _focused,
+                child: IconButton(
+                  tooltip: 'Edit group',
+                  onPressed: widget.onEdit,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 24,
+                    height: 24,
                   ),
+                  padding: EdgeInsets.zero,
+                  icon: AppIcon(AppIcons.pencil, color: colors.textSecondary),
                 ),
-              },
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );

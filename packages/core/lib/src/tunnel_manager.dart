@@ -105,35 +105,41 @@ class TunnelManager({
     }
   }
 
-  Future<void> setGroupColour(String group, TunnelColour? colour) async {
-    if (_groupColours[group] == colour ||
-        !_tunnels.any((tunnel) => tunnel.group == group)) {
+  /// Gives [group] the [name], or the spelling of a group in use like it,
+  /// and the [colour], in one save.
+  Future<void> editGroup(
+    String group, {
+    required String name,
+    required TunnelColour? colour,
+  }) async {
+    if (!_tunnels.any((tunnel) => tunnel.group == group)) return;
+    final renamed = switch (groupNamed(name)) {
+      final typed? when typed != group => groupLike(
+        _tunnels.groups,
+        typed,
+        except: group,
+      ),
+      _ => group,
+    };
+    final regrouped = [
+      for (final tunnel in _tunnels)
+        tunnel.group == group ? tunnel.copyWith(group: renamed) : tunnel,
+    ];
+    final coloured = {
+      for (final MapEntry(key: named, value: kept) in _groupColours.entries)
+        if (named != group && named != renamed) named: kept,
+      renamed: ?colour,
+    };
+    if (const ListEquality<Tunnel>().equals(regrouped, _tunnels) &&
+        const MapEquality<String, TunnelColour>().equals(
+          coloured,
+          _groupColours,
+        )) {
       return;
     }
 
-    _groupColours = {
-      for (final MapEntry(key: named, value: kept) in _groupColours.entries)
-        if (named != group) named: kept,
-      group: ?colour,
-    };
-    await _persist();
-  }
-
-  /// [from] becomes [to], or the spelling of a group in use like it; the
-  /// colour goes with it unless that group has its own.
-  Future<void> renameGroup(String from, String to) async {
-    final typed = groupNamed(to);
-    if (typed == null || typed == from) return;
-    final renamed = groupLike(_tunnels.groups, typed, except: from);
-
-    _tunnels = [
-      for (final tunnel in _tunnels)
-        tunnel.group == from ? tunnel.copyWith(group: renamed) : tunnel,
-    ];
-    if (_groupColours[from] case final colour?
-        when _groupColours[renamed] == null) {
-      _groupColours = {..._groupColours, renamed: colour};
-    }
+    _tunnels = regrouped;
+    _groupColours = coloured;
     await _persist();
   }
 

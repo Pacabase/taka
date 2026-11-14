@@ -130,7 +130,7 @@ void main() {
     expect(isInGroup('Proxy'), isFalse);
   });
 
-  group("a group's header", () {
+  group("a group's Edit", () {
     Future<_MockTunnelsBloc> pumpGrouped(WidgetTester tester) => pumpPage(
       tester,
       initialState: Ready(
@@ -145,111 +145,132 @@ void main() {
               group: 'monolith',
             ),
           ],
+          groupColours: const {'monolith': TunnelColour.green},
         ),
       ),
     );
 
-    testWidgets('renames the whole group, even only its case', (tester) async {
-      final bloc = await pumpGrouped(tester);
+    Future<void> openEdit(WidgetTester tester) async {
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getCenter(find.text('monolith')));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Edit group'));
+      await tester.pumpAndSettle();
+    }
 
-      await tester.tap(find.text('monolith'));
+    testWidgets('shows only while the header is hovered', (tester) async {
+      await pumpGrouped(tester);
+      bool shown() => tester
+          .widget<Visibility>(
+            find
+                .ancestor(
+                  of: find.byTooltip('Edit group'),
+                  matching: find.byType(Visibility),
+                )
+                .first,
+          )
+          .visible;
+
+      expect(shown(), isFalse);
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getCenter(find.text('monolith')));
       await tester.pump();
-      await tester.enterText(find.byType(TextField), ' Monolith ');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
+      expect(shown(), isTrue);
+    });
+
+    testWidgets('names and colours the group in one save', (tester) async {
+      final bloc = await pumpGrouped(tester);
+      await openEdit(tester);
+
+      expect(find.text('Edit group'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Monolith');
+      await tester.tap(find.byTooltip('Blue'));
       await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
 
       verify(
         () => bloc.add(
           const TunnelsEvent.send(
-            AgentCommand.renameGroup('monolith', 'Monolith'),
+            AgentCommand.editGroup(
+              'monolith',
+              name: 'Monolith',
+              colour: TunnelColour.blue,
+            ),
           ),
         ),
       ).called(1);
+      expect(find.text('Tunnels'), findsOneWidget);
     });
 
-    testWidgets('clicking away renames it', (tester) async {
-      final bloc = await pumpPage(
-        tester,
-        initialState: Ready(
-          TunnelsSnapshot(
-            tunnels: [
-              database.copyWith(group: 'monolith'),
-              proxy,
-              const Tunnel(
-                id: 'c3',
-                name: 'Cache',
-                localPort: 1,
-                group: 'Prod',
-              ),
-            ],
-          ),
-        ),
+    testWidgets('opens on the group as it is', (tester) async {
+      await pumpGrouped(tester);
+      await openEdit(tester);
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'monolith',
       );
-
-      await tester.tap(find.text('monolith'));
-      await tester.pump();
-      await tester.enterText(find.byType(TextField), 'prod');
-      FocusManager.instance.primaryFocus!.unfocus();
-      await tester.pump();
-
-      verify(
-        () => bloc.add(
-          const TunnelsEvent.send(AgentCommand.renameGroup('monolith', 'prod')),
+      final selected = tester
+          .widgetList<Semantics>(find.byType(Semantics))
+          .where((semantics) => semantics.properties.selected ?? false);
+      expect(selected, hasLength(1));
+      expect(
+        find.ancestor(
+          of: find.byWidget(selected.single),
+          matching: find.byTooltip('Green'),
         ),
-      ).called(1);
+        findsOneWidget,
+      );
     });
 
-    testWidgets('the same name renames nothing', (tester) async {
+    testWidgets('Esc or Cancel changes nothing', (tester) async {
       final bloc = await pumpGrouped(tester);
+      await openEdit(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('Tunnels'), findsOneWidget);
 
-      await tester.tap(find.text('monolith'));
-      await tester.pump();
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pump();
+      await openEdit(tester);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
 
+      expect(find.text('Tunnels'), findsOneWidget);
       verifyNever(
         () => bloc.add(
           const TunnelsEvent.send(
-            AgentCommand.arrange([
-              (id: 'a1', group: 'monolith'),
-              (id: 'b2', group: null),
-              (id: 'c3', group: 'monolith'),
-            ]),
+            AgentCommand.editGroup(
+              'monolith',
+              name: 'monolith',
+              colour: TunnelColour.green,
+            ),
           ),
         ),
       );
     });
 
-    testWidgets('Esc or a blank name renames nothing', (tester) async {
-      final bloc = await pumpGrouped(tester);
+    testWidgets('a blank name turns Save off', (tester) async {
+      await pumpGrouped(tester);
+      await openEdit(tester);
 
-      await tester.tap(find.text('monolith'));
-      await tester.pump();
-      await tester.enterText(find.byType(TextField), 'Other');
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pump();
-      expect(find.text('monolith'), findsOneWidget);
-
-      await tester.tap(find.text('monolith'));
-      await tester.pump();
       await tester.enterText(find.byType(TextField), '  ');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
 
-      for (final name in ['Other', '  ']) {
-        verifyNever(
-          () => bloc.add(
-            TunnelsEvent.send(
-              AgentCommand.arrange([
-                (id: 'a1', group: name),
-                (id: 'b2', group: null),
-                (id: 'c3', group: name),
-              ]),
-            ),
-          ),
-        );
-      }
-      expect(find.text('monolith'), findsOneWidget);
+      expect(
+        tester.widget<FilledButton>(find.byType(FilledButton)).enabled,
+        isFalse,
+      );
+    });
+
+    testWidgets("the header's name isn't edited in place", (tester) async {
+      await pumpGrouped(tester);
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+
+      expect(find.byType(TextField), findsNothing);
     });
   });
 
@@ -491,40 +512,6 @@ void main() {
       ]);
     },
   );
-
-  testWidgets("the dot by a group's name sets its colour", (tester) async {
-    final bloc = await pumpPage(
-      tester,
-      initialState: Ready(
-        TunnelsSnapshot(
-          tunnels: [database.copyWith(group: 'Prod')],
-          groupColours: const {'Prod': TunnelColour.green},
-        ),
-      ),
-    );
-
-    await tester.tap(find.byTooltip('Colour for Prod'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Blue'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Colour for Prod'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('No colour'));
-    await tester.pumpAndSettle();
-
-    verify(
-      () => bloc.add(
-        const TunnelsEvent.send(
-          AgentCommand.setGroupColour('Prod', TunnelColour.blue),
-        ),
-      ),
-    ).called(1);
-    verify(
-      () => bloc.add(
-        const TunnelsEvent.send(AgentCommand.setGroupColour('Prod', null)),
-      ),
-    ).called(1);
-  });
 
   testWidgets(
     'lists the tunnels from the top, and dragging one moves it, shown as hovered',

@@ -41,8 +41,8 @@ void main() {
         (id: 'a1', group: null),
       ]),
       AgentCommand.trustHostKey('a1', 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY'),
-      AgentCommand.setGroupColour('Prod', TunnelColour.purple),
-      AgentCommand.setGroupColour('Prod', null),
+      AgentCommand.editGroup('Prod', name: 'Live', colour: TunnelColour.purple),
+      AgentCommand.editGroup('Prod', name: 'Prod', colour: null),
       AgentCommand.setLaunchAtLogin(on: true),
       AgentCommand.setDebugLogging(on: false),
       AgentCommand.showLogs(),
@@ -51,7 +51,6 @@ void main() {
         [database],
         groupColours: {'Prod': TunnelColour.green},
       ),
-      AgentCommand.renameGroup('monolith', 'Monolith'),
       AgentCommand.exportTunnels('/Users/me/tunnels.json'),
       AgentCommand.quit(),
     ]) {

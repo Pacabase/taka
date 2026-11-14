@@ -127,9 +127,8 @@ class AgentServer(
       id,
       fingerprint,
     ),
-    SetGroupColour(:final group, :final colour) =>
-      await _manager.setGroupColour(group, colour),
-    RenameGroup(:final from, :final to) => await _manager.renameGroup(from, to),
+    EditGroup(:final group, :final name, :final colour) =>
+      await _manager.editGroup(group, name: name, colour: colour),
     ImportTunnels(:final tunnels, :final groupColours) => await _manager.import(
       tunnels,
       groupColours: groupColours,

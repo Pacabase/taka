@@ -6,7 +6,7 @@ import 'package:taka/pages/tunnels/widgets/host_input.dart';
 import 'package:taka/pages/tunnels/widgets/route_step.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
-import 'package:taka/widgets/colour_dot.dart';
+import 'package:taka/widgets/colour_picker.dart';
 
 final _notInAddress = RegExp('[^0-9a-fA-F.:]');
 
@@ -259,17 +259,9 @@ class _TunnelFormState extends State<TunnelForm> {
                 builder: (context, _) => _groupColour == null
                     ? Labelled(
                         label: 'Colour',
-                        child: Row(
-                          spacing: 8,
-                          children: [
-                            for (final colour in [...TunnelColour.values, null])
-                              _Swatch(
-                                colour: colour,
-                                label: colour?.label ?? 'No colour',
-                                isSelected: _colour == colour,
-                                onTap: () => setState(() => _colour = colour),
-                              ),
-                          ],
+                        child: ColourPicker(
+                          selected: _colour,
+                          onPick: (colour) => setState(() => _colour = colour),
                         ),
                       )
                     : const SizedBox.shrink(),
@@ -514,40 +506,6 @@ class const _Colon() extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: 4,
       children: [dot, dot],
-    );
-  }
-}
-
-class const _Swatch({
-  required final TunnelColour? colour,
-  required final String label,
-  required final bool isSelected,
-  required final void Function() onTap,
-}) extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
-
-    // The tooltip names it to screen readers too.
-    return Tooltip(
-      message: label,
-      child: Semantics(
-        button: true,
-        selected: isSelected,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: Container(
-            foregroundDecoration: isSelected
-                ? BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: colors.textBrilliant, width: 2),
-                  )
-                : null,
-            child: ColourDot(colour, size: 20),
-          ),
-        ),
-      ),
     );
   }
 }
