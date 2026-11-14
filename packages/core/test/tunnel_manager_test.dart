@@ -14,6 +14,10 @@ import 'package:test/test.dart';
 import 'fakes/fakes.dart';
 
 void main() {
+  const refused = SshForwardFailed(
+    'channel 2: open failed: connect failed: Connection refused',
+    reason: 'Connection refused',
+  );
   late MockSshClient client;
   late FakeStore store;
   late FakeTunnel tunnel;
@@ -1420,11 +1424,6 @@ void main() {
       expect(checked, isEmpty);
     });
 
-    const refused = SshForwardFailed(
-      'channel 2: open failed: connect failed: Connection refused',
-      reason: 'Connection refused',
-    );
-
     test('fails the tunnel when the check finds nothing behind it', () async {
       late void Function(SshLog log) sshSays;
       when(openAnyTunnel).thenAnswer((invocation) async {
@@ -1441,58 +1440,132 @@ void main() {
       expect(tunnel.closeCount, 1);
     });
 
-    test('fails it for a refusal ssh logs just after the check', () {
-      fakeAsync((time) {
-        late void Function(SshLog log) sshSays;
+    group('within the check window', () {
+      const window = Duration(seconds: 3);
+      late void Function(SshLog log) sshSays;
+      late int opens;
+
+      void checkedFor(
+        void Function(TunnelManager manager, FakeAsync time) body, {
+        bool restored = false,
+      }) => fakeAsync((time) {
+        opens = 0;
         when(openAnyTunnel).thenAnswer((invocation) async {
+          opens++;
           sshSays =
               invocation.namedArguments[#onLog]! as void Function(SshLog log);
-          return tunnel;
+          return tunnel = FakeTunnel(15432);
         });
+        if (restored) store = FakeStore([database], {'a1'});
         final manager = TunnelManager(
           store: store,
           client: client,
           checkDestination: (_, _) async {},
+          checkWindow: window,
         );
-        unawaited(manager.load().then((_) => manager.toggle('a1')));
-        time
-          ..flushMicrotasks()
-          ..elapse(const Duration(milliseconds: 500));
-        sshSays(refused);
+        unawaited(
+          manager.load().then(
+            (_) => restored ? manager.restore() : manager.toggle('a1'),
+          ),
+        );
         time.flushMicrotasks();
-
-        expect(manager.snapshot.statusOf('a1'), Failed(refused.line));
+        body(manager, time);
         unawaited(manager.close());
         time.flushMicrotasks();
       });
-    });
 
-    test('only warns of a refusal long after the check', () {
-      fakeAsync((time) {
-        late void Function(SshLog log) sshSays;
-        when(openAnyTunnel).thenAnswer((invocation) async {
-          sshSays =
-              invocation.namedArguments[#onLog]! as void Function(SshLog log);
-          return tunnel;
+      test('a refusal fails the tunnel and closes ssh for good', () {
+        checkedFor((manager, time) {
+          time.elapse(window - const Duration(milliseconds: 1));
+          sshSays(refused);
+          time
+            ..flushMicrotasks()
+            ..elapse(const Duration(minutes: 5));
+
+          expect(manager.snapshot.statusOf('a1'), Failed(refused.line));
+          expect(tunnel.closeCount, 1);
+          expect(opens, 1);
         });
-        final manager = TunnelManager(
-          store: store,
-          client: client,
-          checkDestination: (_, _) async {},
-        );
-        unawaited(manager.load().then((_) => manager.toggle('a1')));
-        time
-          ..flushMicrotasks()
-          ..elapse(const Duration(seconds: 5));
-        sshSays(refused);
-        time.flushMicrotasks();
+      });
 
-        expect(
-          manager.snapshot.statusOf('a1'),
-          const Connected(warning: 'Connection refused'),
-        );
-        unawaited(manager.close());
-        time.flushMicrotasks();
+      test('follows a check that failed itself', () {
+        fakeAsync((time) {
+          when(openAnyTunnel).thenAnswer((invocation) async {
+            sshSays =
+                invocation.namedArguments[#onLog]! as void Function(SshLog log);
+            return tunnel;
+          });
+          final manager = TunnelManager(
+            store: store,
+            client: client,
+            checkDestination: (_, _) async =>
+                throw const SocketException('Connection timed out'),
+            checkWindow: window,
+          );
+          unawaited(manager.load().then((_) => manager.toggle('a1')));
+          time.flushMicrotasks();
+          sshSays(refused);
+          time.flushMicrotasks();
+
+          expect(manager.snapshot.statusOf('a1'), Failed(refused.line));
+          unawaited(manager.close());
+          time.flushMicrotasks();
+        });
+      });
+
+      test('ends, after which a refusal only warns', () {
+        checkedFor((manager, time) {
+          time.elapse(window);
+          sshSays(refused);
+          time.flushMicrotasks();
+
+          expect(
+            manager.snapshot.statusOf('a1'),
+            const Connected(warning: 'Connection refused'),
+          );
+        });
+      });
+
+      test('starts again when a failed tunnel is turned on again', () {
+        checkedFor((manager, time) {
+          sshSays(refused);
+          time.flushMicrotasks();
+          unawaited(manager.toggle('a1'));
+          time.flushMicrotasks();
+          sshSays(refused);
+          time.flushMicrotasks();
+
+          expect(opens, 2);
+          expect(manager.snapshot.statusOf('a1'), Failed(refused.line));
+        });
+      });
+
+      test('ends when the tunnel drops, so a reconnect only warns', () {
+        checkedFor((manager, time) {
+          time.elapse(const Duration(milliseconds: 500));
+          tunnel.drop();
+          time.elapse(const Duration(seconds: 1));
+          expect(opens, 2);
+          sshSays(refused);
+          time.flushMicrotasks();
+
+          expect(
+            manager.snapshot.statusOf('a1'),
+            const Connected(warning: 'Connection refused'),
+          );
+        });
+      });
+
+      test('is not opened for a tunnel restored at login', () {
+        checkedFor((manager, time) {
+          sshSays(refused);
+          time.flushMicrotasks();
+
+          expect(
+            manager.snapshot.statusOf('a1'),
+            const Connected(warning: 'Connection refused'),
+          );
+        }, restored: true);
       });
     });
 
@@ -1510,10 +1583,6 @@ void main() {
   });
 
   group('a warning from ssh', () {
-    const refused = SshForwardFailed(
-      'channel 2: open failed: connect failed: Connection refused',
-      reason: 'Connection refused',
-    );
     const lifetime = Duration(seconds: 30);
     late void Function(SshLog log) sshSays;
 

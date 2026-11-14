@@ -7,12 +7,6 @@ final _remotePortRefused = RegExp(
 
 const _reasons = [
   (
-    // ssh's line for a forwarded connection the server couldn't make.
-    patterns: [': open failed: '],
-    short: "can't reach where it leads",
-    sentence: "The server can't reach where this tunnel leads.",
-  ),
-  (
     patterns: ["isn't an address of this computer"],
     short: 'address not on this computer',
     sentence: "This computer doesn't have the From address.",
@@ -59,6 +53,19 @@ const _reasons = [
 ];
 
 ({String short, String sentence})? _reasonOf(String message) {
+  // Within a longer message, such as a ProxyJump's, the line is another hop's.
+  if (message.contains(': open failed: ') && !message.contains('\n')) {
+    return message.contains('administratively prohibited')
+        ? (
+            short: "server won't forward",
+            sentence: "The server doesn't allow this tunnel.",
+          )
+        : (
+            short: "can't reach where it leads",
+            sentence: "The server can't reach where this tunnel leads.",
+          );
+  }
+
   if (_portInUse.firstMatch(message)?[1] case final port?) {
     return (
       short: 'port $port in use',

@@ -28,6 +28,17 @@ void main() {
           "or forwarding isn't allowed.",
     ),
     (
+      'channel 0: open failed: connect failed: Connection refused\n'
+          'stdio forwarding failed',
+      "can't reach the server",
+      "Can't reach the server.",
+    ),
+    (
+      'channel 3: open failed: administratively prohibited: open failed',
+      "server won't forward",
+      "The server doesn't allow this tunnel.",
+    ),
+    (
       'channel 2: open failed: connect failed: Connection refused',
       "can't reach where it leads",
       "The server can't reach where this tunnel leads.",

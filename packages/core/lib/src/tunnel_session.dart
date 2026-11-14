@@ -72,14 +72,12 @@ class TunnelSession({
     _isChecking = true;
     try {
       await check(tunnel.reachableAt, tunnel.localPort);
-      // ssh says the destination refused a moment after the check's own
-      // connection has closed.
-      await Future<void>.delayed(checkWindow);
     } on Object catch (exception) {
       _log.w('${tunnel.title}: could not check where it leads ($exception)');
-    } finally {
-      _isChecking = false;
     }
+    // ssh logs the refusal only after the check's connection has closed.
+    await Future<void>.delayed(checkWindow);
+    _isChecking = false;
   }
 
   Future<void> stop() async {
@@ -188,6 +186,9 @@ class TunnelSession({
   void _drop(Object? exception) {
     if (isStopped) return;
 
+    // A reconnect isn't checked, so a refusal on it comes from a client.
+    _isChecking = false;
+
     _stable?.cancel();
     if (exception case SshUnknownHostKeyException(:final hostKey)) {
       _log.w('${tunnel.title}: waiting for the user to check $hostKey');
@@ -257,15 +258,15 @@ class TunnelSession({
     onChange();
   }
 
-  // The check the user turned it on for found nothing behind it: a tunnel
-  // that can't reach its destination is no use left on.
   void _refuse(String line) {
     if (isStopped || _status is! Connected) return;
 
-    _clearWarning?.cancel();
-    _stable?.cancel();
-    _abort.complete();
-    unawaited(_opened?.close());
+    unawaited(
+      stop().catchError(
+        (Object exception) =>
+            _log.w('${tunnel.title}: could not close ssh ($exception)'),
+      ),
+    );
     _fail(line);
   }
 
