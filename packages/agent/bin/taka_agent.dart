@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:agent/src/agent_tray.dart';
+import 'package:agent/src/foreground.dart';
 import 'package:agent/src/local_preferences.dart';
 import 'package:agent/src/process_name.dart';
 import 'package:agent/src/screen_lock.dart';
@@ -33,10 +34,15 @@ Future<void> _start() async {
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
     client: const SystemSshClient(loginShell: true, shareConnections: true),
-    // 1Password prompts only while the asking app is in front; open brings it.
-    beforeConnect: agentBundle == null
+    comeForward: agentBundle == null
         ? null
-        : () => Process.run('open', [agentBundle]),
+        : Foreground(
+            // A background app can't bring itself forward; open can.
+            activate: () => Process.run('open', [agentBundle]),
+            frontmostApp: macFrontmostApp,
+            activateApp: macActivateApp,
+            self: pid,
+          ).comeForward,
     isLocked: isScreenLocked,
     checkDestination: probeLocalPort,
   );
