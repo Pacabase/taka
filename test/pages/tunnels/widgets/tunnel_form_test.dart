@@ -17,6 +17,7 @@ void main() {
     Tunnel? initial,
     List<String> hosts = const [],
     List<String> groups = const [],
+    Map<String, TunnelColour> groupColours = const {},
   }) async {
     saved = [];
     cancels = 0;
@@ -28,6 +29,7 @@ void main() {
             initial: initial,
             hosts: hosts,
             groups: groups,
+            groupColours: groupColours,
             onSave: saved.add,
             onCancel: () => cancels++,
           ),
@@ -491,7 +493,13 @@ void main() {
       expect(saved.single.colour, TunnelColour.blue);
     });
 
-    testWidgets("goes back to the group's when that one is picked", (
+    testWidgets('is none until one is picked', (tester) async {
+      await pumpForm(tester);
+
+      expect(find.byTooltip('No colour'), findsOneWidget);
+    });
+
+    testWidgets("is the group's in a coloured group, and comes back out", (
       tester,
     ) async {
       const tunnel = Tunnel(
@@ -503,22 +511,21 @@ void main() {
         group: 'Prod',
         colour: TunnelColour.red,
       );
-      await pumpForm(tester, initial: tunnel);
+      await pumpForm(
+        tester,
+        initial: tunnel,
+        groups: const ['Prod'],
+        groupColours: const {'Prod': TunnelColour.blue},
+      );
 
-      await tester.tap(find.byTooltip("Its group's colour"));
+      expect(find.text('Colour'), findsNothing);
+      await tester.enterText(field(0), 'prod');
       await tester.pump();
-      await tester.tap(find.text('Save'));
-
-      expect(saved.single, tunnel.copyWith(colour: null));
-    });
-
-    testWidgets('is none for a tunnel in no group', (tester) async {
-      await pumpForm(tester);
-
-      expect(find.byTooltip('No colour'), findsOneWidget);
-      await tester.enterText(field(0), 'Prod');
+      expect(find.text('Colour'), findsNothing);
+      await tester.enterText(field(0), 'Staging');
       await tester.pump();
-      expect(find.byTooltip("Its group's colour"), findsOneWidget);
+      expect(find.text('Colour'), findsOneWidget);
+      expect(find.byTooltip('Red'), findsOneWidget);
     });
   });
 

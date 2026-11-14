@@ -112,8 +112,9 @@ sealed class const TunnelsSnapshot._() with _$TunnelsSnapshot {
 
   TunnelStatus statusOf(String id) => statuses[id] ?? const Stopped();
 
+  /// A coloured group's colour, or else the tunnel's own.
   TunnelColour? colourOf(Tunnel tunnel) =>
-      tunnel.colour ?? groupColours[tunnel.group];
+      groupColours[tunnel.group] ?? tunnel.colour;
 
   int get connectedCount => statuses.values.whereType<Connected>().length;
 }

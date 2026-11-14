@@ -16,6 +16,7 @@ class const TunnelForm({
   final TunnelKind kind = TunnelKind.local,
   final List<String> hosts = const [],
   final List<String> groups = const [],
+  final Map<String, TunnelColour> groupColours = const {},
   required final void Function(Tunnel tunnel) onSave,
   required final void Function() onCancel,
 }) extends StatefulWidget {
@@ -51,6 +52,11 @@ class _TunnelFormState extends State<TunnelForm> {
   bool get _isRemote => _kind == TunnelKind.remote;
 
   bool get _isSocket => _isLocal && _toHost.text.trim().startsWith('/');
+
+  TunnelColour? get _groupColour => switch (groupNamed(_group.text)) {
+    final typed? => widget.groupColours[groupLike(widget.groups, typed)],
+    null => null,
+  };
 
   String? get _bindAddress => bindAddressNamed(_fromHost.text);
 
@@ -247,27 +253,26 @@ class _TunnelFormState extends State<TunnelForm> {
                   _ => const SizedBox.shrink(),
                 },
               ),
-              Labelled(
-                label: 'Colour',
-                child: ListenableBuilder(
-                  listenable: _group,
-                  builder: (context, _) => Row(
-                    spacing: 8,
-                    children: [
-                      for (final colour in [...TunnelColour.values, null])
-                        _Swatch(
-                          colour: colour,
-                          label:
-                              colour?.label ??
-                              (groupNamed(_group.text) == null
-                                  ? 'No colour'
-                                  : "Its group's colour"),
-                          isSelected: _colour == colour,
-                          onTap: () => setState(() => _colour = colour),
+              // A coloured group's tunnels take its colour.
+              ListenableBuilder(
+                listenable: _group,
+                builder: (context, _) => _groupColour == null
+                    ? Labelled(
+                        label: 'Colour',
+                        child: Row(
+                          spacing: 8,
+                          children: [
+                            for (final colour in [...TunnelColour.values, null])
+                              _Swatch(
+                                colour: colour,
+                                label: colour?.label ?? 'No colour',
+                                isSelected: _colour == colour,
+                                onTap: () => setState(() => _colour = colour),
+                              ),
+                          ],
                         ),
-                    ],
-                  ),
-                ),
+                      )
+                    : const SizedBox.shrink(),
               ),
               const Spacer(),
               Row(

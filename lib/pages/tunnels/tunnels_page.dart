@@ -108,6 +108,12 @@ class _TunnelsPageState extends State<TunnelsPage> {
                             _ => const <String>[],
                           },
                         ),
+                        groupColours: context.select(
+                          (TunnelsBloc bloc) => switch (bloc.state) {
+                            Ready(:final snapshot) => snapshot.groupColours,
+                            _ => const <String, TunnelColour>{},
+                          },
+                        ),
                         onSave: (tunnel) {
                           context.read<TunnelsBloc>().add(
                             TunnelsEvent.send(AgentCommand.save(tunnel)),
@@ -244,7 +250,7 @@ class const _TunnelList({
                     TunnelTile(
                       tunnel: tunnel,
                       status: snapshot.statusOf(tunnel.id),
-                      colour: tunnel.colour ?? groupColour,
+                      colour: groupColour ?? tunnel.colour,
                       guide: guide,
                       onToggle: () =>
                           _send(context, AgentCommand.toggle(tunnel.id)),
