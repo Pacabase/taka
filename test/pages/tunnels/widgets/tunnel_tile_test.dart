@@ -212,6 +212,19 @@ void main() {
     expect(find.byTooltip(message), findsOneWidget);
   });
 
+  testWidgets('a forward the server could not make names its destination', (
+    tester,
+  ) async {
+    const line = 'channel 2: open failed: connect failed: Connection refused';
+    await pumpTile(tester, status: const Failed(line, isForward: true));
+
+    expect(
+      find.text("Can't reach localhost:5432 through the server."),
+      findsOneWidget,
+    );
+    expect(find.byTooltip(line), findsOneWidget);
+  });
+
   testWidgets('a tunnel to a new server shows its key, and Trust sends it', (
     tester,
   ) async {

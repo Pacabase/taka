@@ -19,6 +19,10 @@ void main() {
       Connected(warning: 'Connection refused'),
       Reconnecting('Connection to bastion closed by remote host.'),
       Failed('127.0.0.1:5432 is already in use'),
+      Failed(
+        'channel 2: open failed: connect failed: Connection refused',
+        isForward: true,
+      ),
       UnknownHostKey(
         host: 'bastion',
         type: 'ED25519',

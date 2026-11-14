@@ -20,6 +20,7 @@ class TunnelSession({
   required final Future<void> Function(String address, int localPort)?
   checkDestination,
   required final Duration warningLifetime,
+  required final Duration checkWindow,
   required final List<Duration> retryDelays,
   required final Duration lockedRecheck,
   required final Duration stableAfter,
@@ -35,6 +36,7 @@ class TunnelSession({
   int _attempts = 0;
   bool _waitsForUnlock = false;
   bool _hasChecked = false;
+  bool _isChecking = false;
 
   TunnelStatus get status => _status;
 
@@ -64,11 +66,18 @@ class TunnelSession({
   }
 
   Future<void> _checkDestination() async {
+    final check = checkDestination;
+    if (check == null) return;
+
+    _isChecking = true;
     try {
-      await checkDestination?.call(tunnel.reachableAt, tunnel.localPort);
+      await check(tunnel.reachableAt, tunnel.localPort);
     } on Object catch (exception) {
       _log.w('${tunnel.title}: could not check where it leads ($exception)');
     }
+    // ssh logs the refusal only after the check's connection has closed.
+    await Future<void>.delayed(checkWindow);
+    _isChecking = false;
   }
 
   Future<void> stop() async {
@@ -120,7 +129,9 @@ class TunnelSession({
     // ssh's lines, named since tunnels connect at once.
     void onLog(SshLog log) {
       _sshLog.d('${tunnel.title}: ${log.line}');
-      if (log case SshForwardFailed(:final reason)) _warn(reason);
+      if (log case SshForwardFailed(:final reason)) {
+        _isChecking ? _refuse(log.line) : _warn(reason);
+      }
     }
 
     final bindAddress = tunnel.listenAddress;
@@ -174,6 +185,9 @@ class TunnelSession({
   // A first try the user is watching stays failed; others retry.
   void _drop(Object? exception) {
     if (isStopped) return;
+
+    // A reconnect isn't checked, so a refusal on it comes from a client.
+    _isChecking = false;
 
     _stable?.cancel();
     if (exception case SshUnknownHostKeyException(:final hostKey)) {
@@ -238,10 +252,22 @@ class TunnelSession({
     _ => '$exception',
   };
 
-  void _fail(String message) {
+  void _fail(String message, {bool isForward = false}) {
     _log.w('${tunnel.title} failed: $message');
-    _status = Failed(message);
+    _status = Failed(message, isForward: isForward);
     onChange();
+  }
+
+  void _refuse(String line) {
+    if (isStopped || _status is! Connected) return;
+
+    unawaited(
+      stop().catchError(
+        (Object exception) =>
+            _log.w('${tunnel.title}: could not close ssh ($exception)'),
+      ),
+    );
+    _fail(line, isForward: true);
   }
 
   // A stopping session has left the manager's sessions but is still Connected.
