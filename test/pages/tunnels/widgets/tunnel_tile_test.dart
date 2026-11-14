@@ -30,7 +30,7 @@ void main() {
     Tunnel tunnel = unnamed,
     TunnelStatus status = const Stopped(),
     TunnelColour? colour,
-    Color? guide,
+    ({Color colour, bool isFirst, bool isLast})? guide,
   }) async {
     toggles = 0;
     trusted = [];
@@ -55,32 +55,54 @@ void main() {
 
   testWidgets("in a group, it's indented behind a guide line", (tester) async {
     double left() => tester.getTopLeft(find.text(unnamed.summary)).dx;
-    bool hasGuide() => tester
-        .widgetList<Container>(find.byType(Container))
-        .any(
-          (container) => switch (container.decoration) {
-            BoxDecoration(border: Border(:final left)) => left.width == 2,
-            _ => false,
-          },
-        );
-
     await pumpTile(tester);
     final outside = left();
-    expect(hasGuide(), isFalse);
+    expect(find.byType(GuideLine), findsNothing);
 
-    await pumpTile(tester, guide: Colors.blue);
-    expect(left() - outside, 16);
-    expect(hasGuide(), isTrue);
-    expect(
-      tester
-          .widgetList<Container>(find.byType(Container))
-          .map((container) => container.decoration)
-          .whereType<BoxDecoration>()
-          .map((decoration) => decoration.border)
-          .whereType<Border>()
-          .map((border) => border.left.color),
-      contains(Colors.blue),
+    await pumpTile(
+      tester,
+      guide: (colour: Colors.blue, isFirst: true, isLast: false),
     );
+    expect(left() - outside, 16);
+    final guide = tester.widget<GuideLine>(find.byType(GuideLine));
+    expect(guide.colour, Colors.blue);
+    expect((guide.isFirst, guide.isLast), (true, false));
+    // It runs the tile's whole height.
+    expect(
+      tester.getSize(find.byType(GuideLine)).height,
+      tester.getSize(find.byType(TunnelTile)).height,
+    );
+  });
+
+  testWidgets('a guide line is rounded only at the ends it has', (
+    tester,
+  ) async {
+    BorderRadius radius() =>
+        (tester
+                        .widget<DecoratedBox>(
+                          find.descendant(
+                            of: find.byType(GuideLine),
+                            matching: find.byType(DecoratedBox),
+                          ),
+                        )
+                        .decoration
+                    as BoxDecoration)
+                .borderRadius!
+            as BorderRadius;
+
+    await pumpTile(
+      tester,
+      guide: (colour: Colors.blue, isFirst: true, isLast: false),
+    );
+    expect(radius().topLeft, const Radius.circular(1));
+    expect(radius().bottomLeft, Radius.zero);
+
+    await pumpTile(
+      tester,
+      guide: (colour: Colors.blue, isFirst: false, isLast: true),
+    );
+    expect(radius().topLeft, Radius.zero);
+    expect(radius().bottomLeft, const Radius.circular(1));
   });
 
   testWidgets('shows its colour as a dot, and no dot without one', (

@@ -315,6 +315,37 @@ void main() {
     });
   });
 
+  testWidgets("a group's guide line rounds at its first and last tunnel", (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            const Tunnel(id: 'c3', name: 'Cache', localPort: 1, group: 'Prod'),
+            const Tunnel(id: 'd4', name: 'Docs', localPort: 2, group: 'Prod'),
+            proxy.copyWith(group: 'Solo'),
+          ],
+        ),
+      ),
+    );
+    (bool, bool)? endsOf(String name) => switch (tester
+        .widget<TunnelTile>(
+          find.ancestor(of: find.text(name), matching: find.byType(TunnelTile)),
+        )
+        .guide) {
+      (:final isFirst, :final isLast, colour: _) => (isFirst, isLast),
+      null => null,
+    };
+
+    expect(endsOf('Database'), (true, false));
+    expect(endsOf('Cache'), (false, false));
+    expect(endsOf('Docs'), (false, true));
+    expect(endsOf('Proxy'), (true, true));
+  });
+
   testWidgets("a group's header carries its tunnels when dragged", (
     tester,
   ) async {
@@ -398,7 +429,8 @@ void main() {
     }
     expect(liftedIsInGroup(), isTrue);
     // It takes the group's colour as its guide line, with no dot of its own.
-    expect(lifted().guide, colors.tunnel(TunnelColour.blue));
+    expect(lifted().guide?.colour, colors.tunnel(TunnelColour.blue));
+    expect((lifted().guide?.isFirst, lifted().guide?.isLast), (false, false));
     expect(lifted().colour, isNull);
 
     for (var step = 0; step < 10; step++) {
@@ -533,15 +565,10 @@ void main() {
           of: find.text('Database'),
           matching: find.byType(TunnelTile),
         ),
-        matching: find.byWidgetPredicate(
-          (widget) =>
-              widget is Container &&
-              widget.decoration is BoxDecoration &&
-              (widget.decoration! as BoxDecoration).border is Border,
-        ),
+        matching: find.byType(GuideLine),
       );
 
-      // The guide line is the 2px left edge of the tile's inner box.
+      // The guide line is 2px wide.
       expect(
         tester
             .getCenter(

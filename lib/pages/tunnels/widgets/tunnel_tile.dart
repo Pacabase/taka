@@ -17,7 +17,7 @@ class const TunnelTile({
   final TunnelColour? colour,
 
   /// The group's guide line, or null for a tunnel in no group.
-  final Color? guide,
+  final ({Color colour, bool isFirst, bool isLast})? guide,
   required final void Function() onToggle,
   required final void Function(String fingerprint) onTrust,
   required final void Function() onEdit,
@@ -129,109 +129,155 @@ class _TunnelTileState extends State<TunnelTile> {
           constraints: const BoxConstraints(minHeight: 48),
           padding: EdgeInsets.only(left: widget.guide == null ? 0 : 14),
           color: isHovered ? colors.selection : Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              border: switch (widget.guide) {
-                final guide? => Border(
-                  left: BorderSide(color: guide, width: 2),
+          child: Stack(
+            children: [
+              if (widget.guide case (
+                :final colour,
+                :final isFirst,
+                :final isLast,
+              ))
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: GuideLine(
+                    colour: colour,
+                    isFirst: isFirst,
+                    isLast: isLast,
+                  ),
                 ),
-                null => null,
-              },
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              spacing: 4,
-              children: [
-                Row(
-                  spacing: 8,
+              Padding(
+                // Past the 2px guide line, which lies over this padding.
+                padding: EdgeInsets.fromLTRB(
+                  widget.guide == null ? 12 : 14,
+                  6,
+                  12,
+                  6,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  spacing: 4,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: 2,
-                        children: [
-                          Row(
-                            spacing: 6,
+                    Row(
+                      spacing: 8,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            spacing: 2,
                             children: [
-                              if (widget.colour case final colour?)
-                                ColourDot(colour),
-                              Flexible(
-                                child: Text(
-                                  tunnel.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w500,
+                              Row(
+                                spacing: 6,
+                                children: [
+                                  if (widget.colour case final colour?)
+                                    ColourDot(colour),
+                                  Flexible(
+                                    child: Text(
+                                      tunnel.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
+                              ?caption,
                             ],
                           ),
-                          ?caption,
-                        ],
-                      ),
-                    ),
-                    if (isHovered || _focused) ...[
-                      if (tunnel.sshCommand case final command?)
-                        IconButton(
-                          tooltip: _copied == null
-                              ? 'Copy SSH command'
-                              : 'Copied',
-                          onPressed: () => _copy(command),
-                          icon: AppIcon(
-                            _copied == null ? AppIcons.copy : AppIcons.check,
-                            color: _copied == null
-                                ? colors.textSecondary
-                                : colors.green,
+                        ),
+                        if (isHovered || _focused) ...[
+                          if (tunnel.sshCommand case final command?)
+                            IconButton(
+                              tooltip: _copied == null
+                                  ? 'Copy SSH command'
+                                  : 'Copied',
+                              onPressed: () => _copy(command),
+                              icon: AppIcon(
+                                _copied == null
+                                    ? AppIcons.copy
+                                    : AppIcons.check,
+                                color: _copied == null
+                                    ? colors.textSecondary
+                                    : colors.green,
+                              ),
+                            ),
+                          IconButton(
+                            tooltip: 'Edit',
+                            onPressed: widget.onEdit,
+                            icon: AppIcon(
+                              AppIcons.pencil,
+                              color: colors.textSecondary,
+                            ),
                           ),
+                          IconButton(
+                            tooltip: 'Delete',
+                            onPressed: widget.onDelete,
+                            icon: AppIcon(
+                              AppIcons.trash,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                        if (status is Connecting || status is Reconnecting)
+                          SizedBox.square(
+                            dimension: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colors.orange,
+                            ),
+                          ),
+                        if (status is Failed)
+                          AppIcon(AppIcons.triangleAlert, color: colors.red),
+                        if (status case UnknownHostKey(:final fingerprint))
+                          TextButton(
+                            onPressed: () => widget.onTrust(fingerprint),
+                            child: const Text('Trust'),
+                          ),
+                        NativeSwitch(
+                          value: status.isOn,
+                          color: status is Connecting || status is Reconnecting
+                              ? colors.orange
+                              : colors.green,
+                          label: tunnel.title,
+                          onToggle: widget.onToggle,
                         ),
-                      IconButton(
-                        tooltip: 'Edit',
-                        onPressed: widget.onEdit,
-                        icon: AppIcon(
-                          AppIcons.pencil,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Delete',
-                        onPressed: widget.onDelete,
-                        icon: AppIcon(
-                          AppIcons.trash,
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                    ],
-                    if (status is Connecting || status is Reconnecting)
-                      SizedBox.square(
-                        dimension: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: colors.orange,
-                        ),
-                      ),
-                    if (status is Failed)
-                      AppIcon(AppIcons.triangleAlert, color: colors.red),
-                    if (status case UnknownHostKey(:final fingerprint))
-                      TextButton(
-                        onPressed: () => widget.onTrust(fingerprint),
-                        child: const Text('Trust'),
-                      ),
-                    NativeSwitch(
-                      value: status.isOn,
-                      color: status is Connecting || status is Reconnecting
-                          ? colors.orange
-                          : colors.green,
-                      label: tunnel.title,
-                      onToggle: widget.onToggle,
+                      ],
                     ),
+                    ?hostKey,
                   ],
                 ),
-                ?hostKey,
-              ],
-            ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The line down the side of a group's tunnels, rounded where it starts and
+/// ends.
+class const GuideLine({
+  super.key,
+  required final Color colour,
+  final bool isFirst = false,
+  final bool isLast = false,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    const round = Radius.circular(1);
+
+    return SizedBox(
+      width: 2,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colour,
+          borderRadius: BorderRadius.vertical(
+            top: isFirst ? round : Radius.zero,
+            bottom: isLast ? round : Radius.zero,
           ),
         ),
       ),

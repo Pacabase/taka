@@ -277,17 +277,24 @@ class const _TunnelList({
               key: ValueKey(tunnel.id),
               builder: (context) {
                 // Lifted, it shows the group it would land in.
-                final group = switch (ReorderableRows.dropIndexOf(
-                  context,
-                  index,
-                )) {
+                final dropAt = ReorderableRows.dropIndexOf(context, index);
+                final group = switch (dropAt) {
                   final to? => snapshot.tunnels.groupOnDrop(index, to),
                   null => tunnel.group,
                 };
                 final groupColour = snapshot.groupColours[group];
                 final guide = group == null
                     ? null
-                    : colors.guideOf(groupColour);
+                    : (
+                        colour: colors.guideOf(groupColour),
+                        // A lifted one is between places, so neither end.
+                        isFirst:
+                            dropAt == null &&
+                            rows.elementAtOrNull(index - 1) is GroupHeaderRow,
+                        isLast:
+                            dropAt == null &&
+                            rows.elementAtOrNull(index + 1) is GroupEndRow,
+                      );
 
                 return Column(
                   children: [
@@ -310,7 +317,7 @@ class const _TunnelList({
                         case TunnelRow(tunnel: Tunnel(group: final next))
                         when next == tunnel.group)
                       _InGroup(
-                        guide: guide,
+                        guide: guide?.colour,
                         child: Divider(
                           height: 1,
                           indent: 6,
