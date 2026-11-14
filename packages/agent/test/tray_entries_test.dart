@@ -59,7 +59,7 @@ void main() {
     expect(menu(snapshot).take(7), [
       '1 of 4 connected · 1 failed',
       '---',
-      '☑ Production database — localhost:15432',
+      '☑ Production database — 127.0.0.1:15432',
       '☑ Proxy — connecting…',
       '☐ Web — port 8080 in use',
       '☑ Other — reconnecting…',
@@ -123,7 +123,7 @@ void main() {
     );
   });
 
-  test('puts each group in a submenu, after the tunnels in none', () {
+  test('puts each group in a submenu, where its first tunnel is', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [
         Tunnel(id: 'a', name: 'Api', localPort: 1, group: 'Prod'),
@@ -135,17 +135,32 @@ void main() {
     );
     const prod =
         'Prod — 1 of 2 connected ▸ '
-        '☑ Api — localhost:1 | ☐ Cache | --- | Disconnect All';
+        '☑ Api — 127.0.0.1:1 | ☐ Cache | --- | Disconnect All';
 
     expect(menu(snapshot).take(6), [
       '1 of 4 connected',
       '---',
+      prod,
       '☐ Local',
       'Dev — 0 of 1 connected ▸ ☐ Dev db',
-      prod,
       '---',
     ]);
-    expect(tunnelActions(snapshot), startsWith('Tunnel Actions ▸ Local ▸ '));
+    expect(
+      RegExp(r'(?:▸ |\| )(\w[\w ]*) ▸ Copy')
+          .allMatches(tunnelActions(snapshot))
+          .map((match) => match[1]),
+      ['Api', 'Cache', 'Local', 'Dev db'],
+    );
+  });
+
+  test("shortens a long group's name, not its count", () {
+    final group = 'A very long group name ' * 3;
+    final snapshot = TunnelsSnapshot(
+      tunnels: [Tunnel(id: 'a', name: 'Api', localPort: 1, group: group)],
+    );
+
+    expect(menu(snapshot)[2], endsWith('… — 0 of 1 connected ▸ ☐ Api'));
+    expect(menu(snapshot)[2].split(' ▸ ').first.length, lessThanOrEqualTo(50));
   });
 
   test('puts the colour square before a tunnel and a group', () {
@@ -170,8 +185,8 @@ void main() {
     );
 
     expect(menu(snapshot).sublist(2, 4), [
-      '☐ 🟩 Local',
       '🟦 Prod — 0 of 2 connected ▸ ☐ 🟦 Api | ☐ 🟥 Cache | --- | Connect All',
+      '☐ 🟩 Local',
     ]);
   });
 
@@ -202,7 +217,7 @@ void main() {
       tunnelActions(snapshot),
       'Tunnel Actions ▸ '
       'Production database ▸ '
-      'Copy Address ⧉ localhost:15432 | '
+      'Copy Address ⧉ 127.0.0.1:15432 | '
       'Copy SSH Command ⧉ '
       'ssh -N -L 127.0.0.1:15432:db.internal:5432 bastion | '
       'Edit… | '
@@ -210,15 +225,38 @@ void main() {
       'Port 8080 is already in use. | '
       'Try Again | '
       '--- | '
-      'Copy Address ⧉ localhost:8080 | '
+      'Copy Address ⧉ 127.0.0.1:8080 | '
       'Copy SSH Command ⧉ ssh -N -L 127.0.0.1:8080::0 web | '
       'Edit… | '
       'Other ▸ '
       'The connection dropped. | '
       '--- | '
-      'Copy Address ⧉ localhost:8081 | '
+      'Copy Address ⧉ 127.0.0.1:8081 | '
       'Copy SSH Command ⧉ ssh -N -L 127.0.0.1:8081::0 web | '
       'Edit…',
+    );
+  });
+
+  test('names the destination of a forward the server could not make', () {
+    const refused = Failed(
+      'channel 2: open failed: connect failed: Connection refused',
+      isForward: true,
+    );
+    final snapshot = TunnelsSnapshot(
+      tunnels: [database],
+      statuses: {'a1': refused},
+    );
+
+    expect(
+      menu(snapshot),
+      contains("☐ Production database — can't reach db.internal:5432"),
+    );
+    expect(
+      tunnelActions(snapshot),
+      startsWith(
+        'Tunnel Actions ▸ Production database ▸ '
+        "Can't reach db.internal:5432 through the server. | Try Again",
+      ),
     );
   });
 
@@ -262,7 +300,7 @@ void main() {
 
     expect(
       tunnelActions(snapshot),
-      'Tunnel Actions ▸ Broken ▸ Copy Address ⧉ localhost:0 | Edit…',
+      'Tunnel Actions ▸ Broken ▸ Copy Address ⧉ 127.0.0.1:0 | Edit…',
     );
   });
 

@@ -13,7 +13,10 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
   /// [warning] is ssh's reason, such as `Connection refused`; the tunnel stays up.
   const factory connected({@Default('') String warning}) = Connected;
 
-  const factory failed(String message) = Failed;
+  /// [message] is ssh's. [isForward] when ssh connected, but the server
+  /// couldn't make the connection the tunnel forwards to.
+  const factory failed(String message, {@Default(false) bool isForward}) =
+      Failed;
 
   const factory reconnecting(String reason) = Reconnecting;
 
@@ -30,7 +33,10 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
       warning: warning,
     ),
     {'status': 'connected'} => const Connected(),
-    {'status': 'failed', 'message': final String message} => Failed(message),
+    {'status': 'failed', 'message': final String message} => Failed(
+      message,
+      isForward: json['forward'] == true,
+    ),
     {'status': 'failed'} => const Failed(''),
     {'status': 'reconnecting', 'reason': final String reason} => Reconnecting(
       reason,
@@ -53,7 +59,11 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
       'status': 'connected',
       if (warning.isNotEmpty) 'warning': warning,
     },
-    Failed(:final message) => {'status': 'failed', 'message': message},
+    Failed(:final message, :final isForward) => {
+      'status': 'failed',
+      'message': message,
+      if (isForward) 'forward': true,
+    },
     Reconnecting(:final reason) => {'status': 'reconnecting', 'reason': reason},
     UnknownHostKey(:final host, :final type, :final fingerprint) => {
       'status': 'unknownHostKey',

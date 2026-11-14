@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Tunnel {
 
- String get id; String get name; TunnelKind get kind; String get sshHost; String? get localHost; int get localPort; String? get remoteHost; int? get remotePort; String? get remoteSocket; String? get group;/// Shown instead of its group's colour, when set.
+ String get id; String get name; TunnelKind get kind; String get sshHost; String? get bindAddress; String? get localHost; int get localPort; String? get remoteHost; int? get remotePort; String? get remoteSocket; String? get group;/// Shown instead of its group's colour, when set.
  TunnelColour? get colour;
 /// Create a copy of Tunnel
 /// with the given fields replaced by the non-null parameter values.
@@ -28,14 +28,14 @@ $TunnelCopyWith<Tunnel> get copyWith => _$TunnelCopyWithImpl<Tunnel>(this as Tun
 @override
 bool operator ==(Object other) {
   final _this = this as Tunnel;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Tunnel&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.sshHost, _this.sshHost) || other.sshHost == _this.sshHost)&&(identical(other.localHost, _this.localHost) || other.localHost == _this.localHost)&&(identical(other.localPort, _this.localPort) || other.localPort == _this.localPort)&&(identical(other.remoteHost, _this.remoteHost) || other.remoteHost == _this.remoteHost)&&(identical(other.remotePort, _this.remotePort) || other.remotePort == _this.remotePort)&&(identical(other.remoteSocket, _this.remoteSocket) || other.remoteSocket == _this.remoteSocket)&&(identical(other.group, _this.group) || other.group == _this.group)&&(identical(other.colour, _this.colour) || other.colour == _this.colour));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Tunnel&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.sshHost, _this.sshHost) || other.sshHost == _this.sshHost)&&(identical(other.bindAddress, _this.bindAddress) || other.bindAddress == _this.bindAddress)&&(identical(other.localHost, _this.localHost) || other.localHost == _this.localHost)&&(identical(other.localPort, _this.localPort) || other.localPort == _this.localPort)&&(identical(other.remoteHost, _this.remoteHost) || other.remoteHost == _this.remoteHost)&&(identical(other.remotePort, _this.remotePort) || other.remotePort == _this.remotePort)&&(identical(other.remoteSocket, _this.remoteSocket) || other.remoteSocket == _this.remoteSocket)&&(identical(other.group, _this.group) || other.group == _this.group)&&(identical(other.colour, _this.colour) || other.colour == _this.colour));
 }
 
 
 @override
 int get hashCode {
   final _this = this as Tunnel;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.kind,_this.sshHost,_this.localHost,_this.localPort,_this.remoteHost,_this.remotePort,_this.remoteSocket,_this.group,_this.colour);
+  return Object.hash(runtimeType,_this.id,_this.name,_this.kind,_this.sshHost,_this.bindAddress,_this.localHost,_this.localPort,_this.remoteHost,_this.remotePort,_this.remoteSocket,_this.group,_this.colour);
 }
 
 
@@ -47,7 +47,7 @@ abstract mixin class $TunnelCopyWith<$Res>  {
   factory $TunnelCopyWith(Tunnel value, $Res Function(Tunnel) _then) = _$TunnelCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, TunnelKind kind, String sshHost, String? localHost, int localPort, String? remoteHost, int? remotePort, String? remoteSocket, String? group, TunnelColour? colour
+ String id, String name, TunnelKind kind, String sshHost, String? bindAddress, String? localHost, int localPort, String? remoteHost, int? remotePort, String? remoteSocket, String? group, TunnelColour? colour
 });
 
 
@@ -64,13 +64,14 @@ class _$TunnelCopyWithImpl<$Res>
 
 /// Create a copy of Tunnel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? kind = null,Object? sshHost = null,Object? localHost = freezed,Object? localPort = null,Object? remoteHost = freezed,Object? remotePort = freezed,Object? remoteSocket = freezed,Object? group = freezed,Object? colour = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? kind = null,Object? sshHost = null,Object? bindAddress = freezed,Object? localHost = freezed,Object? localPort = null,Object? remoteHost = freezed,Object? remotePort = freezed,Object? remoteSocket = freezed,Object? group = freezed,Object? colour = freezed,}) {
   return _then(Tunnel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as TunnelKind,sshHost: null == sshHost ? _self.sshHost : sshHost // ignore: cast_nullable_to_non_nullable
-as String,localHost: freezed == localHost ? _self.localHost : localHost // ignore: cast_nullable_to_non_nullable
+as String,bindAddress: freezed == bindAddress ? _self.bindAddress : bindAddress // ignore: cast_nullable_to_non_nullable
+as String?,localHost: freezed == localHost ? _self.localHost : localHost // ignore: cast_nullable_to_non_nullable
 as String?,localPort: null == localPort ? _self.localPort : localPort // ignore: cast_nullable_to_non_nullable
 as int,remoteHost: freezed == remoteHost ? _self.remoteHost : remoteHost // ignore: cast_nullable_to_non_nullable
 as String?,remotePort: freezed == remotePort ? _self.remotePort : remotePort // ignore: cast_nullable_to_non_nullable
@@ -159,10 +160,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  TunnelKind kind,  String sshHost,  String? localHost,  int localPort,  String? remoteHost,  int? remotePort,  String? remoteSocket,  String? group,  TunnelColour? colour)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  TunnelKind kind,  String sshHost,  String? bindAddress,  String? localHost,  int localPort,  String? remoteHost,  int? remotePort,  String? remoteSocket,  String? group,  TunnelColour? colour)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Tunnel() when $default != null:
-return $default(_that.id,_that.name,_that.kind,_that.sshHost,_that.localHost,_that.localPort,_that.remoteHost,_that.remotePort,_that.remoteSocket,_that.group,_that.colour);case _:
+return $default(_that.id,_that.name,_that.kind,_that.sshHost,_that.bindAddress,_that.localHost,_that.localPort,_that.remoteHost,_that.remotePort,_that.remoteSocket,_that.group,_that.colour);case _:
   return orElse();
 
 }
@@ -180,10 +181,10 @@ return $default(_that.id,_that.name,_that.kind,_that.sshHost,_that.localHost,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  TunnelKind kind,  String sshHost,  String? localHost,  int localPort,  String? remoteHost,  int? remotePort,  String? remoteSocket,  String? group,  TunnelColour? colour)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  TunnelKind kind,  String sshHost,  String? bindAddress,  String? localHost,  int localPort,  String? remoteHost,  int? remotePort,  String? remoteSocket,  String? group,  TunnelColour? colour)  $default,) {final _that = this;
 switch (_that) {
 case _Tunnel():
-return $default(_that.id,_that.name,_that.kind,_that.sshHost,_that.localHost,_that.localPort,_that.remoteHost,_that.remotePort,_that.remoteSocket,_that.group,_that.colour);}
+return $default(_that.id,_that.name,_that.kind,_that.sshHost,_that.bindAddress,_that.localHost,_that.localPort,_that.remoteHost,_that.remotePort,_that.remoteSocket,_that.group,_that.colour);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -197,10 +198,10 @@ return $default(_that.id,_that.name,_that.kind,_that.sshHost,_that.localHost,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  TunnelKind kind,  String sshHost,  String? localHost,  int localPort,  String? remoteHost,  int? remotePort,  String? remoteSocket,  String? group,  TunnelColour? colour)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  TunnelKind kind,  String sshHost,  String? bindAddress,  String? localHost,  int localPort,  String? remoteHost,  int? remotePort,  String? remoteSocket,  String? group,  TunnelColour? colour)?  $default,) {final _that = this;
 switch (_that) {
 case _Tunnel() when $default != null:
-return $default(_that.id,_that.name,_that.kind,_that.sshHost,_that.localHost,_that.localPort,_that.remoteHost,_that.remotePort,_that.remoteSocket,_that.group,_that.colour);case _:
+return $default(_that.id,_that.name,_that.kind,_that.sshHost,_that.bindAddress,_that.localHost,_that.localPort,_that.remoteHost,_that.remotePort,_that.remoteSocket,_that.group,_that.colour);case _:
   return null;
 
 }
@@ -212,13 +213,14 @@ return $default(_that.id,_that.name,_that.kind,_that.sshHost,_that.localHost,_th
 
 
 class _Tunnel extends Tunnel {
-  const _Tunnel({required this.id, this.name = '', this.kind = TunnelKind.local, this.sshHost = '', this.localHost, required this.localPort, this.remoteHost, this.remotePort, this.remoteSocket, this.group, this.colour}): super._();
+  const _Tunnel({required this.id, this.name = '', this.kind = TunnelKind.local, this.sshHost = '', this.bindAddress, this.localHost, required this.localPort, this.remoteHost, this.remotePort, this.remoteSocket, this.group, this.colour}): super._();
   
 
 @override final  String id;
 @override@JsonKey() final  String name;
 @override@JsonKey() final  TunnelKind kind;
 @override@JsonKey() final  String sshHost;
+@override final  String? bindAddress;
 @override final  String? localHost;
 @override final  int localPort;
 @override final  String? remoteHost;
@@ -238,13 +240,13 @@ _$TunnelCopyWith<_Tunnel> get copyWith => __$TunnelCopyWithImpl<_Tunnel>(this, _
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Tunnel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.sshHost, sshHost) || other.sshHost == sshHost)&&(identical(other.localHost, localHost) || other.localHost == localHost)&&(identical(other.localPort, localPort) || other.localPort == localPort)&&(identical(other.remoteHost, remoteHost) || other.remoteHost == remoteHost)&&(identical(other.remotePort, remotePort) || other.remotePort == remotePort)&&(identical(other.remoteSocket, remoteSocket) || other.remoteSocket == remoteSocket)&&(identical(other.group, group) || other.group == group)&&(identical(other.colour, colour) || other.colour == colour));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Tunnel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.sshHost, sshHost) || other.sshHost == sshHost)&&(identical(other.bindAddress, bindAddress) || other.bindAddress == bindAddress)&&(identical(other.localHost, localHost) || other.localHost == localHost)&&(identical(other.localPort, localPort) || other.localPort == localPort)&&(identical(other.remoteHost, remoteHost) || other.remoteHost == remoteHost)&&(identical(other.remotePort, remotePort) || other.remotePort == remotePort)&&(identical(other.remoteSocket, remoteSocket) || other.remoteSocket == remoteSocket)&&(identical(other.group, group) || other.group == group)&&(identical(other.colour, colour) || other.colour == colour));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,kind,sshHost,localHost,localPort,remoteHost,remotePort,remoteSocket,group,colour);
+    return Object.hash(runtimeType,id,name,kind,sshHost,bindAddress,localHost,localPort,remoteHost,remotePort,remoteSocket,group,colour);
 }
 
 
@@ -256,7 +258,7 @@ abstract mixin class _$TunnelCopyWith<$Res> implements $TunnelCopyWith<$Res> {
   factory _$TunnelCopyWith(_Tunnel value, $Res Function(_Tunnel) _then) = __$TunnelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, TunnelKind kind, String sshHost, String? localHost, int localPort, String? remoteHost, int? remotePort, String? remoteSocket, String? group, TunnelColour? colour
+ String id, String name, TunnelKind kind, String sshHost, String? bindAddress, String? localHost, int localPort, String? remoteHost, int? remotePort, String? remoteSocket, String? group, TunnelColour? colour
 });
 
 
@@ -273,13 +275,14 @@ class __$TunnelCopyWithImpl<$Res>
 
 /// Create a copy of Tunnel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? kind = null,Object? sshHost = null,Object? localHost = freezed,Object? localPort = null,Object? remoteHost = freezed,Object? remotePort = freezed,Object? remoteSocket = freezed,Object? group = freezed,Object? colour = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? kind = null,Object? sshHost = null,Object? bindAddress = freezed,Object? localHost = freezed,Object? localPort = null,Object? remoteHost = freezed,Object? remotePort = freezed,Object? remoteSocket = freezed,Object? group = freezed,Object? colour = freezed,}) {
   return _then(_Tunnel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as TunnelKind,sshHost: null == sshHost ? _self.sshHost : sshHost // ignore: cast_nullable_to_non_nullable
-as String,localHost: freezed == localHost ? _self.localHost : localHost // ignore: cast_nullable_to_non_nullable
+as String,bindAddress: freezed == bindAddress ? _self.bindAddress : bindAddress // ignore: cast_nullable_to_non_nullable
+as String?,localHost: freezed == localHost ? _self.localHost : localHost // ignore: cast_nullable_to_non_nullable
 as String?,localPort: null == localPort ? _self.localPort : localPort // ignore: cast_nullable_to_non_nullable
 as int,remoteHost: freezed == remoteHost ? _self.remoteHost : remoteHost // ignore: cast_nullable_to_non_nullable
 as String?,remotePort: freezed == remotePort ? _self.remotePort : remotePort // ignore: cast_nullable_to_non_nullable

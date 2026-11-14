@@ -102,10 +102,12 @@ class _TunnelsPageState extends State<TunnelsPage> {
                         initial: _editing,
                         kind: _newKind,
                         hosts: _hosts,
-                        groups: switch (context.read<TunnelsBloc>().state) {
-                          Ready(:final snapshot) => snapshot.tunnels.groups,
-                          _ => const [],
-                        },
+                        groups: context.select(
+                          (TunnelsBloc bloc) => switch (bloc.state) {
+                            Ready(:final snapshot) => snapshot.tunnels.groups,
+                            _ => const <String>[],
+                          },
+                        ),
                         onSave: (tunnel) {
                           context.read<TunnelsBloc>().add(
                             TunnelsEvent.send(AgentCommand.save(tunnel)),
@@ -194,109 +196,269 @@ class const _TunnelList({
 
   Widget _rows(BuildContext context, TunnelsSnapshot snapshot) {
     final colors = TakaColors.of(context);
-    final shown = snapshot.tunnels.shown;
+    final rows = snapshot.tunnels.rows;
 
     return ReorderableRows(
-      onReorder: (from, to) {
-        final id = shown[from].id;
-        _send(
-          context,
-          AgentCommand.move(
-            id,
-            snapshot.tunnels.moveIndexFor(id, shownIndex: to),
-          ),
-        );
-      },
+      spanOf: (index) => rows[index].span,
+      settle: snapshot.tunnels.landingOf,
+      onReorder: (from, to) => _send(
+        context,
+        AgentCommand.arrange([
+          for (final tunnel in snapshot.tunnels.droppedAt(from, to))
+            (id: tunnel.id, group: tunnel.group),
+        ]),
+      ),
       children: [
-        for (final (index, tunnel) in shown.indexed)
-          Column(
-            key: ValueKey(tunnel.id),
-            children: [
-              if (tunnel.group case final group?
-                  when index == 0 || shown[index - 1].group != group)
-                _GroupHeader(
-                  group,
-                  colour: snapshot.groupColours[group],
-                  onColour: (colour) => _send(
-                    context,
-                    AgentCommand.setGroupColour(group, colour),
-                  ),
-                ),
-              TunnelTile(
-                tunnel: tunnel,
-                status: snapshot.statusOf(tunnel.id),
-                colour: snapshot.colourOf(tunnel),
-                onToggle: () => _send(context, AgentCommand.toggle(tunnel.id)),
-                onTrust: (fingerprint) => _send(
+        for (final (index, row) in rows.indexed)
+          switch (row) {
+            GroupHeaderRow(:final group) => _GroupHeader(
+              group,
+              key: ValueKey('group $group'),
+              colour: snapshot.groupColours[group],
+              onColour: (colour) =>
+                  _send(context, AgentCommand.setGroupColour(group, colour)),
+              onRename: (name) => _rename(context, snapshot, group, name),
+            ),
+            GroupEndRow(:final group) => SizedBox(
+              key: ValueKey('end $group'),
+              height: 12,
+            ),
+            TunnelRow(:final tunnel) => Builder(
+              key: ValueKey(tunnel.id),
+              builder: (context) {
+                // Lifted, it shows the group it would land in.
+                final group = switch (ReorderableRows.dropIndexOf(
                   context,
-                  AgentCommand.trustHostKey(tunnel.id, fingerprint),
-                ),
-                onEdit: () => onEdit(tunnel),
-                onDelete: () => _send(context, AgentCommand.remove(tunnel.id)),
-              ),
-              if (index < shown.length - 1 &&
-                  shown[index + 1].group == tunnel.group)
-                Divider(
-                  height: 1,
-                  indent: 6,
-                  endIndent: 6,
-                  color: colors.background,
-                ),
-            ],
-          ),
+                  index,
+                )) {
+                  final to? => snapshot.tunnels.groupOnDrop(index, to),
+                  null => tunnel.group,
+                };
+                final groupColour = snapshot.groupColours[group];
+
+                return Column(
+                  children: [
+                    TunnelTile(
+                      tunnel: tunnel,
+                      status: snapshot.statusOf(tunnel.id),
+                      colour: snapshot.colourOf(tunnel),
+                      isInGroup: group != null,
+                      groupColour: groupColour,
+                      onToggle: () =>
+                          _send(context, AgentCommand.toggle(tunnel.id)),
+                      onTrust: (fingerprint) => _send(
+                        context,
+                        AgentCommand.trustHostKey(tunnel.id, fingerprint),
+                      ),
+                      onEdit: () => onEdit(tunnel),
+                      onDelete: () =>
+                          _send(context, AgentCommand.remove(tunnel.id)),
+                    ),
+                    if (rows.elementAtOrNull(index + 1)
+                        case TunnelRow(tunnel: Tunnel(group: final next))
+                        when next == tunnel.group)
+                      _InGroup(
+                        isInGroup: group != null,
+                        colour: groupColour,
+                        child: Divider(
+                          height: 1,
+                          indent: 6,
+                          endIndent: 6,
+                          color: colors.selection,
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          },
       ],
     );
+  }
+
+  void _rename(
+    BuildContext context,
+    TunnelsSnapshot snapshot,
+    String group,
+    String name,
+  ) {
+    final typed = groupNamed(name);
+    if (typed == null || typed == group) return;
+    final renamed = groupLike(snapshot.tunnels.groups, typed, except: group);
+
+    _send(
+      context,
+      AgentCommand.arrange([
+        for (final tunnel in snapshot.tunnels)
+          (
+            id: tunnel.id,
+            group: tunnel.group == group ? renamed : tunnel.group,
+          ),
+      ]),
+    );
+    // A group it joins keeps its own colour.
+    if (snapshot.groupColours[group] case final colour?
+        when snapshot.groupColours[renamed] == null) {
+      _send(context, AgentCommand.setGroupColour(renamed, colour));
+    }
   }
 
   void _send(BuildContext context, AgentCommand command) =>
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
 
-class const _GroupHeader(
-  final String group, {
+class const _InGroup({
+  required final bool isInGroup,
   required final TunnelColour? colour,
-  required final void Function(TunnelColour? colour) onColour,
+  required final Widget child,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    if (!isInGroup) return child;
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 14),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: switch (colour) {
+                final colour? => TakaColors.of(context).tunnel(colour),
+                null => TakaColors.of(context).guide,
+              },
+              width: 2,
+            ),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class const _GroupHeader(
+  final String group, {
+  super.key,
+  required final TunnelColour? colour,
+  required final void Function(TunnelColour? colour) onColour,
+  required final void Function(String name) onRename,
+}) extends StatefulWidget {
+  @override
+  State<_GroupHeader> createState() => _GroupHeaderState();
+}
+
+class _GroupHeaderState extends State<_GroupHeader> {
+  final _focus = FocusNode();
+  TextEditingController? _editing;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (!_focus.hasFocus) _finish(save: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    _editing?.dispose();
+    super.dispose();
+  }
+
+  void _start() => setState(
+    () => _editing = TextEditingController(text: widget.group)
+      ..selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: widget.group.length,
+      ),
+  );
+
+  void _finish({required bool save}) {
+    final editing = _editing;
+    if (editing == null) return;
+
+    setState(() => _editing = null);
+    if (save) widget.onRename(editing.text);
+    // The field still holds it until it's gone from the tree.
+    WidgetsBinding.instance.addPostFrameCallback((_) => editing.dispose());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = TakaColors.of(context);
+    const style = TextStyle(fontSize: 12, fontWeight: FontWeight.w500);
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
-        // A record, since a menu item whose value is null counts as no pick.
-        child: PopupMenuButton<(TunnelColour?,)>(
-          tooltip: 'Colour for $group',
-          onSelected: (picked) => onColour(picked.$1),
-          itemBuilder: (_) => [
-            for (final colour in TunnelColour.values)
-              PopupMenuItem(
-                value: (colour,),
-                child: Row(
-                  spacing: 8,
-                  children: [ColourDot(colour), Text(colour.label)],
-                ),
-              ),
-            const PopupMenuItem(value: (null,), child: Text('No colour')),
-          ],
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 6,
-            children: [
-              if (colour case final colour?) ColourDot(colour),
-              Flexible(
-                child: Text(
-                  group,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: TakaColors.of(context).textSecondary,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 6,
+          children: [
+            // A record, since a menu item whose value is null counts as no pick.
+            PopupMenuButton<(TunnelColour?,)>(
+              tooltip: 'Colour for ${widget.group}',
+              padding: EdgeInsets.zero,
+              onSelected: (picked) => widget.onColour(picked.$1),
+              itemBuilder: (_) => [
+                for (final colour in TunnelColour.values)
+                  PopupMenuItem(
+                    value: (colour,),
+                    child: Row(
+                      spacing: 8,
+                      children: [ColourDot(colour), Text(colour.label)],
+                    ),
+                  ),
+                const PopupMenuItem(value: (null,), child: Text('No colour')),
+              ],
+              child: switch (widget.colour) {
+                final colour? => ColourDot(colour),
+                null => Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: colors.guide),
                   ),
                 ),
-              ),
-            ],
-          ),
+              },
+            ),
+            Flexible(
+              child: switch (_editing) {
+                final editing? => CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(LogicalKeyboardKey.escape): () =>
+                        _finish(save: false),
+                  },
+                  child: TextField(
+                    controller: editing,
+                    focusNode: _focus,
+                    autofocus: true,
+                    style: style.copyWith(color: colors.text),
+                    decoration: const InputDecoration.collapsed(hintText: ''),
+                    onSubmitted: (_) => _finish(save: true),
+                  ),
+                ),
+                null => Tooltip(
+                  message: 'Rename',
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.text,
+                    child: GestureDetector(
+                      onTap: _start,
+                      child: Text(
+                        widget.group,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: style.copyWith(color: colors.textSecondary),
+                      ),
+                    ),
+                  ),
+                ),
+              },
+            ),
+          ],
         ),
       ),
     );

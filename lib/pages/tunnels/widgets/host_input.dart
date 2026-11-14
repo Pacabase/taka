@@ -8,6 +8,10 @@ class const HostInput({
   required final List<String> hosts,
   required final String hint,
   required final TextStyle style,
+
+  /// For a name that may be new: no list until typed, and Enter keeps what
+  /// was typed rather than taking a suggestion.
+  final bool acceptsNew = false,
   required final void Function() onSubmitted,
 }) extends StatefulWidget {
   @override
@@ -32,6 +36,7 @@ class _HostInputState extends State<HostInput> {
       focusNode: _focus,
       optionsBuilder: (value) {
         final typed = value.text.trim().toLowerCase();
+        if (widget.acceptsNew && typed.isEmpty) return const [];
         return widget.hosts.where(
           (host) => host.toLowerCase().contains(typed) && host != value.text,
         );
@@ -43,7 +48,9 @@ class _HostInputState extends State<HostInput> {
         style: widget.style,
         onSubmitted: () {
           final typed = controller.text;
-          if (!widget.hosts.contains(typed.trim())) onFieldSubmitted();
+          if (!widget.acceptsNew && !widget.hosts.contains(typed.trim())) {
+            onFieldSubmitted();
+          }
           if (controller.text == typed) widget.onSubmitted();
         },
       ),

@@ -16,8 +16,11 @@ class TunnelManager({
   required final SshClient client,
   final Future<void> Function()? beforeConnect,
   final Future<bool> Function()? isLocked,
-  final Future<void> Function(int localPort)? checkDestination,
+  final Future<void> Function(String address, int localPort)? checkDestination,
   final Duration warningLifetime = const Duration(seconds: 30),
+
+  /// How long after the check ssh may still say the destination refused it.
+  final Duration checkWindow = const Duration(seconds: 2),
 
   /// A dropped tunnel fails once a try after the last delay fails too.
   final List<Duration> retryDelays = const [
@@ -77,6 +80,12 @@ class TunnelManager({
       for (final saved in _tunnels) saved.id == tunnel.id ? tunnel : saved,
       if (previous == null) tunnel,
     ];
+    // Otherwise a group shows where its first tunnel is, so it could jump.
+    if (tunnel.group case final group? when previous?.group != group) {
+      final others = _tunnels.where((saved) => saved.id != tunnel.id).toList();
+      final last = others.lastIndexWhere((saved) => saved.group == group);
+      if (last != -1) _tunnels = others..insert(last + 1, tunnel);
+    }
     await _persist();
 
     final isWanted =
@@ -108,8 +117,17 @@ class TunnelManager({
   Future<void> import(List<Tunnel> tunnels) async {
     final imported = [..._tunnels];
     final ids = {for (final saved in imported) saved.id};
-    for (final tunnel in tunnels) {
-      if (imported.any((saved) => tunnel.copyWith(id: saved.id) == saved)) {
+    for (final read in tunnels) {
+      final tunnel = read.copyWith(
+        group: switch (read.group) {
+          final group? => groupLike(imported.groups, group),
+          null => null,
+        },
+      );
+      // A tunnel already saved stays in the group it has here.
+      if (imported.any(
+        (saved) => tunnel.copyWith(id: saved.id, group: saved.group) == saved,
+      )) {
         continue;
       }
       var id = tunnel.id;
@@ -131,11 +149,11 @@ class TunnelManager({
     await _persist();
   }
 
-  Future<void> move(String id, int index) async {
-    final moved = _tunnels.moved(id, index);
-    if (identical(moved, _tunnels)) return;
+  Future<void> arrange(List<({String id, String? group})> order) async {
+    final arranged = _tunnels.arranged(order);
+    if (const ListEquality<Tunnel>().equals(arranged, _tunnels)) return;
 
-    _tunnels = moved;
+    _tunnels = arranged;
     await _persist();
   }
 
@@ -172,7 +190,6 @@ class TunnelManager({
     ]);
   }
 
-  /// Every tunnel, or only those in [group].
   Future<void> connectAll({String? group}) =>
       Future.wait(_idsIn(group).whereNot(_isOn).map(toggle));
 
@@ -206,6 +223,7 @@ class TunnelManager({
       isLocked: isLocked,
       checkDestination: checkDestination,
       warningLifetime: warningLifetime,
+      checkWindow: checkWindow,
       retryDelays: retryDelays,
       lockedRecheck: lockedRecheck,
       stableAfter: stableAfter,

@@ -93,9 +93,11 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
       ].join(' · '),
     ),
     const SeparatorEntry(),
-    for (final tunnel in tunnels.where((tunnel) => tunnel.group == null))
-      _tunnelEntry(tunnel, snapshot),
-    for (final group in tunnels.groups) _groupEntry(group, snapshot),
+    for (final row in tunnels.rows)
+      if (row case GroupHeaderRow(:final group))
+        _groupEntry(group, snapshot)
+      else if (row case TunnelRow(:final tunnel) when tunnel.group == null)
+        _tunnelEntry(tunnel, snapshot),
     const SeparatorEntry(),
     SubmenuEntry('Tunnel Actions', [
       for (final tunnel in tunnels.shown)
@@ -123,12 +125,17 @@ TrayEntry _groupEntry(String group, TunnelsSnapshot snapshot) {
       .length;
 
   return SubmenuEntry(
-    _shortened(
-      _squared(
-        snapshot.groupColours[group],
-        '$group — $connected of ${members.length} connected',
+    // A long name gives way, not the count or the colour.
+    switch ((
+      ' — $connected of ${members.length} connected',
+      snapshot.groupColours[group],
+    )) {
+      (final count, final colour) => _squared(
+        colour,
+        '${_shortened(group, _width - count.length - (colour == null ? 0 : 2))}'
+        '$count',
       ),
-    ),
+    },
     [
       for (final tunnel in members) _tunnelEntry(tunnel, snapshot),
       if (members.length > 1) ...[
@@ -154,7 +161,8 @@ TrayEntry _tunnelEntry(Tunnel tunnel, TunnelsSnapshot snapshot) {
         Connected() when tunnel.kind == TunnelKind.remote =>
           '${tunnel.title} — port ${tunnel.remotePort} on the server',
         Connected() => '${tunnel.title} — ${tunnel.address}',
-        Failed(:final message) => '${tunnel.title} — ${shortReason(message)}',
+        final Failed failure =>
+          '${tunnel.title} — ${failureShort(tunnel, failure)}',
         Reconnecting() => '${tunnel.title} — reconnecting…',
         UnknownHostKey() => "${tunnel.title} — check the server's key",
       }),
@@ -168,9 +176,9 @@ String _squared(TunnelColour? colour, String label) =>
 
 List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
   final whyDown = [
-    if (status
-        case Failed(message: final reason) || Reconnecting(:final reason))
-      InfoEntry(plainReason(reason)),
+    if (status case final Failed failure)
+      InfoEntry(failureSentence(tunnel, failure)),
+    if (status case Reconnecting(:final reason)) InfoEntry(plainReason(reason)),
     if (status is Failed)
       TunnelActionEntry(tunnel, TunnelAction.tryAgain, 'Try Again'),
     if (status case UnknownHostKey(:final host))
@@ -194,9 +202,9 @@ List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
 const _width = 50;
 
 // A menu is as wide as its longest item, and wraps none.
-String _shortened(String label) => label.length <= _width
+String _shortened(String label, [int width = _width]) => label.length <= width
     ? label
-    : '${label.substring(0, _width - 1).trimRight()}…';
+    : '${label.substring(0, width - 1).trimRight()}…';
 
 String trayTooltip(TunnelsSnapshot snapshot) =>
     switch (snapshot.connectedCount) {

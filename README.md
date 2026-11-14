@@ -65,6 +65,7 @@ Ordered roughly by priority; each line is about one pull request.
 ### Daily driver (0.2, Linux)
 
 - [ ] **Activity log** per tunnel.
+- [ ] **Tags**, several per tunnel, to filter the list by.
 - [ ] **Import** hosts from `~/.ssh/config`.
 - [ ] **More Linux packages** — AppImage and the AUR.
 
@@ -88,4 +89,3 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Health checks** that show a tunnel as connected only once the service behind it answers.
 - [ ] **Network rules** — connect on a given Wi-Fi or VPN, pause while offline.
 - [ ] **On-demand tunnels** that start ssh on the first connection and stop when idle.
-- [ ] **Binding to the LAN**, so other devices can use a tunnel.

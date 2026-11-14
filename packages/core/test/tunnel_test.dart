@@ -68,6 +68,14 @@ void main() {
       expect(Tunnel.fromJson(toRouter.toJson()), toRouter);
     });
 
+    test('a bind address round-trips, and is left out when there is none', () {
+      final docker = database.copyWith(bindAddress: '172.17.0.1');
+
+      expect(docker.toJson(), containsPair('bindAddress', '172.17.0.1'));
+      expect(Tunnel.fromJson(docker.toJson()), docker);
+      expect(database.toJson(), isNot(contains('bindAddress')));
+    });
+
     test('a tunnel to a socket round-trips', () {
       expect(docker.toJson(), {
         'id': 's6',
@@ -119,18 +127,18 @@ void main() {
     test('summary describes a local tunnel', () {
       expect(
         database.summary,
-        'localhost:15432 → db.internal:5432 via deploy@bastion.example.com',
+        '127.0.0.1:15432 → db.internal:5432 via deploy@bastion.example.com',
       );
     });
 
     test('summary describes a SOCKS proxy', () {
-      expect(proxy.summary, 'SOCKS on localhost:1080 via bastion');
+      expect(proxy.summary, 'SOCKS on 127.0.0.1:1080 via bastion');
     });
 
     test('summary describes a tunnel to a socket', () {
       expect(
         docker.summary,
-        'localhost:2375 → /var/run/docker.sock via bastion',
+        '127.0.0.1:2375 → /var/run/docker.sock via bastion',
       );
     });
 
@@ -148,9 +156,55 @@ void main() {
     });
 
     test('address is where a client connects', () {
-      expect(database.address, 'localhost:15432');
-      expect(proxy.address, 'socks5h://localhost:1080');
+      expect(database.address, '127.0.0.1:15432');
+      expect(proxy.address, 'socks5h://127.0.0.1:1080');
       expect(preview.address, 'localhost:8080');
+    });
+
+    test('address and summary name another address to listen on', () {
+      final docker = database.copyWith(bindAddress: '172.17.0.1');
+
+      expect(docker.address, '172.17.0.1:15432');
+      expect(docker.summary, startsWith('172.17.0.1:15432 → '));
+      expect(
+        proxy.copyWith(bindAddress: 'fd00::1').address,
+        'socks5h://[fd00::1]:1080',
+      );
+    });
+
+    test('a tunnel on every address says so, and is reached on loopback', () {
+      expect(
+        database.copyWith(bindAddress: '0.0.0.0').summary,
+        startsWith('0.0.0.0:15432 → '),
+      );
+      expect(
+        database.copyWith(bindAddress: '0.0.0.0').address,
+        '127.0.0.1:15432',
+      );
+      expect(
+        proxy.copyWith(bindAddress: '::').summary,
+        'SOCKS on [::]:1080 via bastion',
+      );
+      expect(
+        database.copyWith(bindAddress: '0.0.0.0').reachableAt,
+        '127.0.0.1',
+      );
+      expect(proxy.copyWith(bindAddress: '::').address, 'socks5h://[::1]:1080');
+      expect(database.reachableAt, '127.0.0.1');
+    });
+
+    test('reaches every address on loopback however it is written', () {
+      for (final (address, reached) in [
+        ('::0', '::1'),
+        ('0:0:0:0:0:0:0:0', '::1'),
+        ('172.17.0.1', '172.17.0.1'),
+      ]) {
+        expect(
+          database.copyWith(bindAddress: address).reachableAt,
+          reached,
+          reason: address,
+        );
+      }
     });
 
     test('toString names the id and title', () {
@@ -188,39 +242,202 @@ void main() {
       expect(const [b, d].groups, isEmpty);
     });
 
-    test('shows the tunnels in no group first, then each group', () {
-      expect(tunnels.shown, [b, d, e, a, c]);
+    String layout(List<Tunnel> tunnels) => tunnels.rows
+        .map(
+          (row) => switch (row) {
+            GroupHeaderRow(:final group, :final size) => '[$group $size]',
+            TunnelRow(:final tunnel) => tunnel.id,
+            GroupEndRow() => '/',
+          },
+        )
+        .join(' ');
+
+    // Rows: 0 [Prod 2], 1 a, 2 c, 3 /, 4 b, 5 d, 6 [dev 1], 7 e, 8 /.
+    test(
+      'shows each group where its first tunnel is, between a header and a gap',
+      () {
+        expect(tunnels.shown, [a, c, b, d, e]);
+        expect(layout(tunnels), '[Prod 2] a c / b d [dev 1] e /');
+      },
+    );
+
+    group('a dropped tunnel', () {
+      test('dropped above a header is in no group', () {
+        expect(
+          layout(tunnels.droppedAt(4, 0)),
+          'b [Prod 2] a c / d [dev 1] e /',
+        );
+      });
+
+      test("dropped among a group's tunnels joins it", () {
+        expect(
+          layout(tunnels.droppedAt(5, 2)),
+          '[Prod 3] a d c / b [dev 1] e /',
+        );
+      });
+
+      test('dropped right under a header joins that group', () {
+        expect(
+          layout(tunnels.droppedAt(4, 1)),
+          '[Prod 3] b a c / d [dev 1] e /',
+        );
+      });
+
+      test("dropped above a group's gap joins it as its last tunnel", () {
+        expect(
+          layout(tunnels.droppedAt(4, 3)),
+          '[Prod 3] a c b / d [dev 1] e /',
+        );
+      });
+
+      test("dropped below a group's gap lands after the group", () {
+        final dropped = tunnels.droppedAt(1, 3);
+
+        expect(layout(dropped), '[Prod 1] c / a b d [dev 1] e /');
+        expect(dropped.firstWhere((tunnel) => tunnel.id == 'a').group, isNull);
+      });
+
+      test(
+        "taken out of its group, a group's only tunnel leaves no header",
+        () {
+          expect(layout(tunnels.droppedAt(7, 0)), 'e [Prod 2] a c / b d');
+        },
+      );
+
+      test("dropped above the last group's gap joins it", () {
+        expect(
+          layout(tunnels.droppedAt(4, 7)),
+          '[Prod 2] a c / d [dev 2] e b /',
+        );
+        expect(tunnels.groupOnDrop(4, 7), 'dev');
+        expect(tunnels.groupOnDrop(4, 0), isNull);
+      });
+
+      test('dropped past the end lands at the end, in no group', () {
+        expect(tunnels.droppedAt(4, 99).last, b);
+      });
     });
 
-    test('moves a tunnel to where it was dropped among those shown', () {
-      int to(String id, int shownIndex) =>
-          tunnels.moveIndexFor(id, shownIndex: shownIndex);
+    group('a dropped group', () {
+      test('moves with all its tunnels', () {
+        expect(
+          layout(tunnels.droppedAt(0, 5)),
+          'b d [dev 1] e / [Prod 2] a c /',
+        );
+        expect(
+          layout(tunnels.droppedAt(6, 0)),
+          '[dev 1] e / [Prod 2] a c / b d',
+        );
+      });
 
-      expect(tunnels.moved('d', to('d', 0)).shown, [d, b, e, a, c]);
-      expect(tunnels.moved('c', to('c', 3)).shown, [b, d, e, c, a]);
-      expect(tunnels.moved('a', to('a', 9)).shown, [b, d, e, c, a]);
-      expect(const [a].moveIndexFor('a', shownIndex: 0), 0);
+      test('can sit between tunnels in no group', () {
+        expect(
+          layout(tunnels.droppedAt(6, 5)),
+          '[Prod 2] a c / b [dev 1] e / d',
+        );
+      });
+
+      test(
+        'dropped inside another group lands next to it, the nearer side',
+        () {
+          expect(
+            layout(tunnels.droppedAt(6, 3)),
+            '[Prod 2] a c / [dev 1] e / b d',
+          );
+          expect(
+            layout(tunnels.droppedAt(6, 1)),
+            '[dev 1] e / [Prod 2] a c / b d',
+          );
+          // Halfway, it goes before.
+          expect(
+            layout(tunnels.droppedAt(6, 2)),
+            '[dev 1] e / [Prod 2] a c / b d',
+          );
+        },
+      );
+
+      test('dropped past the end lands at the end', () {
+        expect(tunnels.droppedAt(0, 99), tunnels.droppedAt(0, 5));
+      });
     });
+
+    test('groupLike names the group in use, whatever the case', () {
+      expect(groupLike(['Prod', 'dev'], 'prod'), 'Prod');
+      expect(groupLike(['Prod'], 'Staging'), 'Staging');
+      expect(groupLike(['prod'], 'Prod', except: 'prod'), 'Prod');
+    });
+
+    test('a blank group is no group', () {
+      expect(
+        Tunnel.fromJson({'id': 'x', 'localPort': 1, 'group': '  '}).group,
+        isNull,
+      );
+      expect(
+        Tunnel.fromJson({'id': 'x', 'localPort': 1, 'group': ' Prod '}).group,
+        'Prod',
+      );
+    });
+
+    test(
+      'arranges by an order of ids and groups, keeping any it leaves out',
+      () {
+        expect(
+          tunnels.arranged([(id: 'e', group: null), (id: 'a', group: 'dev')]),
+          [e.copyWith(group: null), a.copyWith(group: 'dev'), b, c, d],
+        );
+        expect(
+          tunnels.arranged([
+            (id: 'zz', group: 'x'),
+            (id: 'b', group: 'Prod'),
+            (id: 'b', group: 'dev'),
+          ]),
+          [b.copyWith(group: 'Prod'), a, c, d, e],
+        );
+      },
+    );
   });
 
-  group('moved', () {
-    const web = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
-    const tunnels = [database, proxy, web];
+  group('addresses', () {
+    for (final (typed, kept) in [
+      (null, null),
+      ('', null),
+      (' 127.0.0.1 ', null),
+      ('localhost', null),
+      ('*', '0.0.0.0'),
+      ('[::1]', '::1'),
+      ('172.17.0.1', '172.17.0.1'),
+    ]) {
+      test('keeps ${typed == null ? 'none' : "'$typed'"} as $kept', () {
+        expect(bindAddressNamed(typed), kept);
+      });
+    }
 
-    test('puts a tunnel at the index among the others', () {
-      expect(tunnels.moved('a1', 2), [proxy, web, database]);
-      expect(tunnels.moved('c3', 0), [web, database, proxy]);
-      expect(tunnels.moved('b2', 1), tunnels);
+    test('a saved default address reads as none', () {
+      expect(
+        Tunnel.fromJson({...database.toJson(), 'bindAddress': '127.0.0.1'}),
+        database,
+      );
     });
 
-    test('keeps an index past either end in the list', () {
-      expect(tunnels.moved('b2', 9), [database, web, proxy]);
-      expect(tunnels.moved('b2', -1), [proxy, database, web]);
-    });
-
-    test('leaves the list as it is for a tunnel it does not have', () {
-      expect(tunnels.moved('zz', 0), tunnels);
-    });
+    for (final (address, isIp, isLoopback, isEvery) in [
+      ('127.0.0.1', true, true, false),
+      ('127.0.0.2', true, true, false),
+      ('::1', true, true, false),
+      ('0:0:0:0:0:0:0:1', true, true, false),
+      ('0.0.0.0', true, false, true),
+      ('::', true, false, true),
+      ('::0', true, false, true),
+      ('172.17.0.1', true, false, false),
+      ('localhost', false, false, false),
+      ('1.2.3', false, false, false),
+      ('fe80::1%en0', false, false, false),
+    ]) {
+      test(address, () {
+        expect(isIpAddress(address), isIp, reason: 'isIpAddress');
+        expect(isLoopbackAddress(address), isLoopback, reason: 'isLoopback');
+        expect(isEveryAddress(address), isEvery, reason: 'isEveryAddress');
+      });
+    }
   });
 
   group('sshCommand', () {
@@ -254,6 +471,22 @@ void main() {
         preview.copyWith(localHost: '192.168.1.1').sshCommand,
         'ssh -N -R 127.0.0.1:8080:192.168.1.1:3000 bastion',
       );
+    });
+
+    test('listens on the bind address', () {
+      expect(
+        database.copyWith(bindAddress: '172.17.0.1').sshCommand,
+        contains('-L 172.17.0.1:15432:db.internal:5432'),
+      );
+      expect(
+        docker.copyWith(bindAddress: '0.0.0.0').sshCommand,
+        contains('-L 0.0.0.0:2375:/var/run/docker.sock'),
+      );
+      expect(
+        proxy.copyWith(bindAddress: '::').sshCommand,
+        contains('-D [::]:1080'),
+      );
+      expect(database.copyWith(bindAddress: 'localhost').sshCommand, isNull);
     });
 
     test('is null for a tunnel ssh cannot open', () {

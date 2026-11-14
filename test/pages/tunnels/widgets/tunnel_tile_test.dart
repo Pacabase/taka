@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/taka_app.dart';
+import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/colour_dot.dart';
 
@@ -29,7 +30,9 @@ void main() {
     WidgetTester tester, {
     Tunnel tunnel = unnamed,
     TunnelStatus status = const Stopped(),
+    bool isInGroup = false,
     TunnelColour? colour,
+    TunnelColour? groupColour,
   }) async {
     toggles = 0;
     trusted = [];
@@ -40,7 +43,9 @@ void main() {
           body: TunnelTile(
             tunnel: tunnel,
             status: status,
+            isInGroup: isInGroup,
             colour: colour,
+            groupColour: groupColour,
             onToggle: () => toggles++,
             onTrust: trusted.add,
             onEdit: () {},
@@ -50,6 +55,39 @@ void main() {
       ),
     );
   }
+
+  testWidgets("in a group, it's indented behind a guide line", (tester) async {
+    double left() => tester.getTopLeft(find.text(unnamed.summary)).dx;
+    bool hasGuide() => tester
+        .widgetList<Container>(find.byType(Container))
+        .any(
+          (container) => switch (container.decoration) {
+            BoxDecoration(border: Border(:final left)) => left.width == 2,
+            _ => false,
+          },
+        );
+
+    await pumpTile(tester);
+    final outside = left();
+    expect(hasGuide(), isFalse);
+
+    await pumpTile(tester, isInGroup: true);
+    expect(left() - outside, 16);
+    expect(hasGuide(), isTrue);
+
+    await pumpTile(tester, isInGroup: true, groupColour: TunnelColour.blue);
+    final colors = TakaColors.of(tester.element(find.byType(TunnelTile)));
+    expect(
+      tester
+          .widgetList<Container>(find.byType(Container))
+          .map((container) => container.decoration)
+          .whereType<BoxDecoration>()
+          .map((decoration) => decoration.border)
+          .whereType<Border>()
+          .map((border) => border.left.color),
+      contains(colors.tunnel(TunnelColour.blue)),
+    );
+  });
 
   testWidgets('shows its colour as a dot, and no dot without one', (
     tester,
@@ -201,6 +239,19 @@ void main() {
 
     expect(find.text('The server refused the login.'), findsOneWidget);
     expect(find.byTooltip(message), findsOneWidget);
+  });
+
+  testWidgets('a forward the server could not make names its destination', (
+    tester,
+  ) async {
+    const line = 'channel 2: open failed: connect failed: Connection refused';
+    await pumpTile(tester, status: const Failed(line, isForward: true));
+
+    expect(
+      find.text("Can't reach localhost:5432 through the server."),
+      findsOneWidget,
+    );
+    expect(find.byTooltip(line), findsOneWidget);
   });
 
   testWidgets('a tunnel to a new server shows its key, and Trust sends it', (

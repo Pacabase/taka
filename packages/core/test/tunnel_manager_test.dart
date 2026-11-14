@@ -14,6 +14,10 @@ import 'package:test/test.dart';
 import 'fakes/fakes.dart';
 
 void main() {
+  const refused = SshForwardFailed(
+    'channel 2: open failed: connect failed: Connection refused',
+    reason: 'Connection refused',
+  );
   late MockSshClient client;
   late FakeStore store;
   late FakeTunnel tunnel;
@@ -22,6 +26,7 @@ void main() {
     any(),
     remoteHost: any(named: 'remoteHost'),
     remotePort: any(named: 'remotePort'),
+    bindAddress: any(named: 'bindAddress'),
     localPort: any(named: 'localPort'),
     onLog: any(named: 'onLog'),
     abortTrigger: any(named: 'abortTrigger'),
@@ -29,6 +34,16 @@ void main() {
 
   Future<SshTunnel> openAnySocksProxy() => client.openSocksProxy(
     any(),
+    bindAddress: any(named: 'bindAddress'),
+    localPort: any(named: 'localPort'),
+    onLog: any(named: 'onLog'),
+    abortTrigger: any(named: 'abortTrigger'),
+  );
+
+  Future<SshTunnel> openAnySocketTunnel() => client.openSocketTunnel(
+    any(),
+    remoteSocket: any(named: 'remoteSocket'),
+    bindAddress: any(named: 'bindAddress'),
     localPort: any(named: 'localPort'),
     onLog: any(named: 'onLog'),
     abortTrigger: any(named: 'abortTrigger'),
@@ -137,6 +152,19 @@ void main() {
       },
     );
 
+    test('puts a tunnel that joins a group after its tunnels', () async {
+      const cache = Tunnel(id: 'c3', localPort: 6379, group: 'Prod');
+      store = FakeStore([proxy, database.copyWith(group: 'Prod'), cache]);
+      final manager = await loaded();
+
+      await manager.save(proxy.copyWith(group: 'Prod'));
+
+      expect(manager.snapshot.tunnels.map((tunnel) => tunnel.id), [
+        'a1',
+        'c3',
+        'b2',
+      ]);
+    });
     test(
       'keeps a tunnel that is on connected when only its colour changes',
       () async {
@@ -171,6 +199,40 @@ void main() {
 
       expect(manager.snapshot.tunnels, [database, proxy, added]);
       expect(store.tunnels, [database, proxy, added]);
+    });
+
+    test(
+      'skips a tunnel already saved, keeping the group it has here',
+      () async {
+        store = FakeStore([database.copyWith(group: 'Prod'), proxy]);
+        final manager = await loaded();
+
+        await manager.import([database.copyWith(id: 'x9'), proxy]);
+
+        expect(manager.snapshot.tunnels, [
+          database.copyWith(group: 'Prod'),
+          proxy,
+        ]);
+      },
+    );
+
+    test("puts a tunnel in a group in use, whatever the name's case", () async {
+      store = FakeStore([database.copyWith(group: 'Prod')]);
+      final manager = await loaded();
+      const added = Tunnel(id: 'c3', localPort: 8080, group: 'prod');
+
+      await manager.import([added]);
+
+      expect(manager.snapshot.tunnels.last.group, 'Prod');
+    });
+
+    test('keeps the group of a tunnel it adds', () async {
+      final manager = await loaded();
+      const added = Tunnel(id: 'c3', localPort: 8080, group: 'Web');
+
+      await manager.import([added]);
+
+      expect(manager.snapshot.tunnels.last, added);
     });
 
     test('skips a tunnel already saved, whatever its id', () async {
@@ -270,15 +332,7 @@ void main() {
 
     test('opens a tunnel to a socket with its fields', () async {
       store = FakeStore([docker]);
-      when(
-        () => client.openSocketTunnel(
-          any(),
-          remoteSocket: any(named: 'remoteSocket'),
-          localPort: any(named: 'localPort'),
-          onLog: any(named: 'onLog'),
-          abortTrigger: any(named: 'abortTrigger'),
-        ),
-      ).thenAnswer((_) async => tunnel);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
       final manager = await loaded();
 
       await manager.toggle('s6');
@@ -297,17 +351,42 @@ void main() {
       expect(tunnel.closeCount, 1);
     });
 
-    test('opens the socket even with a host and port left over', () async {
-      store = FakeStore([docker.copyWith(remoteHost: 'db', remotePort: 5432)]);
-      when(
-        () => client.openSocketTunnel(
+    test('a SOCKS proxy and a socket listen on their bind address', () async {
+      store = FakeStore([
+        proxy.copyWith(bindAddress: '0.0.0.0'),
+        docker.copyWith(bindAddress: '172.17.0.1'),
+      ]);
+      when(openAnySocksProxy).thenAnswer((_) async => tunnel);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
+      final manager = await loaded();
+
+      await manager.toggle('b2');
+      await manager.toggle('s6');
+
+      verify(
+        () => client.openSocksProxy(
           any(),
-          remoteSocket: any(named: 'remoteSocket'),
+          bindAddress: '0.0.0.0',
           localPort: any(named: 'localPort'),
           onLog: any(named: 'onLog'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
-      ).thenAnswer((_) async => tunnel);
+      ).called(1);
+      verify(
+        () => client.openSocketTunnel(
+          any(),
+          remoteSocket: any(named: 'remoteSocket'),
+          bindAddress: '172.17.0.1',
+          localPort: any(named: 'localPort'),
+          onLog: any(named: 'onLog'),
+          abortTrigger: any(named: 'abortTrigger'),
+        ),
+      ).called(1);
+    });
+
+    test('opens the socket even with a host and port left over', () async {
+      store = FakeStore([docker.copyWith(remoteHost: 'db', remotePort: 5432)]);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
       final manager = await loaded();
 
       await manager.toggle('s6');
@@ -527,6 +606,10 @@ void main() {
 
     for (final (error, message) in [
       (const SshPortInUseException(15432), '127.0.0.1:15432 is already in use'),
+      (
+        const SshException("172.17.0.1 isn't an address of this computer"),
+        "172.17.0.1 isn't an address of this computer",
+      ),
       (ArgumentError.value('-x', 'server', 'bad host'), 'bad host'),
       (StateError('boom'), 'Bad state: boom'),
     ]) {
@@ -787,6 +870,7 @@ void main() {
             const SshTarget('elsewhere', user: 'deploy'),
             remoteHost: any(named: 'remoteHost'),
             remotePort: any(named: 'remotePort'),
+            bindAddress: any(named: 'bindAddress'),
             localPort: any(named: 'localPort'),
             onLog: any(named: 'onLog'),
             abortTrigger: any(named: 'abortTrigger'),
@@ -915,7 +999,7 @@ void main() {
       void Function(TunnelManager manager, FakeAsync time) body, {
       Future<void> Function()? beforeConnect,
       Future<bool> Function()? isLocked,
-      Future<void> Function(int localPort)? checkDestination,
+      Future<void> Function(String address, int localPort)? checkDestination,
     }) => fakeAsync((time) {
       opened = [];
       failures = [];
@@ -986,7 +1070,7 @@ void main() {
 
         expect(opened, hasLength(2));
         expect(checked, [15432]);
-      }, checkDestination: (port) async => checked.add(port));
+      }, checkDestination: (_, port) async => checked.add(port));
     });
 
     test('says Disconnected when ssh gives no reason', () {
@@ -1193,15 +1277,22 @@ void main() {
 
   group('checking where a forward leads', () {
     late List<int> checked;
+    late List<String> checkedAt;
 
     Future<TunnelManager> checking({
-      Future<void> Function(int localPort)? check,
+      Future<void> Function(String address, int localPort)? check,
     }) async {
       checked = [];
+      checkedAt = [];
       final manager = TunnelManager(
         store: store,
         client: client,
-        checkDestination: check ?? (port) async => checked.add(port),
+        checkDestination:
+            check ??
+            (address, port) async {
+              checkedAt.add(address);
+              checked.add(port);
+            },
       );
       addTearDown(manager.close);
       await manager.load();
@@ -1217,17 +1308,36 @@ void main() {
       expect(checked, [15432]);
     });
 
+    for (final (address, reached) in [
+      ('0.0.0.0', '127.0.0.1'),
+      ('::', '::1'),
+      ('172.17.0.1', '172.17.0.1'),
+    ]) {
+      test('listens on $address, and checks it at $reached', () async {
+        store = FakeStore([database.copyWith(bindAddress: address)]);
+        final manager = await checking();
+
+        await manager.toggle('a1');
+        await pumpEventQueue();
+
+        verify(
+          () => client.openTunnel(
+            any(),
+            remoteHost: any(named: 'remoteHost'),
+            remotePort: any(named: 'remotePort'),
+            bindAddress: address,
+            localPort: any(named: 'localPort'),
+            onLog: any(named: 'onLog'),
+            abortTrigger: any(named: 'abortTrigger'),
+          ),
+        ).called(1);
+        expect(checkedAt, [reached]);
+      });
+    }
+
     test('checks a forward to a socket', () async {
       store = FakeStore([docker]);
-      when(
-        () => client.openSocketTunnel(
-          any(),
-          remoteSocket: any(named: 'remoteSocket'),
-          localPort: any(named: 'localPort'),
-          onLog: any(named: 'onLog'),
-          abortTrigger: any(named: 'abortTrigger'),
-        ),
-      ).thenAnswer((_) async => tunnel);
+      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
       final manager = await checking();
 
       await manager.toggle('s6');
@@ -1265,7 +1375,7 @@ void main() {
         return FakeTunnel(15432);
       });
       final check = Completer<void>();
-      final manager = await checking(check: (_) => check.future);
+      final manager = await checking(check: (_, _) => check.future);
       await manager.toggle('a1');
       await manager.toggle('a1');
       await manager.toggle('a1');
@@ -1326,34 +1436,167 @@ void main() {
       expect(checked, isEmpty);
     });
 
-    test('shows the refusal the check brings out as a warning', () async {
+    test('fails the tunnel when the check finds nothing behind it', () async {
       late void Function(SshLog log) sshSays;
       when(openAnyTunnel).thenAnswer((invocation) async {
         sshSays =
             invocation.namedArguments[#onLog]! as void Function(SshLog log);
         return tunnel;
       });
-      final manager = await checking(
-        check: (_) async => sshSays(
-          const SshForwardFailed(
-            'channel 2: open failed: connect failed: Connection refused',
-            reason: 'Connection refused',
-          ),
-        ),
-      );
+      final manager = await checking(check: (_, _) async => sshSays(refused));
 
       await manager.toggle('a1');
       await pumpEventQueue();
 
       expect(
         manager.snapshot.statusOf('a1'),
-        const Connected(warning: 'Connection refused'),
+        Failed(refused.line, isForward: true),
       );
+      expect(tunnel.closeCount, 1);
+    });
+
+    group('within the check window', () {
+      const window = Duration(seconds: 3);
+      late void Function(SshLog log) sshSays;
+      late int opens;
+
+      void checkedFor(
+        void Function(TunnelManager manager, FakeAsync time) body, {
+        bool restored = false,
+      }) => fakeAsync((time) {
+        opens = 0;
+        when(openAnyTunnel).thenAnswer((invocation) async {
+          opens++;
+          sshSays =
+              invocation.namedArguments[#onLog]! as void Function(SshLog log);
+          return tunnel = FakeTunnel(15432);
+        });
+        if (restored) store = FakeStore([database], {'a1'});
+        final manager = TunnelManager(
+          store: store,
+          client: client,
+          checkDestination: (_, _) async {},
+          checkWindow: window,
+        );
+        unawaited(
+          manager.load().then(
+            (_) => restored ? manager.restore() : manager.toggle('a1'),
+          ),
+        );
+        time.flushMicrotasks();
+        body(manager, time);
+        unawaited(manager.close());
+        time.flushMicrotasks();
+      });
+
+      test('a refusal fails the tunnel and closes ssh for good', () {
+        checkedFor((manager, time) {
+          time.elapse(window - const Duration(milliseconds: 1));
+          sshSays(refused);
+          time
+            ..flushMicrotasks()
+            ..elapse(const Duration(minutes: 5));
+
+          expect(
+            manager.snapshot.statusOf('a1'),
+            Failed(refused.line, isForward: true),
+          );
+          expect(tunnel.closeCount, 1);
+          expect(opens, 1);
+        });
+      });
+
+      test('follows a check that failed itself', () {
+        fakeAsync((time) {
+          when(openAnyTunnel).thenAnswer((invocation) async {
+            sshSays =
+                invocation.namedArguments[#onLog]! as void Function(SshLog log);
+            return tunnel;
+          });
+          final manager = TunnelManager(
+            store: store,
+            client: client,
+            checkDestination: (_, _) async =>
+                throw const SocketException('Connection timed out'),
+            checkWindow: window,
+          );
+          unawaited(manager.load().then((_) => manager.toggle('a1')));
+          time.flushMicrotasks();
+          sshSays(refused);
+          time.flushMicrotasks();
+
+          expect(
+            manager.snapshot.statusOf('a1'),
+            Failed(refused.line, isForward: true),
+          );
+          unawaited(manager.close());
+          time.flushMicrotasks();
+        });
+      });
+
+      test('ends, after which a refusal only warns', () {
+        checkedFor((manager, time) {
+          time.elapse(window);
+          sshSays(refused);
+          time.flushMicrotasks();
+
+          expect(
+            manager.snapshot.statusOf('a1'),
+            const Connected(warning: 'Connection refused'),
+          );
+        });
+      });
+
+      test('starts again when a failed tunnel is turned on again', () {
+        checkedFor((manager, time) {
+          sshSays(refused);
+          time.flushMicrotasks();
+          unawaited(manager.toggle('a1'));
+          time.flushMicrotasks();
+          sshSays(refused);
+          time.flushMicrotasks();
+
+          expect(opens, 2);
+          expect(
+            manager.snapshot.statusOf('a1'),
+            Failed(refused.line, isForward: true),
+          );
+        });
+      });
+
+      test('ends when the tunnel drops, so a reconnect only warns', () {
+        checkedFor((manager, time) {
+          time.elapse(const Duration(milliseconds: 500));
+          tunnel.drop();
+          time.elapse(const Duration(seconds: 1));
+          expect(opens, 2);
+          sshSays(refused);
+          time.flushMicrotasks();
+
+          expect(
+            manager.snapshot.statusOf('a1'),
+            const Connected(warning: 'Connection refused'),
+          );
+        });
+      });
+
+      test('is not opened for a tunnel restored at login', () {
+        checkedFor((manager, time) {
+          sshSays(refused);
+          time.flushMicrotasks();
+
+          expect(
+            manager.snapshot.statusOf('a1'),
+            const Connected(warning: 'Connection refused'),
+          );
+        }, restored: true);
+      });
     });
 
     test('stays connected when the check itself fails', () async {
       final manager = await checking(
-        check: (_) async => throw const SocketException('Connection refused'),
+        check: (_, _) async =>
+            throw const SocketException('Connection refused'),
       );
 
       await manager.toggle('a1');
@@ -1364,10 +1607,6 @@ void main() {
   });
 
   group('a warning from ssh', () {
-    const refused = SshForwardFailed(
-      'channel 2: open failed: connect failed: Connection refused',
-      reason: 'Connection refused',
-    );
     const lifetime = Duration(seconds: 30);
     late void Function(SshLog log) sshSays;
 
@@ -1519,7 +1758,7 @@ void main() {
       await manager.save(database.copyWith(localPort: 15433));
       expect(store.on, {'a1'});
 
-      await manager.move('a1', 1);
+      await manager.arrange([(id: 'b2', group: null), (id: 'a1', group: null)]);
       expect(store.on, {'a1'});
     });
 
@@ -1662,7 +1901,7 @@ void main() {
   group('logs', () {
     const connecting =
         'I/Tunnels: Connecting Production database: '
-        'localhost:15432 → db.internal:5432 via deploy@bastion';
+        '127.0.0.1:15432 → db.internal:5432 via deploy@bastion';
     const denied = 'deploy@bastion: Permission denied (publickey).';
     late List<String> lines;
 
@@ -1676,7 +1915,7 @@ void main() {
       final manager = TunnelManager(
         store: store,
         client: client,
-        checkDestination: (_) async =>
+        checkDestination: (_, _) async =>
             throw const SocketException('Connection refused'),
       );
       addTearDown(manager.close);
@@ -1778,13 +2017,32 @@ void main() {
     expect(store.tunnels, [proxy]);
   });
 
-  test('move reorders the tunnels and saves', () async {
+  test('arrange reorders and regroups the tunnels and saves', () async {
     final manager = await loaded();
 
-    await manager.move('b2', 0);
+    await manager.arrange([(id: 'b2', group: 'Prod'), (id: 'a1', group: null)]);
 
-    expect(manager.snapshot.tunnels, [proxy, database]);
-    expect(store.tunnels, [proxy, database]);
+    expect(manager.snapshot.tunnels, [proxy.copyWith(group: 'Prod'), database]);
+    expect(store.tunnels, [proxy.copyWith(group: 'Prod'), database]);
+  });
+
+  test('arrange keeps a tunnel that is on connected', () async {
+    final manager = await loaded();
+    await manager.toggle('a1');
+
+    await manager.arrange([(id: 'a1', group: 'Prod'), (id: 'b2', group: null)]);
+
+    expect(tunnel.closeCount, 0);
+    expect(manager.snapshot.statusOf('a1'), const Connected());
+  });
+
+  test('arrange saves nothing when nothing changes', () async {
+    final manager = await loaded();
+    final saves = store.saveCount;
+
+    await manager.arrange([(id: 'a1', group: null), (id: 'b2', group: null)]);
+
+    expect(store.saveCount, saves);
   });
 
   group('a group colour', () {
@@ -1828,13 +2086,12 @@ void main() {
     });
   });
 
-  test('move saves nothing when nothing moves', () async {
+  test('arrange saves nothing and says nothing for an unknown id', () async {
     final manager = await loaded();
     final changes = <TunnelsSnapshot>[];
     manager.changes.listen(changes.add);
 
-    await manager.move('a1', 0);
-    await manager.move('gone', 1);
+    await manager.arrange([(id: 'gone', group: 'Prod')]);
 
     expect(changes, isEmpty);
     expect(store.saveCount, 0);

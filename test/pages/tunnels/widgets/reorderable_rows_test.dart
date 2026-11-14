@@ -15,6 +15,7 @@ void main() {
   Future<void> pumpRows(
     WidgetTester tester, {
     Map<String, double> heights = const {},
+    int Function(int index)? spanOf,
   }) async {
     moves = [];
     names = ['one', 'two', 'three'];
@@ -26,6 +27,7 @@ void main() {
             builder: (context, setState) {
               setNames = setState;
               return ReorderableRows(
+                spanOf: spanOf,
                 onReorder: (from, to) => setState(() {
                   moves.add((from, to));
                   names.insert(to, names.removeAt(from));
@@ -179,5 +181,85 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(moves, isEmpty);
+  });
+
+  testWidgets('a row with a span carries the rows after it along', (
+    tester,
+  ) async {
+    await pumpRows(tester, spanOf: (index) => index == 0 ? 2 : 1);
+
+    final gesture = await lift(tester, 'one', 60);
+    await tester.pump(const Duration(milliseconds: 200));
+    double liftedTop(String name) => tester.getTopLeft(find.text(name).last).dy;
+    expect(liftedTop('two') - liftedTop('one'), 40);
+    expect(topOf(tester, 'three'), 0);
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(moves, [(0, 1)]);
+  });
+
+  testWidgets('a row with a span moves up past a row before it', (
+    tester,
+  ) async {
+    await pumpRows(tester, spanOf: (index) => index == 1 ? 2 : 1);
+
+    final gesture = await lift(tester, 'two', -40);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(topOf(tester, 'one'), 80);
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(moves, [(1, 0)]);
+  });
+
+  testWidgets('a row with no span stays put', (tester) async {
+    await pumpRows(tester, spanOf: (index) => index == 1 ? 0 : 1);
+
+    await drag(tester, 'two', 50);
+
+    expect(moves, isEmpty);
+    expect(find.text('two'), findsOneWidget);
+  });
+
+  testWidgets('a short drag of a row with a span moves nothing', (
+    tester,
+  ) async {
+    await pumpRows(tester, spanOf: (index) => index == 0 ? 2 : 1);
+
+    await drag(tester, 'one', 10);
+
+    expect(moves, isEmpty);
+    expect(topOf(tester, 'three'), 80);
+  });
+
+  testWidgets('settle moves where a drop lands, while dragging too', (
+    tester,
+  ) async {
+    moves = [];
+    names = ['one', 'two', 'three'];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: takaTheme(Brightness.light),
+        home: Scaffold(
+          body: ReorderableRows(
+            settle: (from, to) => 2,
+            onReorder: (from, to) => moves.add((from, to)),
+            children: [
+              for (final name in names)
+                SizedBox(key: ValueKey(name), height: 40, child: Text(name)),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final gesture = await lift(tester, 'one', 10);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(topOf(tester, 'three'), 40);
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(moves, [(0, 2)]);
   });
 }

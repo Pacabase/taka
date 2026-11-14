@@ -12,10 +12,26 @@ void main() {
       'Port 8080 is already in use.',
     ),
     (
+      '172.17.0.1:8080 is already in use',
+      'port 8080 in use',
+      'Port 8080 is already in use.',
+    ),
+    (
+      "172.17.0.1 isn't an address of this computer",
+      'address not on this computer',
+      "This computer doesn't have the From address.",
+    ),
+    (
       'Error: remote port forwarding failed for listen port 8080',
       "server won't open port 8080",
       "The server won't open port 8080: it's taken there, "
           "or forwarding isn't allowed.",
+    ),
+    (
+      'channel 0: open failed: connect failed: Connection refused\n'
+          'stdio forwarding failed',
+      "can't reach the server",
+      "Can't reach the server.",
     ),
     (
       'ssh: connect to host bastion port 22: Connection refused',
@@ -157,6 +173,61 @@ void main() {
         ),
         "A site through the SOCKS proxy couldn't be reached.",
       );
+    });
+  });
+
+  group('a forward the server could not make', () {
+    const database = Tunnel(
+      id: 'a1',
+      sshHost: 'bastion',
+      localPort: 15432,
+      remoteHost: 'db.internal',
+      remotePort: 5432,
+    );
+    const docker = Tunnel(
+      id: 's6',
+      sshHost: 'bastion',
+      localPort: 2375,
+      remoteSocket: '/var/run/docker.sock',
+    );
+    const refused = Failed(
+      'channel 2: open failed: connect failed: Connection refused',
+      isForward: true,
+    );
+
+    test('names what the tunnel could not reach', () {
+      expect(failureShort(database, refused), "can't reach db.internal:5432");
+      expect(
+        failureSentence(database, refused),
+        "Can't reach db.internal:5432 through the server.",
+      );
+      expect(failureShort(docker, refused), "can't open /var/run/docker.sock");
+      expect(
+        failureSentence(docker, refused),
+        "Can't open /var/run/docker.sock on the server.",
+      );
+    });
+
+    test('says when the server forbids the forward', () {
+      const forbidden = Failed(
+        'channel 3: open failed: administratively prohibited: open failed',
+        isForward: true,
+      );
+
+      expect(failureShort(database, forbidden), "server won't forward");
+      expect(
+        failureSentence(database, forbidden),
+        "The server doesn't allow this tunnel.",
+      );
+    });
+
+    test('reads any other failure from what ssh said', () {
+      const unreachable = Failed(
+        'ssh: connect to host bastion port 22: Connection refused',
+      );
+
+      expect(failureShort(database, unreachable), "can't reach the server");
+      expect(failureSentence(database, unreachable), "Can't reach the server.");
     });
   });
 }
