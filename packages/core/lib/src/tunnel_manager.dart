@@ -47,7 +47,7 @@ class TunnelManager({
   TunnelsSnapshot get snapshot => TunnelsSnapshot(
     tunnels: _tunnels,
     statuses: _sessions.map((id, session) => MapEntry(id, session.status)),
-    groupColours: _coloursInUse,
+    groupColours: _groupColours,
   );
 
   Stream<TunnelsSnapshot> get changes => _changes.stream;
@@ -55,7 +55,7 @@ class TunnelManager({
   Future<void> load() async {
     final (:tunnels, :on, :groupColours) = await store.load();
     _tunnels = tunnels;
-    _groupColours = groupColours;
+    _groupColours = _inUse(groupColours);
     _wasOn = on;
     _emit();
   }
@@ -106,6 +106,11 @@ class TunnelManager({
   }
 
   Future<void> setGroupColour(String group, TunnelColour? colour) async {
+    if (_groupColours[group] == colour ||
+        !_tunnels.any((tunnel) => tunnel.group == group)) {
+      return;
+    }
+
     _groupColours = {
       for (final MapEntry(key: named, value: kept) in _groupColours.entries)
         if (named != group) named: kept,
@@ -114,7 +119,28 @@ class TunnelManager({
     await _persist();
   }
 
-  Future<void> import(List<Tunnel> tunnels) async {
+  /// [from] becomes [to], or the spelling of a group in use like it; the
+  /// colour goes with it unless that group has its own.
+  Future<void> renameGroup(String from, String to) async {
+    final typed = groupNamed(to);
+    if (typed == null || typed == from) return;
+    final renamed = groupLike(_tunnels.groups, typed, except: from);
+
+    _tunnels = [
+      for (final tunnel in _tunnels)
+        tunnel.group == from ? tunnel.copyWith(group: renamed) : tunnel,
+    ];
+    if (_groupColours[from] case final colour?
+        when _groupColours[renamed] == null) {
+      _groupColours = {..._groupColours, renamed: colour};
+    }
+    await _persist();
+  }
+
+  Future<void> import(
+    List<Tunnel> tunnels, {
+    Map<String, TunnelColour> groupColours = const {},
+  }) async {
     final imported = [..._tunnels];
     final ids = {for (final saved in imported) saved.id};
     for (final read in tunnels) {
@@ -126,7 +152,13 @@ class TunnelManager({
       );
       // A tunnel already saved stays in the group it has here.
       if (imported.any(
-        (saved) => tunnel.copyWith(id: saved.id, group: saved.group) == saved,
+        (saved) =>
+            tunnel.copyWith(
+              id: saved.id,
+              group: saved.group,
+              colour: saved.colour,
+            ) ==
+            saved,
       )) {
         continue;
       }
@@ -137,9 +169,22 @@ class TunnelManager({
       ids.add(id);
       imported.add(tunnel.copyWith(id: id));
     }
-    if (imported.length == _tunnels.length) return;
+    // A group that has a colour here keeps it.
+    final coloured = {
+      for (final MapEntry(key: group, value: colour) in groupColours.entries)
+        groupLike(imported.groups, group): colour,
+      ..._groupColours,
+    };
+    if (imported.length == _tunnels.length &&
+        const MapEquality<String, TunnelColour>().equals(
+          _inUse(coloured, imported),
+          _groupColours,
+        )) {
+      return;
+    }
 
     _tunnels = imported;
+    _groupColours = coloured;
     await _persist();
   }
 
@@ -234,11 +279,14 @@ class TunnelManager({
     return session.connect();
   }
 
-  // A group with no tunnels left loses its colour.
-  Map<String, TunnelColour> get _coloursInUse {
-    final groups = _tunnels.groups.toSet();
+  // An emptied group's colour goes, so a new one of its name starts with none.
+  Map<String, TunnelColour> _inUse(
+    Map<String, TunnelColour> colours, [
+    List<Tunnel>? tunnels,
+  ]) {
+    final groups = (tunnels ?? _tunnels).map((tunnel) => tunnel.group).toSet();
     return {
-      for (final MapEntry(key: group, value: colour) in _groupColours.entries)
+      for (final MapEntry(key: group, value: colour) in colours.entries)
         if (groups.contains(group)) group: colour,
     };
   }
@@ -251,9 +299,10 @@ class TunnelManager({
   };
 
   Future<void> _persist() {
+    _groupColours = _inUse(_groupColours);
     _savedOn = _on;
     _emit();
-    return store.save(_tunnels, on: _savedOn, groupColours: _coloursInUse);
+    return store.save(_tunnels, on: _savedOn, groupColours: _groupColours);
   }
 
   // Which tunnels are on is saved when it changes, so a crash restores them too.
@@ -266,7 +315,7 @@ class TunnelManager({
       _savedOn = on;
       unawaited(
         store
-            .save(_tunnels, on: _savedOn, groupColours: _coloursInUse)
+            .save(_tunnels, on: _savedOn, groupColours: _groupColours)
             .catchError(
               (Object exception) =>
                   _log.w('Could not save which tunnels are on', ex: exception),

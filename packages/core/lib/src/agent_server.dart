@@ -129,7 +129,11 @@ class AgentServer(
     ),
     SetGroupColour(:final group, :final colour) =>
       await _manager.setGroupColour(group, colour),
-    ImportTunnels(:final tunnels) => await _manager.import(tunnels),
+    RenameGroup(:final from, :final to) => await _manager.renameGroup(from, to),
+    ImportTunnels(:final tunnels, :final groupColours) => await _manager.import(
+      tunnels,
+      groupColours: groupColours,
+    ),
     ExportTunnels(:final path) => await File(path).writeAsString(
       encodeTunnels(
         _manager.snapshot.tunnels,

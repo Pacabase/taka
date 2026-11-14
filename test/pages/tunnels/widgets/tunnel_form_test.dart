@@ -80,8 +80,8 @@ void main() {
     tester,
   ) async {
     await pumpForm(tester);
-    // From Name, past each colour, no colour, and to the third kind.
-    for (var press = 0; press < TunnelColour.values.length + 4; press++) {
+    // From Name, past the three kinds of tunnel.
+    for (var press = 0; press < 3; press++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     }
     await tester.sendKeyEvent(LogicalKeyboardKey.space);
@@ -456,9 +456,9 @@ void main() {
     for (final (index, controller) in fields.indexed.skip(1)) {
       expect(focusedController(tester), controller);
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-      // After Name, Tab passes each colour, no colour, and the three kinds.
+      // After Name, Tab passes the three kinds of tunnel.
       if (index == 1) {
-        for (var press = 0; press < TunnelColour.values.length + 4; press++) {
+        for (var press = 0; press < 3; press++) {
           await tester.sendKeyEvent(LogicalKeyboardKey.tab);
         }
       }
@@ -500,6 +500,7 @@ void main() {
         localPort: 15432,
         remoteHost: 'localhost',
         remotePort: 5432,
+        group: 'Prod',
         colour: TunnelColour.red,
       );
       await pumpForm(tester, initial: tunnel);
@@ -509,6 +510,15 @@ void main() {
       await tester.tap(find.text('Save'));
 
       expect(saved.single, tunnel.copyWith(colour: null));
+    });
+
+    testWidgets('is none for a tunnel in no group', (tester) async {
+      await pumpForm(tester);
+
+      expect(find.byTooltip('No colour'), findsOneWidget);
+      await tester.enterText(field(0), 'Prod');
+      await tester.pump();
+      expect(find.byTooltip("Its group's colour"), findsOneWidget);
     });
   });
 

@@ -14,6 +14,6 @@ abstract interface class TunnelStore {
   Future<void> save(
     List<Tunnel> tunnels, {
     required Set<String> on,
-    Map<String, TunnelColour> groupColours = const {},
+    required Map<String, TunnelColour> groupColours,
   });
 }

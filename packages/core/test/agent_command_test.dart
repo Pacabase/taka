@@ -47,6 +47,11 @@ void main() {
       AgentCommand.setDebugLogging(on: false),
       AgentCommand.showLogs(),
       AgentCommand.importTunnels([database, proxy]),
+      AgentCommand.importTunnels(
+        [database],
+        groupColours: {'Prod': TunnelColour.green},
+      ),
+      AgentCommand.renameGroup('monolith', 'Monolith'),
       AgentCommand.exportTunnels('/Users/me/tunnels.json'),
       AgentCommand.quit(),
     ]) {

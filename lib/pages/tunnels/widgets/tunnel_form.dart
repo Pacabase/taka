@@ -127,20 +127,6 @@ class _TunnelFormState extends State<TunnelForm> {
                 label: 'Name',
                 child: _input(_name, hint: 'Optional', autofocus: true),
               ),
-              Labelled(
-                label: 'Colour',
-                child: Row(
-                  spacing: 8,
-                  children: [
-                    for (final colour in [...TunnelColour.values, null])
-                      _Swatch(
-                        colour: colour,
-                        isSelected: _colour == colour,
-                        onTap: () => setState(() => _colour = colour),
-                      ),
-                  ],
-                ),
-              ),
               _KindTabs(
                 kind: _kind,
                 onPick: (kind) => setState(() => _kind = kind),
@@ -260,6 +246,28 @@ class _TunnelFormState extends State<TunnelForm> {
                     ),
                   _ => const SizedBox.shrink(),
                 },
+              ),
+              Labelled(
+                label: 'Colour',
+                child: ListenableBuilder(
+                  listenable: _group,
+                  builder: (context, _) => Row(
+                    spacing: 8,
+                    children: [
+                      for (final colour in [...TunnelColour.values, null])
+                        _Swatch(
+                          colour: colour,
+                          label:
+                              colour?.label ??
+                              (groupNamed(_group.text) == null
+                                  ? 'No colour'
+                                  : "Its group's colour"),
+                          isSelected: _colour == colour,
+                          onTap: () => setState(() => _colour = colour),
+                        ),
+                    ],
+                  ),
+                ),
               ),
               const Spacer(),
               Row(
@@ -507,39 +515,31 @@ class const _Colon() extends StatelessWidget {
 
 class const _Swatch({
   required final TunnelColour? colour,
+  required final String label,
   required final bool isSelected,
   required final void Function() onTap,
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = TakaColors.of(context);
-    final label = colour?.label ?? "Its group's colour";
 
+    // The tooltip names it to screen readers too.
     return Tooltip(
       message: label,
       child: Semantics(
         button: true,
         selected: isSelected,
-        label: label,
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onTap,
           child: Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: switch (colour) {
-                final colour? => colors.tunnel(colour),
-                null => null,
-              },
-              border: Border.all(
-                color: isSelected || colour == null
-                    ? colors.textBrilliant
-                    : Colors.transparent,
-                width: isSelected ? 2 : 1,
-              ),
-            ),
+            foregroundDecoration: isSelected
+                ? BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: colors.textBrilliant, width: 2),
+                  )
+                : null,
+            child: ColourDot(colour, size: 20),
           ),
         ),
       ),

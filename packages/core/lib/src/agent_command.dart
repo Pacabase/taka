@@ -21,7 +21,13 @@ sealed class const AgentCommand._() with _$AgentCommand {
   const factory setGroupColour(String group, TunnelColour? colour) =
       SetGroupColour;
 
-  const factory importTunnels(List<Tunnel> tunnels) = ImportTunnels;
+  /// [from] becomes [to], or the spelling of a group in use like it.
+  const factory renameGroup(String from, String to) = RenameGroup;
+
+  const factory importTunnels(
+    List<Tunnel> tunnels, {
+    @Default({}) Map<String, TunnelColour> groupColours,
+  }) = ImportTunnels;
 
   const factory exportTunnels(String path) = ExportTunnels;
 
@@ -62,8 +68,18 @@ sealed class const AgentCommand._() with _$AgentCommand {
     {'command': 'groupColour', 'group': final String group} &&
         final Map<Object?, Object?> fields =>
       SetGroupColour(group, TunnelColour.fromName(fields['colour'])),
-    {'command': 'import', 'tunnels': final List<Object?> tunnels} =>
-      ImportTunnels(tunnels.map(Tunnel.fromJson).toList()),
+    {
+      'command': 'renameGroup',
+      'from': final String from,
+      'to': final String to,
+    } =>
+      RenameGroup(from, to),
+    {'command': 'import', 'tunnels': final List<Object?> tunnels} &&
+        final Map<Object?, Object?> fields =>
+      ImportTunnels(
+        tunnels.map(Tunnel.fromJson).toList(),
+        groupColours: groupColoursFromJson(fields['groupColours']),
+      ),
     {'command': 'export', 'path': final String path} => ExportTunnels(path),
     {'command': 'quit'} => const QuitAgent(),
     {'command': 'launchAtLogin', 'on': final bool on} => SetLaunchAtLogin(
@@ -94,9 +110,16 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'group': group,
       'colour': ?colour?.name,
     },
-    ImportTunnels(:final tunnels) => {
+    RenameGroup(:final from, :final to) => {
+      'command': 'renameGroup',
+      'from': from,
+      'to': to,
+    },
+    ImportTunnels(:final tunnels, :final groupColours) => {
       'command': 'import',
       'tunnels': tunnels.map((tunnel) => tunnel.toJson()).toList(),
+      if (groupColours.isNotEmpty)
+        'groupColours': groupColoursToJson(groupColours),
     },
     ExportTunnels(:final path) => {'command': 'export', 'path': path},
     QuitAgent() => {'command': 'quit'},

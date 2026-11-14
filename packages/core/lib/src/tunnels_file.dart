@@ -24,11 +24,7 @@ String encodeTunnels(
     for (final tunnel in tunnels)
       if (on.contains(tunnel.id)) tunnel.id,
   ],
-  if (groupColours.isNotEmpty)
-    'groupColours': {
-      for (final MapEntry(key: group, value: colour) in groupColours.entries)
-        group: colour.name,
-    },
+  if (groupColours.isNotEmpty) 'groupColours': groupColoursToJson(groupColours),
 });
 
 /// Reads what [encodeTunnels] wrote, or throws a [FormatException].
@@ -41,13 +37,7 @@ SavedTunnels decodeTunnels(String text) => switch (jsonDecode(text)) {
         final List<Object?> on => on.whereType<String>().toSet(),
         _ => <String>{},
       },
-      groupColours: switch (saved['groupColours']) {
-        final Map<String, Object?> colours => {
-          for (final MapEntry(key: group, value: name) in colours.entries)
-            group: ?TunnelColour.fromName(name),
-        },
-        _ => <String, TunnelColour>{},
-      },
+      groupColours: groupColoursFromJson(saved['groupColours']),
     ),
   {'version': final version} => throw FormatException(
     'Unsupported tunnels file version: $version',

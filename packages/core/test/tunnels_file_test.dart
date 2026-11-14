@@ -36,6 +36,13 @@ void main() {
     });
   }
 
+  test('a file from before colours has none', () {
+    expect(
+      decodeTunnels('{"version": 1, "tunnels": []}').groupColours,
+      isEmpty,
+    );
+  });
+
   test('keeps each group\'s colour, and leaves out names it does not know', () {
     final text = encodeTunnels(
       [database.copyWith(group: 'Prod')],

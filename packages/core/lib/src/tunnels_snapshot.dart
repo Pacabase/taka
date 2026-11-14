@@ -98,13 +98,7 @@ sealed class const TunnelsSnapshot._() with _$TunnelsSnapshot {
         statuses: statuses.map(
           (id, status) => MapEntry(id, TunnelStatus.fromJson(status)),
         ),
-        groupColours: switch (fields['groupColours']) {
-          final Map<String, Object?> colours => {
-            for (final MapEntry(key: group, value: name) in colours.entries)
-              group: ?TunnelColour.fromName(name),
-          },
-          _ => const {},
-        },
+        groupColours: groupColoursFromJson(fields['groupColours']),
       ),
     _ => throw FormatException('Not a snapshot: $json'),
   };
@@ -113,9 +107,7 @@ sealed class const TunnelsSnapshot._() with _$TunnelsSnapshot {
     'tunnels': tunnels.map((tunnel) => tunnel.toJson()).toList(),
     'statuses': statuses.map((id, status) => MapEntry(id, status.toJson())),
     if (groupColours.isNotEmpty)
-      'groupColours': groupColours.map(
-        (group, colour) => MapEntry(group, colour.name),
-      ),
+      'groupColours': groupColoursToJson(groupColours),
   };
 
   TunnelStatus statusOf(String id) => statuses[id] ?? const Stopped();

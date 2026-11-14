@@ -15,6 +15,7 @@ import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_page.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
+import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 
 void main() {
@@ -113,11 +114,16 @@ void main() {
     expect(top('Database'), lessThan(top('Cache')));
     expect(top('Cache'), lessThan(top('Proxy')));
 
-    bool isInGroup(String name) => tester
-        .widget<TunnelTile>(
-          find.ancestor(of: find.text(name), matching: find.byType(TunnelTile)),
-        )
-        .isInGroup;
+    bool isInGroup(String name) =>
+        tester
+            .widget<TunnelTile>(
+              find.ancestor(
+                of: find.text(name),
+                matching: find.byType(TunnelTile),
+              ),
+            )
+            .guide !=
+        null;
     expect(isInGroup('Database'), isTrue);
     expect(isInGroup('Cache'), isTrue);
     expect(isInGroup('Proxy'), isFalse);
@@ -154,58 +160,13 @@ void main() {
       verify(
         () => bloc.add(
           const TunnelsEvent.send(
-            AgentCommand.arrange([
-              (id: 'a1', group: 'Monolith'),
-              (id: 'b2', group: null),
-              (id: 'c3', group: 'Monolith'),
-            ]),
+            AgentCommand.renameGroup('monolith', 'Monolith'),
           ),
         ),
       ).called(1);
     });
 
-    for (final (into, intoColour, carried) in [
-      ('Monolith', null, true),
-      ('Prod', TunnelColour.red, false),
-    ]) {
-      testWidgets(
-        'renamed into $into, ${carried ? 'keeps' : 'takes'} its colour',
-        (tester) async {
-          final bloc = await pumpPage(
-            tester,
-            initialState: Ready(
-              TunnelsSnapshot(
-                tunnels: [
-                  database.copyWith(group: 'monolith'),
-                  const Tunnel(id: 'c3', localPort: 1, group: 'Prod'),
-                ],
-                groupColours: {
-                  'monolith': TunnelColour.blue,
-                  'Prod': ?intoColour,
-                },
-              ),
-            ),
-          );
-
-          await tester.tap(find.text('monolith'));
-          await tester.pump();
-          await tester.enterText(find.byType(TextField), into);
-          await tester.testTextInput.receiveAction(TextInputAction.done);
-          await tester.pump();
-
-          void sent() => bloc.add(
-            TunnelsEvent.send(
-              AgentCommand.setGroupColour(into, TunnelColour.blue),
-            ),
-          );
-          carried ? verify(sent).called(1) : verifyNever(sent);
-        },
-      );
-    }
-
-    testWidgets("clicking away renames it, into another group's spelling", (
-      tester,
-    ) async {
+    testWidgets('clicking away renames it', (tester) async {
       final bloc = await pumpPage(
         tester,
         initialState: Ready(
@@ -232,13 +193,7 @@ void main() {
 
       verify(
         () => bloc.add(
-          const TunnelsEvent.send(
-            AgentCommand.arrange([
-              (id: 'a1', group: 'Prod'),
-              (id: 'b2', group: null),
-              (id: 'c3', group: 'Prod'),
-            ]),
-          ),
+          const TunnelsEvent.send(AgentCommand.renameGroup('monolith', 'prod')),
         ),
       ).called(1);
     });
@@ -356,13 +311,15 @@ void main() {
             database.copyWith(group: 'Prod'),
             proxy,
           ],
+          groupColours: const {'Prod': TunnelColour.blue},
         ),
       ),
     );
     Finder tile(String name) =>
         find.ancestor(of: find.text(name), matching: find.byType(TunnelTile));
-    bool liftedIsInGroup() =>
-        tester.widget<TunnelTile>(tile('Proxy').last).isInGroup;
+    TunnelTile lifted() => tester.widget<TunnelTile>(tile('Proxy').last);
+    bool liftedIsInGroup() => lifted().guide != null;
+    final colors = TakaColors.of(tester.element(find.byType(TunnelTile).first));
     final into =
         tester.getCenter(find.byKey(const ValueKey('end Prod')).last).dy -
         1 -
@@ -377,12 +334,16 @@ void main() {
       await tester.pump();
     }
     expect(liftedIsInGroup(), isTrue);
+    // It takes the group's colour, as its guide line and its dot.
+    expect(lifted().guide, colors.tunnel(TunnelColour.blue));
+    expect(lifted().colour, TunnelColour.blue);
 
     for (var step = 0; step < 10; step++) {
       await drag.moveBy(Offset(0, -into / 10));
       await tester.pump();
     }
     expect(liftedIsInGroup(), isFalse);
+    expect(lifted().colour, isNull);
     await drag.up();
     await tester.pumpAndSettle();
 

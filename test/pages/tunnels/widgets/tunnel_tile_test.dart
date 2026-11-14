@@ -9,7 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/taka_app.dart';
-import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/colour_dot.dart';
 
@@ -30,9 +29,8 @@ void main() {
     WidgetTester tester, {
     Tunnel tunnel = unnamed,
     TunnelStatus status = const Stopped(),
-    bool isInGroup = false,
     TunnelColour? colour,
-    TunnelColour? groupColour,
+    Color? guide,
   }) async {
     toggles = 0;
     trusted = [];
@@ -43,9 +41,8 @@ void main() {
           body: TunnelTile(
             tunnel: tunnel,
             status: status,
-            isInGroup: isInGroup,
             colour: colour,
-            groupColour: groupColour,
+            guide: guide,
             onToggle: () => toggles++,
             onTrust: trusted.add,
             onEdit: () {},
@@ -71,12 +68,9 @@ void main() {
     final outside = left();
     expect(hasGuide(), isFalse);
 
-    await pumpTile(tester, isInGroup: true);
+    await pumpTile(tester, guide: Colors.blue);
     expect(left() - outside, 16);
     expect(hasGuide(), isTrue);
-
-    await pumpTile(tester, isInGroup: true, groupColour: TunnelColour.blue);
-    final colors = TakaColors.of(tester.element(find.byType(TunnelTile)));
     expect(
       tester
           .widgetList<Container>(find.byType(Container))
@@ -85,7 +79,7 @@ void main() {
           .map((decoration) => decoration.border)
           .whereType<Border>()
           .map((border) => border.left.color),
-      contains(colors.tunnel(TunnelColour.blue)),
+      contains(Colors.blue),
     );
   });
 
@@ -93,7 +87,10 @@ void main() {
     tester,
   ) async {
     await pumpTile(tester, colour: TunnelColour.blue);
-    expect(find.byType(ColourDot), findsOneWidget);
+    expect(
+      tester.widget<ColourDot>(find.byType(ColourDot)).colour,
+      TunnelColour.blue,
+    );
 
     await pumpTile(tester);
     expect(find.byType(ColourDot), findsNothing);

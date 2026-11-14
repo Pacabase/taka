@@ -102,7 +102,7 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
     SubmenuEntry('Tunnel Actions', [
       for (final tunnel in tunnels.shown)
         SubmenuEntry(
-          _shortened(tunnel.title),
+          _shortened(_squared(snapshot.colourOf(tunnel), tunnel.title)),
           _tunnelActions(tunnel, snapshot.statusOf(tunnel.id)),
         ),
     ]),
@@ -125,16 +125,11 @@ TrayEntry _groupEntry(String group, TunnelsSnapshot snapshot) {
       .length;
 
   return SubmenuEntry(
-    // A long name gives way, not the count or the colour.
-    switch ((
-      ' — $connected of ${members.length} connected',
-      snapshot.groupColours[group],
-    )) {
-      (final count, final colour) => _squared(
-        colour,
-        '${_shortened(group, _width - count.length - (colour == null ? 0 : 2))}'
-        '$count',
-      ),
+    // A long name gives way, not the count.
+    switch (' — $connected of ${members.length} connected') {
+      final count =>
+        '${_shortened(_squared(snapshot.groupColours[group], group), _width - count.length)}'
+            '$count',
     },
     [
       for (final tunnel in members) _tunnelEntry(tunnel, snapshot),

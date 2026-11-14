@@ -35,7 +35,7 @@ class LocalTunnelStore({required final File file}) implements TunnelStore {
   Future<void> save(
     List<Tunnel> tunnels, {
     required Set<String> on,
-    Map<String, TunnelColour> groupColours = const {},
+    required Map<String, TunnelColour> groupColours,
   }) {
     final saved = _lastSave.then((_) => _save(tunnels, on, groupColours));
     _lastSave = saved.catchError((Object _) {});

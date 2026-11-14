@@ -56,6 +56,9 @@ class const TakaColors({
 
   /// The line down the side of a group's tunnels.
   Color get guide => text.withValues(alpha: 0.25);
+
+  Color guideOf(TunnelColour? colour) =>
+      colour == null ? guide : tunnel(colour);
   Color tunnel(TunnelColour colour) => switch (colour) {
     TunnelColour.red => red,
     TunnelColour.orange => orange,

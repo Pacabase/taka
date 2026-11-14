@@ -217,7 +217,7 @@ class const _TunnelList({
               colour: snapshot.groupColours[group],
               onColour: (colour) =>
                   _send(context, AgentCommand.setGroupColour(group, colour)),
-              onRename: (name) => _rename(context, snapshot, group, name),
+              onRename: (name) => _rename(context, group, name),
             ),
             GroupEndRow(:final group) => SizedBox(
               key: ValueKey('end $group'),
@@ -235,15 +235,17 @@ class const _TunnelList({
                   null => tunnel.group,
                 };
                 final groupColour = snapshot.groupColours[group];
+                final guide = group == null
+                    ? null
+                    : colors.guideOf(groupColour);
 
                 return Column(
                   children: [
                     TunnelTile(
                       tunnel: tunnel,
                       status: snapshot.statusOf(tunnel.id),
-                      colour: snapshot.colourOf(tunnel),
-                      isInGroup: group != null,
-                      groupColour: groupColour,
+                      colour: tunnel.colour ?? groupColour,
+                      guide: guide,
                       onToggle: () =>
                           _send(context, AgentCommand.toggle(tunnel.id)),
                       onTrust: (fingerprint) => _send(
@@ -258,8 +260,7 @@ class const _TunnelList({
                         case TunnelRow(tunnel: Tunnel(group: final next))
                         when next == tunnel.group)
                       _InGroup(
-                        isInGroup: group != null,
-                        colour: groupColour,
+                        guide: guide,
                         child: Divider(
                           height: 1,
                           indent: 6,
@@ -276,59 +277,29 @@ class const _TunnelList({
     );
   }
 
-  void _rename(
-    BuildContext context,
-    TunnelsSnapshot snapshot,
-    String group,
-    String name,
-  ) {
+  void _rename(BuildContext context, String group, String name) {
     final typed = groupNamed(name);
     if (typed == null || typed == group) return;
-    final renamed = groupLike(snapshot.tunnels.groups, typed, except: group);
 
-    _send(
-      context,
-      AgentCommand.arrange([
-        for (final tunnel in snapshot.tunnels)
-          (
-            id: tunnel.id,
-            group: tunnel.group == group ? renamed : tunnel.group,
-          ),
-      ]),
-    );
-    // A group it joins keeps its own colour.
-    if (snapshot.groupColours[group] case final colour?
-        when snapshot.groupColours[renamed] == null) {
-      _send(context, AgentCommand.setGroupColour(renamed, colour));
-    }
+    _send(context, AgentCommand.renameGroup(group, typed));
   }
 
   void _send(BuildContext context, AgentCommand command) =>
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
 
-class const _InGroup({
-  required final bool isInGroup,
-  required final TunnelColour? colour,
-  required final Widget child,
-}) extends StatelessWidget {
+class const _InGroup({required final Color? guide, required final Widget child})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    if (!isInGroup) return child;
+    final guide = this.guide;
+    if (guide == null) return child;
 
     return Padding(
       padding: const EdgeInsets.only(left: 14),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          border: Border(
-            left: BorderSide(
-              color: switch (colour) {
-                final colour? => TakaColors.of(context).tunnel(colour),
-                null => TakaColors.of(context).guide,
-              },
-              width: 2,
-            ),
-          ),
+          border: Border(left: BorderSide(color: guide, width: 2)),
         ),
         child: child,
       ),
@@ -395,35 +366,33 @@ class _GroupHeaderState extends State<_GroupHeader> {
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          spacing: 6,
+          spacing: 2,
           children: [
-            // A record, since a menu item whose value is null counts as no pick.
-            PopupMenuButton<(TunnelColour?,)>(
-              tooltip: 'Colour for ${widget.group}',
-              padding: EdgeInsets.zero,
-              onSelected: (picked) => widget.onColour(picked.$1),
-              itemBuilder: (_) => [
-                for (final colour in TunnelColour.values)
-                  PopupMenuItem(
-                    value: (colour,),
-                    child: Row(
-                      spacing: 8,
-                      children: [ColourDot(colour), Text(colour.label)],
+            // Hidden while renaming, keeping its place: a pick would go to
+            // the old name.
+            Visibility.maintain(
+              visible: _editing == null,
+              // A record, since a menu item whose value is null counts as no pick.
+              child: PopupMenuButton<(TunnelColour?,)>(
+                tooltip: 'Colour for ${widget.group}',
+                padding: EdgeInsets.zero,
+                onSelected: (picked) => widget.onColour(picked.$1),
+                itemBuilder: (_) => [
+                  for (final colour in TunnelColour.values)
+                    PopupMenuItem(
+                      value: (colour,),
+                      child: Row(
+                        spacing: 8,
+                        children: [ColourDot(colour), Text(colour.label)],
+                      ),
                     ),
-                  ),
-                const PopupMenuItem(value: (null,), child: Text('No colour')),
-              ],
-              child: switch (widget.colour) {
-                final colour? => ColourDot(colour),
-                null => Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: colors.guide),
-                  ),
+                  const PopupMenuItem(value: (null,), child: Text('No colour')),
+                ],
+                child: SizedBox.square(
+                  dimension: 20,
+                  child: Center(child: ColourDot(widget.colour)),
                 ),
-              },
+              ),
             ),
             Flexible(
               child: switch (_editing) {

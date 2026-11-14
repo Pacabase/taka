@@ -14,9 +14,10 @@ class const TunnelTile({
   super.key,
   required final Tunnel tunnel,
   required final TunnelStatus status,
-  final bool isInGroup = false,
   final TunnelColour? colour,
-  final TunnelColour? groupColour,
+
+  /// The group's guide line, or null for a tunnel in no group.
+  final Color? guide,
   required final void Function() onToggle,
   required final void Function(String fingerprint) onTrust,
   required final void Function() onEdit,
@@ -126,22 +127,17 @@ class _TunnelTileState extends State<TunnelTile> {
         onExit: (_) => setState(() => _hovered = false),
         child: Container(
           constraints: const BoxConstraints(minHeight: 48),
-          padding: EdgeInsets.only(left: widget.isInGroup ? 14 : 0),
+          padding: EdgeInsets.only(left: widget.guide == null ? 0 : 14),
           color: isHovered ? colors.selection : Colors.transparent,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              border: widget.isInGroup
-                  ? Border(
-                      left: BorderSide(
-                        color: switch (widget.groupColour) {
-                          final colour? => colors.tunnel(colour),
-                          null => colors.guide,
-                        },
-                        width: 2,
-                      ),
-                    )
-                  : null,
+              border: switch (widget.guide) {
+                final guide? => Border(
+                  left: BorderSide(color: guide, width: 2),
+                ),
+                null => null,
+              },
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
