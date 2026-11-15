@@ -83,6 +83,38 @@ void main() {
     );
   });
 
+  test('a snapshot with group colours round-trips', () {
+    final snapshot = TunnelsSnapshot(
+      tunnels: [database.copyWith(group: 'Prod')],
+      groupColours: const {'Prod': TunnelColour.green},
+    );
+
+    expect(
+      TunnelsSnapshot.fromJson(
+        throughJson(snapshot.toJson())! as Map<String, Object?>,
+      ),
+      snapshot,
+    );
+  });
+
+  test("a coloured group's colour wins over a tunnel's own", () {
+    final grouped = database.copyWith(group: 'Prod');
+    const snapshot = TunnelsSnapshot(
+      groupColours: {'Prod': TunnelColour.green},
+    );
+
+    expect(snapshot.colourOf(grouped), TunnelColour.green);
+    expect(
+      snapshot.colourOf(grouped.copyWith(colour: TunnelColour.red)),
+      TunnelColour.green,
+    );
+    expect(
+      snapshot.colourOf(proxy.copyWith(colour: TunnelColour.red)),
+      TunnelColour.red,
+    );
+    expect(snapshot.colourOf(proxy), isNull);
+  });
+
   test('a malformed snapshot is a FormatException', () {
     expect(
       () => TunnelsSnapshot.fromJson({

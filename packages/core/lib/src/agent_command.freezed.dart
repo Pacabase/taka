@@ -56,7 +56,7 @@ extension AgentCommandPatterns on AgentCommand {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SaveTunnel value)?  save,TResult Function( RemoveTunnel value)?  remove,TResult Function( ToggleTunnel value)?  toggle,TResult Function( ArrangeTunnels value)?  arrange,TResult Function( TrustHostKey value)?  trustHostKey,TResult Function( ImportTunnels value)?  importTunnels,TResult Function( ExportTunnels value)?  exportTunnels,TResult Function( QuitAgent value)?  quit,TResult Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult Function( SetDebugLogging value)?  setDebugLogging,TResult Function( ShowLogs value)?  showLogs,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SaveTunnel value)?  save,TResult Function( RemoveTunnel value)?  remove,TResult Function( ToggleTunnel value)?  toggle,TResult Function( ArrangeTunnels value)?  arrange,TResult Function( TrustHostKey value)?  trustHostKey,TResult Function( EditGroup value)?  editGroup,TResult Function( ImportTunnels value)?  importTunnels,TResult Function( ExportTunnels value)?  exportTunnels,TResult Function( QuitAgent value)?  quit,TResult Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult Function( SetDebugLogging value)?  setDebugLogging,TResult Function( ShowLogs value)?  showLogs,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
@@ -64,7 +64,8 @@ return save(_that);case RemoveTunnel() when remove != null:
 return remove(_that);case ToggleTunnel() when toggle != null:
 return toggle(_that);case ArrangeTunnels() when arrange != null:
 return arrange(_that);case TrustHostKey() when trustHostKey != null:
-return trustHostKey(_that);case ImportTunnels() when importTunnels != null:
+return trustHostKey(_that);case EditGroup() when editGroup != null:
+return editGroup(_that);case ImportTunnels() when importTunnels != null:
 return importTunnels(_that);case ExportTunnels() when exportTunnels != null:
 return exportTunnels(_that);case QuitAgent() when quit != null:
 return quit(_that);case SetLaunchAtLogin() when setLaunchAtLogin != null:
@@ -88,7 +89,7 @@ return showLogs(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SaveTunnel value)  save,required TResult Function( RemoveTunnel value)  remove,required TResult Function( ToggleTunnel value)  toggle,required TResult Function( ArrangeTunnels value)  arrange,required TResult Function( TrustHostKey value)  trustHostKey,required TResult Function( ImportTunnels value)  importTunnels,required TResult Function( ExportTunnels value)  exportTunnels,required TResult Function( QuitAgent value)  quit,required TResult Function( SetLaunchAtLogin value)  setLaunchAtLogin,required TResult Function( SetDebugLogging value)  setDebugLogging,required TResult Function( ShowLogs value)  showLogs,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SaveTunnel value)  save,required TResult Function( RemoveTunnel value)  remove,required TResult Function( ToggleTunnel value)  toggle,required TResult Function( ArrangeTunnels value)  arrange,required TResult Function( TrustHostKey value)  trustHostKey,required TResult Function( EditGroup value)  editGroup,required TResult Function( ImportTunnels value)  importTunnels,required TResult Function( ExportTunnels value)  exportTunnels,required TResult Function( QuitAgent value)  quit,required TResult Function( SetLaunchAtLogin value)  setLaunchAtLogin,required TResult Function( SetDebugLogging value)  setDebugLogging,required TResult Function( ShowLogs value)  showLogs,}){
 final _that = this;
 switch (_that) {
 case SaveTunnel():
@@ -96,7 +97,8 @@ return save(_that);case RemoveTunnel():
 return remove(_that);case ToggleTunnel():
 return toggle(_that);case ArrangeTunnels():
 return arrange(_that);case TrustHostKey():
-return trustHostKey(_that);case ImportTunnels():
+return trustHostKey(_that);case EditGroup():
+return editGroup(_that);case ImportTunnels():
 return importTunnels(_that);case ExportTunnels():
 return exportTunnels(_that);case QuitAgent():
 return quit(_that);case SetLaunchAtLogin():
@@ -116,7 +118,7 @@ return showLogs(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SaveTunnel value)?  save,TResult? Function( RemoveTunnel value)?  remove,TResult? Function( ToggleTunnel value)?  toggle,TResult? Function( ArrangeTunnels value)?  arrange,TResult? Function( TrustHostKey value)?  trustHostKey,TResult? Function( ImportTunnels value)?  importTunnels,TResult? Function( ExportTunnels value)?  exportTunnels,TResult? Function( QuitAgent value)?  quit,TResult? Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult? Function( SetDebugLogging value)?  setDebugLogging,TResult? Function( ShowLogs value)?  showLogs,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SaveTunnel value)?  save,TResult? Function( RemoveTunnel value)?  remove,TResult? Function( ToggleTunnel value)?  toggle,TResult? Function( ArrangeTunnels value)?  arrange,TResult? Function( TrustHostKey value)?  trustHostKey,TResult? Function( EditGroup value)?  editGroup,TResult? Function( ImportTunnels value)?  importTunnels,TResult? Function( ExportTunnels value)?  exportTunnels,TResult? Function( QuitAgent value)?  quit,TResult? Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult? Function( SetDebugLogging value)?  setDebugLogging,TResult? Function( ShowLogs value)?  showLogs,}){
 final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
@@ -124,7 +126,8 @@ return save(_that);case RemoveTunnel() when remove != null:
 return remove(_that);case ToggleTunnel() when toggle != null:
 return toggle(_that);case ArrangeTunnels() when arrange != null:
 return arrange(_that);case TrustHostKey() when trustHostKey != null:
-return trustHostKey(_that);case ImportTunnels() when importTunnels != null:
+return trustHostKey(_that);case EditGroup() when editGroup != null:
+return editGroup(_that);case ImportTunnels() when importTunnels != null:
 return importTunnels(_that);case ExportTunnels() when exportTunnels != null:
 return exportTunnels(_that);case QuitAgent() when quit != null:
 return quit(_that);case SetLaunchAtLogin() when setLaunchAtLogin != null:
@@ -147,15 +150,16 @@ return showLogs(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,TResult Function( List<({String? group, String id,})> tunnels)?  arrange,TResult Function( String id,  String fingerprint)?  trustHostKey,TResult Function( List<Tunnel> tunnels)?  importTunnels,TResult Function( String path)?  exportTunnels,TResult Function()?  quit,TResult Function( bool on)?  setLaunchAtLogin,TResult Function( bool on)?  setDebugLogging,TResult Function()?  showLogs,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,TResult Function( List<({String? group, String id,})> tunnels)?  arrange,TResult Function( String id,  String fingerprint)?  trustHostKey,TResult Function( String group,  String name,  TunnelColour? colour)?  editGroup,TResult Function( List<Tunnel> tunnels,  Map<String, TunnelColour> groupColours)?  importTunnels,TResult Function( String path)?  exportTunnels,TResult Function()?  quit,TResult Function( bool on)?  setLaunchAtLogin,TResult Function( bool on)?  setDebugLogging,TResult Function()?  showLogs,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that.tunnel);case RemoveTunnel() when remove != null:
 return remove(_that.id);case ToggleTunnel() when toggle != null:
 return toggle(_that.id);case ArrangeTunnels() when arrange != null:
 return arrange(_that.tunnels);case TrustHostKey() when trustHostKey != null:
-return trustHostKey(_that.id,_that.fingerprint);case ImportTunnels() when importTunnels != null:
-return importTunnels(_that.tunnels);case ExportTunnels() when exportTunnels != null:
+return trustHostKey(_that.id,_that.fingerprint);case EditGroup() when editGroup != null:
+return editGroup(_that.group,_that.name,_that.colour);case ImportTunnels() when importTunnels != null:
+return importTunnels(_that.tunnels,_that.groupColours);case ExportTunnels() when exportTunnels != null:
 return exportTunnels(_that.path);case QuitAgent() when quit != null:
 return quit();case SetLaunchAtLogin() when setLaunchAtLogin != null:
 return setLaunchAtLogin(_that.on);case SetDebugLogging() when setDebugLogging != null:
@@ -178,15 +182,16 @@ return showLogs();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,required TResult Function( List<({String? group, String id,})> tunnels)  arrange,required TResult Function( String id,  String fingerprint)  trustHostKey,required TResult Function( List<Tunnel> tunnels)  importTunnels,required TResult Function( String path)  exportTunnels,required TResult Function()  quit,required TResult Function( bool on)  setLaunchAtLogin,required TResult Function( bool on)  setDebugLogging,required TResult Function()  showLogs,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,required TResult Function( List<({String? group, String id,})> tunnels)  arrange,required TResult Function( String id,  String fingerprint)  trustHostKey,required TResult Function( String group,  String name,  TunnelColour? colour)  editGroup,required TResult Function( List<Tunnel> tunnels,  Map<String, TunnelColour> groupColours)  importTunnels,required TResult Function( String path)  exportTunnels,required TResult Function()  quit,required TResult Function( bool on)  setLaunchAtLogin,required TResult Function( bool on)  setDebugLogging,required TResult Function()  showLogs,}) {final _that = this;
 switch (_that) {
 case SaveTunnel():
 return save(_that.tunnel);case RemoveTunnel():
 return remove(_that.id);case ToggleTunnel():
 return toggle(_that.id);case ArrangeTunnels():
 return arrange(_that.tunnels);case TrustHostKey():
-return trustHostKey(_that.id,_that.fingerprint);case ImportTunnels():
-return importTunnels(_that.tunnels);case ExportTunnels():
+return trustHostKey(_that.id,_that.fingerprint);case EditGroup():
+return editGroup(_that.group,_that.name,_that.colour);case ImportTunnels():
+return importTunnels(_that.tunnels,_that.groupColours);case ExportTunnels():
 return exportTunnels(_that.path);case QuitAgent():
 return quit();case SetLaunchAtLogin():
 return setLaunchAtLogin(_that.on);case SetDebugLogging():
@@ -205,15 +210,16 @@ return showLogs();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,TResult? Function( List<({String? group, String id,})> tunnels)?  arrange,TResult? Function( String id,  String fingerprint)?  trustHostKey,TResult? Function( List<Tunnel> tunnels)?  importTunnels,TResult? Function( String path)?  exportTunnels,TResult? Function()?  quit,TResult? Function( bool on)?  setLaunchAtLogin,TResult? Function( bool on)?  setDebugLogging,TResult? Function()?  showLogs,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,TResult? Function( List<({String? group, String id,})> tunnels)?  arrange,TResult? Function( String id,  String fingerprint)?  trustHostKey,TResult? Function( String group,  String name,  TunnelColour? colour)?  editGroup,TResult? Function( List<Tunnel> tunnels,  Map<String, TunnelColour> groupColours)?  importTunnels,TResult? Function( String path)?  exportTunnels,TResult? Function()?  quit,TResult? Function( bool on)?  setLaunchAtLogin,TResult? Function( bool on)?  setDebugLogging,TResult? Function()?  showLogs,}) {final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that.tunnel);case RemoveTunnel() when remove != null:
 return remove(_that.id);case ToggleTunnel() when toggle != null:
 return toggle(_that.id);case ArrangeTunnels() when arrange != null:
 return arrange(_that.tunnels);case TrustHostKey() when trustHostKey != null:
-return trustHostKey(_that.id,_that.fingerprint);case ImportTunnels() when importTunnels != null:
-return importTunnels(_that.tunnels);case ExportTunnels() when exportTunnels != null:
+return trustHostKey(_that.id,_that.fingerprint);case EditGroup() when editGroup != null:
+return editGroup(_that.group,_that.name,_that.colour);case ImportTunnels() when importTunnels != null:
+return importTunnels(_that.tunnels,_that.groupColours);case ExportTunnels() when exportTunnels != null:
 return exportTunnels(_that.path);case QuitAgent() when quit != null:
 return quit();case SetLaunchAtLogin() when setLaunchAtLogin != null:
 return setLaunchAtLogin(_that.on);case SetDebugLogging() when setDebugLogging != null:
@@ -586,8 +592,80 @@ as String,
 /// @nodoc
 
 
+class EditGroup extends AgentCommand {
+  const EditGroup(this.group, {required this.name, required this.colour}): super._();
+  
+
+ final  String group;
+ final  String name;
+ final  TunnelColour? colour;
+
+/// Create a copy of AgentCommand
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$EditGroupCopyWith<EditGroup> get copyWith => _$EditGroupCopyWithImpl<EditGroup>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is EditGroup&&(identical(other.group, group) || other.group == group)&&(identical(other.name, name) || other.name == name)&&(identical(other.colour, colour) || other.colour == colour));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,group,name,colour);
+}
+
+@override
+String toString() {
+    return 'AgentCommand.editGroup(group: $group, name: $name, colour: $colour)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $EditGroupCopyWith<$Res> implements $AgentCommandCopyWith<$Res> {
+  factory $EditGroupCopyWith(EditGroup value, $Res Function(EditGroup) _then) = _$EditGroupCopyWithImpl;
+@useResult
+$Res call({
+ String group, String name, TunnelColour? colour
+});
+
+
+
+
+}
+/// @nodoc
+class _$EditGroupCopyWithImpl<$Res>
+    implements $EditGroupCopyWith<$Res> {
+  _$EditGroupCopyWithImpl(this._self, this._then);
+
+  final EditGroup _self;
+  final $Res Function(EditGroup) _then;
+
+/// Create a copy of AgentCommand
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? group = null,Object? name = null,Object? colour = freezed,}) {
+  return _then(EditGroup(
+null == group ? _self.group : group // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,colour: freezed == colour ? _self.colour : colour // ignore: cast_nullable_to_non_nullable
+as TunnelColour?,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
 class ImportTunnels extends AgentCommand {
-  const ImportTunnels( List<Tunnel> tunnels): _tunnels = tunnels,super._();
+  const ImportTunnels( List<Tunnel> tunnels, { Map<String, TunnelColour> groupColours = const {}}): _tunnels = tunnels,_groupColours = groupColours,super._();
   
 
  final  List<Tunnel> _tunnels;
@@ -595,6 +673,13 @@ class ImportTunnels extends AgentCommand {
   if (_tunnels is EqualUnmodifiableListView) return _tunnels;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_tunnels);
+}
+
+ final  Map<String, TunnelColour> _groupColours;
+@JsonKey() Map<String, TunnelColour> get groupColours {
+  if (_groupColours is EqualUnmodifiableMapView) return _groupColours;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_groupColours);
 }
 
 
@@ -608,18 +693,18 @@ $ImportTunnelsCopyWith<ImportTunnels> get copyWith => _$ImportTunnelsCopyWithImp
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is ImportTunnels&&const DeepCollectionEquality().equals(other.tunnels, _tunnels));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is ImportTunnels&&const DeepCollectionEquality().equals(other.tunnels, _tunnels)&&const DeepCollectionEquality().equals(other.groupColours, _groupColours));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_tunnels));
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_tunnels),const DeepCollectionEquality().hash(_groupColours));
 }
 
 @override
 String toString() {
-    return 'AgentCommand.importTunnels(tunnels: $tunnels)';
+    return 'AgentCommand.importTunnels(tunnels: $tunnels, groupColours: $groupColours)';
 }
 
 
@@ -630,7 +715,7 @@ abstract mixin class $ImportTunnelsCopyWith<$Res> implements $AgentCommandCopyWi
   factory $ImportTunnelsCopyWith(ImportTunnels value, $Res Function(ImportTunnels) _then) = _$ImportTunnelsCopyWithImpl;
 @useResult
 $Res call({
- List<Tunnel> tunnels
+ List<Tunnel> tunnels, Map<String, TunnelColour> groupColours
 });
 
 
@@ -647,10 +732,11 @@ class _$ImportTunnelsCopyWithImpl<$Res>
 
 /// Create a copy of AgentCommand
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? tunnels = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? tunnels = null,Object? groupColours = null,}) {
   return _then(ImportTunnels(
 null == tunnels ? _self._tunnels : tunnels // ignore: cast_nullable_to_non_nullable
-as List<Tunnel>,
+as List<Tunnel>,groupColours: null == groupColours ? _self._groupColours : groupColours // ignore: cast_nullable_to_non_nullable
+as Map<String, TunnelColour>,
   ));
 }
 

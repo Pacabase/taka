@@ -43,13 +43,25 @@ void main() {
   });
 
   test('save creates the folder and load reads the tunnels in order', () async {
-    await store().save([proxy, database], on: const {});
+    await store().save([proxy, database], on: const {}, groupColours: const {});
 
     expect((await store().load()).tunnels, [proxy, database]);
   });
 
+  test('save keeps group colours, and a file without them has none', () async {
+    await store().save([database], on: const {}, groupColours: const {});
+    expect((await store().load()).groupColours, isEmpty);
+
+    await store().save(
+      [database.copyWith(group: 'Prod')],
+      on: const {},
+      groupColours: const {'Prod': TunnelColour.blue},
+    );
+    expect((await store().load()).groupColours, {'Prod': TunnelColour.blue});
+  });
+
   test('save writes a versioned file', () async {
-    await store().save([proxy], on: const {});
+    await store().save([proxy], on: const {}, groupColours: const {});
 
     expect(jsonDecode(await file.readAsString()), {
       'version': 1,
@@ -59,8 +71,8 @@ void main() {
   });
 
   test('save replaces what was saved before', () async {
-    await store().save([database, proxy], on: const {});
-    await store().save([proxy], on: const {});
+    await store().save([database, proxy], on: const {}, groupColours: const {});
+    await store().save([proxy], on: const {}, groupColours: const {});
 
     expect((await store().load()).tunnels, [proxy]);
   });
@@ -69,9 +81,9 @@ void main() {
     final saving = store();
 
     await Future.wait([
-      saving.save([database], on: const {}),
-      saving.save([database, proxy], on: const {}),
-      saving.save([proxy], on: const {}),
+      saving.save([database], on: const {}, groupColours: const {}),
+      saving.save([database, proxy], on: const {}, groupColours: const {}),
+      saving.save([proxy], on: const {}, groupColours: const {}),
     ]);
 
     expect((await store().load()).tunnels, [proxy]);
@@ -110,7 +122,7 @@ void main() {
     await expectLater(saving.load(), throwsFormatException);
 
     await expectLater(
-      saving.save([proxy], on: const {}),
+      saving.save([proxy], on: const {}, groupColours: const {}),
       throwsA(isA<FileSystemException>()),
     );
     expect(jsonDecode(await file.readAsString()), containsPair('version', 3));
@@ -121,23 +133,23 @@ void main() {
     await Directory(file.path).create(recursive: true);
 
     await expectLater(
-      saving.save([proxy], on: const {}),
+      saving.save([proxy], on: const {}, groupColours: const {}),
       throwsA(isA<FileSystemException>()),
     );
     await Directory(file.path).delete();
-    await saving.save([database], on: const {});
+    await saving.save([database], on: const {}, groupColours: const {});
 
     expect((await store().load()).tunnels, [database]);
   });
 
   test('save leaves no temporary file behind', () async {
-    await store().save([proxy], on: const {});
+    await store().save([proxy], on: const {}, groupColours: const {});
 
     expect(file.parent.listSync().map((entry) => entry.path), [file.path]);
   });
 
   test('save keeps which tunnels were on, and load reads them back', () async {
-    await store().save([database, proxy], on: {'b2'});
+    await store().save([database, proxy], on: {'b2'}, groupColours: const {});
 
     final loaded = await store().load();
 
@@ -174,7 +186,11 @@ void main() {
   });
 
   test('save lists the tunnels that are on in their order', () async {
-    await store().save([database, proxy], on: {'b2', 'a1', 'gone'});
+    await store().save(
+      [database, proxy],
+      on: {'b2', 'a1', 'gone'},
+      groupColours: const {},
+    );
 
     expect(
       jsonDecode(await file.readAsString()),

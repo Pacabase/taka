@@ -15,7 +15,9 @@ import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_page.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
+import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/widgets/colour_dot.dart';
 
 void main() {
   const database = Tunnel(
@@ -113,17 +115,22 @@ void main() {
     expect(top('Database'), lessThan(top('Cache')));
     expect(top('Cache'), lessThan(top('Proxy')));
 
-    bool isInGroup(String name) => tester
-        .widget<TunnelTile>(
-          find.ancestor(of: find.text(name), matching: find.byType(TunnelTile)),
-        )
-        .isInGroup;
+    bool isInGroup(String name) =>
+        tester
+            .widget<TunnelTile>(
+              find.ancestor(
+                of: find.text(name),
+                matching: find.byType(TunnelTile),
+              ),
+            )
+            .guide !=
+        null;
     expect(isInGroup('Database'), isTrue);
     expect(isInGroup('Cache'), isTrue);
     expect(isInGroup('Proxy'), isFalse);
   });
 
-  group("a group's header", () {
+  group("a group's Edit", () {
     Future<_MockTunnelsBloc> pumpGrouped(WidgetTester tester) => pumpPage(
       tester,
       initialState: Ready(
@@ -138,124 +145,205 @@ void main() {
               group: 'monolith',
             ),
           ],
+          groupColours: const {'monolith': TunnelColour.green},
         ),
       ),
     );
 
-    testWidgets('renames the whole group, even only its case', (tester) async {
-      final bloc = await pumpGrouped(tester);
-
-      await tester.tap(find.text('monolith'));
+    Future<void> openEdit(WidgetTester tester) async {
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getCenter(find.text('monolith')));
       await tester.pump();
-      await tester.enterText(find.byType(TextField), ' Monolith ');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pump();
+      await tester.tap(find.byTooltip('Edit monolith'));
+      await tester.pumpAndSettle();
+    }
 
-      verify(
-        () => bloc.add(
-          const TunnelsEvent.send(
-            AgentCommand.arrange([
-              (id: 'a1', group: 'Monolith'),
-              (id: 'b2', group: null),
-              (id: 'c3', group: 'Monolith'),
-            ]),
-          ),
-        ),
-      ).called(1);
+    testWidgets('shows only while the header is hovered', (tester) async {
+      await pumpGrouped(tester);
+      bool shown() => tester
+          .widget<Visibility>(
+            find
+                .ancestor(
+                  of: find.byTooltip('Edit monolith'),
+                  matching: find.byType(Visibility),
+                )
+                .first,
+          )
+          .visible;
+
+      expect(shown(), isFalse);
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getCenter(find.text('monolith')));
+      await tester.pump();
+      expect(shown(), isTrue);
+
+      await mouse.moveTo(Offset.zero);
+      await tester.pump();
+      expect(shown(), isFalse);
     });
 
-    testWidgets("clicking away renames it, into another group's spelling", (
-      tester,
-    ) async {
-      final bloc = await pumpPage(
+    testWidgets('is reached from the keyboard', (tester) async {
+      await pumpGrouped(tester);
+      final edit = find.byTooltip('Edit monolith');
+      bool focused() => Focus.of(tester.element(edit)).hasFocus;
+
+      for (var press = 0; press < 20 && !focused(); press++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      expect(focused(), isTrue);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit group'), findsOneWidget);
+    });
+
+    testWidgets('closes when the group goes away', (tester) async {
+      final states = StreamController<TunnelsState>();
+      addTearDown(states.close);
+      await pumpPage(
         tester,
-        initialState: Ready(
+        initialState: const Ready(
           TunnelsSnapshot(
-            tunnels: [
-              database.copyWith(group: 'monolith'),
-              proxy,
-              const Tunnel(
-                id: 'c3',
-                name: 'Cache',
-                localPort: 1,
-                group: 'Prod',
-              ),
-            ],
+            tunnels: [Tunnel(id: 'a1', localPort: 1, group: 'monolith')],
           ),
         ),
+        states: states.stream,
       );
+      await openEdit(tester);
+      expect(find.text('Edit group'), findsOneWidget);
 
-      await tester.tap(find.text('monolith'));
+      states.add(const Ready(TunnelsSnapshot(tunnels: [proxy])));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tunnels'), findsOneWidget);
+    });
+
+    testWidgets('names and colours the group in one save', (tester) async {
+      final bloc = await pumpGrouped(tester);
+      await openEdit(tester);
+
+      expect(find.text('Edit group'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Monolith');
+      await tester.tap(find.byTooltip('Blue'));
       await tester.pump();
-      await tester.enterText(find.byType(TextField), 'prod');
-      FocusManager.instance.primaryFocus!.unfocus();
-      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
 
       verify(
         () => bloc.add(
           const TunnelsEvent.send(
-            AgentCommand.arrange([
-              (id: 'a1', group: 'Prod'),
-              (id: 'b2', group: null),
-              (id: 'c3', group: 'Prod'),
-            ]),
+            AgentCommand.editGroup(
+              'monolith',
+              name: 'Monolith',
+              colour: TunnelColour.blue,
+            ),
           ),
         ),
       ).called(1);
+      expect(find.text('Tunnels'), findsOneWidget);
     });
 
-    testWidgets('the same name renames nothing', (tester) async {
+    testWidgets('opens on the group as it is', (tester) async {
+      await pumpGrouped(tester);
+      await openEdit(tester);
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'monolith',
+      );
+      final selected = tester
+          .widgetList<Semantics>(find.byType(Semantics))
+          .where((semantics) => semantics.properties.selected ?? false);
+      expect(selected, hasLength(1));
+      expect(
+        find.ancestor(
+          of: find.byWidget(selected.single),
+          matching: find.byTooltip('Green'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Esc or Cancel changes nothing', (tester) async {
       final bloc = await pumpGrouped(tester);
+      await openEdit(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.text('Tunnels'), findsOneWidget);
 
-      await tester.tap(find.text('monolith'));
-      await tester.pump();
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pump();
+      await openEdit(tester);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
 
+      expect(find.text('Tunnels'), findsOneWidget);
       verifyNever(
         () => bloc.add(
           const TunnelsEvent.send(
-            AgentCommand.arrange([
-              (id: 'a1', group: 'monolith'),
-              (id: 'b2', group: null),
-              (id: 'c3', group: 'monolith'),
-            ]),
+            AgentCommand.editGroup(
+              'monolith',
+              name: 'monolith',
+              colour: TunnelColour.green,
+            ),
           ),
         ),
       );
     });
 
-    testWidgets('Esc or a blank name renames nothing', (tester) async {
-      final bloc = await pumpGrouped(tester);
+    testWidgets('a blank name turns Save off', (tester) async {
+      await pumpGrouped(tester);
+      await openEdit(tester);
 
-      await tester.tap(find.text('monolith'));
-      await tester.pump();
-      await tester.enterText(find.byType(TextField), 'Other');
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-      await tester.pump();
-      expect(find.text('monolith'), findsOneWidget);
-
-      await tester.tap(find.text('monolith'));
-      await tester.pump();
       await tester.enterText(find.byType(TextField), '  ');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
 
-      for (final name in ['Other', '  ']) {
-        verifyNever(
-          () => bloc.add(
-            TunnelsEvent.send(
-              AgentCommand.arrange([
-                (id: 'a1', group: name),
-                (id: 'b2', group: null),
-                (id: 'c3', group: name),
-              ]),
-            ),
-          ),
-        );
-      }
-      expect(find.text('monolith'), findsOneWidget);
+      expect(
+        tester.widget<FilledButton>(find.byType(FilledButton)).enabled,
+        isFalse,
+      );
     });
+
+    testWidgets("the header's name isn't edited in place", (tester) async {
+      await pumpGrouped(tester);
+
+      await tester.tap(find.text('monolith'));
+      await tester.pump();
+
+      expect(find.byType(TextField), findsNothing);
+    });
+  });
+
+  testWidgets("a group's guide line rounds at its first and last tunnel", (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      initialState: Ready(
+        TunnelsSnapshot(
+          tunnels: [
+            database.copyWith(group: 'Prod'),
+            const Tunnel(id: 'c3', name: 'Cache', localPort: 1, group: 'Prod'),
+            const Tunnel(id: 'd4', name: 'Docs', localPort: 2, group: 'Prod'),
+            proxy.copyWith(group: 'Solo'),
+          ],
+        ),
+      ),
+    );
+    (bool, bool)? endsOf(String name) => switch (tester
+        .widget<TunnelTile>(
+          find.ancestor(of: find.text(name), matching: find.byType(TunnelTile)),
+        )
+        .guide) {
+      (:final isFirst, :final isLast, colour: _) => (isFirst, isLast),
+      null => null,
+    };
+
+    expect(endsOf('Database'), (true, false));
+    expect(endsOf('Cache'), (false, false));
+    expect(endsOf('Docs'), (false, true));
+    expect(endsOf('Proxy'), (true, true));
   });
 
   testWidgets("a group's header carries its tunnels when dragged", (
@@ -317,13 +405,15 @@ void main() {
             database.copyWith(group: 'Prod'),
             proxy,
           ],
+          groupColours: const {'Prod': TunnelColour.blue},
         ),
       ),
     );
     Finder tile(String name) =>
         find.ancestor(of: find.text(name), matching: find.byType(TunnelTile));
-    bool liftedIsInGroup() =>
-        tester.widget<TunnelTile>(tile('Proxy').last).isInGroup;
+    TunnelTile lifted() => tester.widget<TunnelTile>(tile('Proxy').last);
+    bool liftedIsInGroup() => lifted().guide != null;
+    final colors = TakaColors.of(tester.element(find.byType(TunnelTile).first));
     final into =
         tester.getCenter(find.byKey(const ValueKey('end Prod')).last).dy -
         1 -
@@ -338,12 +428,17 @@ void main() {
       await tester.pump();
     }
     expect(liftedIsInGroup(), isTrue);
+    // It takes the group's colour as its guide line, with no dot of its own.
+    expect(lifted().guide?.colour, colors.tunnel(TunnelColour.blue));
+    expect((lifted().guide?.isFirst, lifted().guide?.isLast), (false, false));
+    expect(lifted().colour, isNull);
 
     for (var step = 0; step < 10; step++) {
       await drag.moveBy(Offset(0, -into / 10));
       await tester.pump();
     }
     expect(liftedIsInGroup(), isFalse);
+    expect(lifted().colour, isNull);
     await drag.up();
     await tester.pumpAndSettle();
 
@@ -449,6 +544,49 @@ void main() {
       ),
     ).called(1);
   });
+
+  testWidgets(
+    "a coloured group's dot sits on its guide line, and its tunnels have none",
+    (tester) async {
+      await pumpPage(
+        tester,
+        initialState: Ready(
+          TunnelsSnapshot(
+            tunnels: [
+              database.copyWith(group: 'Prod', colour: TunnelColour.red),
+              proxy.copyWith(colour: TunnelColour.green),
+            ],
+            groupColours: const {'Prod': TunnelColour.blue},
+          ),
+        ),
+      );
+      final guide = find.descendant(
+        of: find.ancestor(
+          of: find.text('Database'),
+          matching: find.byType(TunnelTile),
+        ),
+        matching: find.byType(GuideLine),
+      );
+
+      // The guide line is 2px wide.
+      expect(
+        tester
+            .getCenter(
+              find.descendant(
+                of: find.byKey(const ValueKey('group Prod')),
+                matching: find.byType(ColourDot),
+              ),
+            )
+            .dx,
+        tester.getTopLeft(guide).dx + 1,
+      );
+      final dots = tester.widgetList<ColourDot>(find.byType(ColourDot));
+      expect(dots.map((dot) => dot.colour), [
+        TunnelColour.blue,
+        TunnelColour.green,
+      ]);
+    },
+  );
 
   testWidgets(
     'lists the tunnels from the top, and dragging one moves it, shown as hovered',

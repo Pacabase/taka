@@ -1,4 +1,5 @@
 import 'package:core/src/tunnel.dart';
+import 'package:core/src/tunnel_colour.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'agent_command.freezed.dart';
@@ -16,7 +17,18 @@ sealed class const AgentCommand._() with _$AgentCommand {
 
   const factory trustHostKey(String id, String fingerprint) = TrustHostKey;
 
-  const factory importTunnels(List<Tunnel> tunnels) = ImportTunnels;
+  /// [name] renames [group], to the spelling of a group in use like it;
+  /// [colour] null takes its colour away.
+  const factory editGroup(
+    String group, {
+    required String name,
+    required TunnelColour? colour,
+  }) = EditGroup;
+
+  const factory importTunnels(
+    List<Tunnel> tunnels, {
+    @Default({}) Map<String, TunnelColour> groupColours,
+  }) = ImportTunnels;
 
   const factory exportTunnels(String path) = ExportTunnels;
 
@@ -54,8 +66,23 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'fingerprint': final String fingerprint,
     } =>
       TrustHostKey(id, fingerprint),
-    {'command': 'import', 'tunnels': final List<Object?> tunnels} =>
-      ImportTunnels(tunnels.map(Tunnel.fromJson).toList()),
+    {
+          'command': 'editGroup',
+          'group': final String group,
+          'name': final String name,
+        } &&
+        final Map<Object?, Object?> fields =>
+      EditGroup(
+        group,
+        name: name,
+        colour: TunnelColour.fromName(fields['colour']),
+      ),
+    {'command': 'import', 'tunnels': final List<Object?> tunnels} &&
+        final Map<Object?, Object?> fields =>
+      ImportTunnels(
+        tunnels.map(Tunnel.fromJson).toList(),
+        groupColours: groupColoursFromJson(fields['groupColours']),
+      ),
     {'command': 'export', 'path': final String path} => ExportTunnels(path),
     {'command': 'quit'} => const QuitAgent(),
     {'command': 'launchAtLogin', 'on': final bool on} => SetLaunchAtLogin(
@@ -81,9 +108,17 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'id': id,
       'fingerprint': fingerprint,
     },
-    ImportTunnels(:final tunnels) => {
+    EditGroup(:final group, :final name, :final colour) => {
+      'command': 'editGroup',
+      'group': group,
+      'name': name,
+      'colour': ?colour?.name,
+    },
+    ImportTunnels(:final tunnels, :final groupColours) => {
       'command': 'import',
       'tunnels': tunnels.map((tunnel) => tunnel.toJson()).toList(),
+      if (groupColours.isNotEmpty)
+        'groupColours': groupColoursToJson(groupColours),
     },
     ExportTunnels(:final path) => {'command': 'export', 'path': path},
     QuitAgent() => {'command': 'quit'},

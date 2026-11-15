@@ -157,8 +157,10 @@ Future<void> _import(
   if (file == null) return;
 
   try {
-    final (:tunnels, on: _) = decodeTunnels(await file.readAsString());
-    send(AgentCommand.importTunnels(tunnels));
+    final (:tunnels, on: _, :groupColours) = decodeTunnels(
+      await file.readAsString(),
+    );
+    send(AgentCommand.importTunnels(tunnels, groupColours: groupColours));
   } on FormatException {
     messenger.showSnackBar(
       SnackBar(content: Text("${file.name} isn't a file of Taka tunnels.")),
