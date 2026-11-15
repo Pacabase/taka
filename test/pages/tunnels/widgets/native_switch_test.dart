@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
+import 'package:taka/theme/taka_theme.dart';
 
 void main() {
   testWidgets('a click on a switch focused by Tab toggles it and drops the '
@@ -13,6 +14,7 @@ void main() {
     var toggles = 0;
     await tester.pumpWidget(
       MaterialApp(
+        theme: takaTheme(Brightness.light),
         home: Scaffold(
           body: Center(
             child: NativeSwitch(

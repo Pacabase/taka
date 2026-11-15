@@ -4,7 +4,7 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:taka/agent/agent_launcher.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
 
@@ -37,7 +37,7 @@ class _AgentErrorPageState extends State<AgentErrorPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
 
     return Scaffold(
       body: Center(

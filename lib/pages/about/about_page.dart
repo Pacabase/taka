@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
 
 const _legalese = 'Copyright © 2026 the Taka project authors.';
@@ -37,7 +37,7 @@ class const AboutPage({super.key, required final String version})
     extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
     final secondary = TextStyle(color: colors.textSecondary);
 
     return Scaffold(

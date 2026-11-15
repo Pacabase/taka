@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
 
 class const TunnelsHeader({
@@ -11,7 +11,7 @@ class const TunnelsHeader({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
 
     return Container(
       height: 32,

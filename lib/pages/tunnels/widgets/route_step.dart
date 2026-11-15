@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 
 // The dashes run on through the 12px gap to the next step's dot.
 class const RouteStep({
@@ -14,7 +14,7 @@ class const RouteStep({
 
   @override
   Widget build(BuildContext context) {
-    final color = TakaColors.of(context).textSecondary;
+    final color = context.theme.textSecondary;
 
     return Stack(
       clipBehavior: Clip.none,
@@ -86,10 +86,7 @@ class const Labelled({
           height: 16,
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: TakaColors.of(context).textSecondary,
-            ),
+            style: TextStyle(fontSize: 12, color: context.theme.textSecondary),
           ),
         ),
         child,

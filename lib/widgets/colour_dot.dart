@@ -1,6 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 
 extension TunnelColourLabel on TunnelColour {
   String get label => '${name[0].toUpperCase()}${name.substring(1)}';
@@ -14,7 +14,7 @@ class const ColourDot(
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
 
     return Container(
       width: size,

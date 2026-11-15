@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 
 class const AppIconData._(final String name) {}
 
@@ -39,7 +39,7 @@ class const AppIcon(
           width: size,
           height: size,
           colorFilter: ColorFilter.mode(
-            color ?? TakaColors.of(context).text,
+            color ?? context.theme.text,
             BlendMode.srcIn,
           ),
         ),
