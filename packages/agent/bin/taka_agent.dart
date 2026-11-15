@@ -34,7 +34,7 @@ Future<void> _start() async {
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
     client: const SystemSshClient(loginShell: true, shareConnections: true),
-    comeForward: agentBundle == null
+    comeForward: agentBundle == null || !Platform.isMacOS
         ? null
         : Foreground(
             // A background app can't bring itself forward; open can.

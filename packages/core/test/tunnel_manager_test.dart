@@ -68,6 +68,24 @@ void main() {
     return () async => calls.add('back');
   };
 
+  // A manager whose tunnel logs ssh's [lines] as it opens, recording in [calls].
+  Future<TunnelManager> loggingIn(
+    List<String> calls, {
+    Future<SshTunnel> Function()? opened,
+    List<String> lines = const [connectingLine, authenticatingLine],
+  }) async {
+    when(openAnyTunnel)
+        .thenAnswer(logsLogin(opened ?? () async => tunnel, lines: lines));
+    final manager = TunnelManager(
+      store: store,
+      client: client,
+      comeForward: recordedIn(calls),
+    );
+    addTearDown(manager.close);
+    await manager.load();
+    return manager;
+  }
+
   Future<SshTunnel> abortable(Invocation invocation) async {
     await (invocation.namedArguments[#abortTrigger]! as Future<void>);
     throw const SshTunnelAbortedException();
@@ -332,19 +350,13 @@ void main() {
       'comes forward as ssh connects and logs in, then hands back',
       () async {
         final calls = <String>[];
-        when(openAnyTunnel).thenAnswer(
-          logsLogin(() async {
+        final manager = await loggingIn(
+          calls,
+          opened: () async {
             calls.add('connected');
             return tunnel;
-          }),
+          },
         );
-        final manager = TunnelManager(
-          store: store,
-          client: client,
-          comeForward: recordedIn(calls),
-        );
-        addTearDown(manager.close);
-        await manager.load();
 
         await manager.toggle('a1');
         await pumpEventQueue();
@@ -355,24 +367,15 @@ void main() {
 
     test('comes forward after a ProxyCommand, as ssh logs in', () async {
       final calls = <String>[];
-      when(openAnyTunnel).thenAnswer(
-        logsLogin(
-          () async => tunnel,
-          lines: [
-            'debug1: Executing proxy command: exec my-proxy myserver',
-            'debug1: Remote protocol version 2.0',
-            authenticatingLine,
-            'debug1: Server accepts key: user@host ED25519 agent',
-          ],
-        ),
+      final manager = await loggingIn(
+        calls,
+        lines: [
+          'debug1: Executing proxy command: exec my-proxy myserver',
+          'debug1: Remote protocol version 2.0',
+          authenticatingLine,
+          'debug1: Server accepts key: user@host ED25519 agent',
+        ],
       );
-      final manager = TunnelManager(
-        store: store,
-        client: client,
-        comeForward: recordedIn(calls),
-      );
-      addTearDown(manager.close);
-      await manager.load();
 
       await manager.toggle('a1');
       await pumpEventQueue();
@@ -380,15 +383,15 @@ void main() {
       expect(calls, ['forward', 'forward', 'back', 'back']);
     });
 
-    test('stays behind when ssh needs no new login', () async {
+    test('stays behind when it joins a shared connection', () async {
       final calls = <String>[];
-      final manager = TunnelManager(
-        store: store,
-        client: client,
-        comeForward: recordedIn(calls),
+      final manager = await loggingIn(
+        calls,
+        lines: [
+          'debug1: auto-mux: Trying existing master at /tmp/cm',
+          'debug1: mux_client_request_session: master session id: 2',
+        ],
       );
-      addTearDown(manager.close);
-      await manager.load();
 
       await manager.toggle('a1');
       await pumpEventQueue();
@@ -399,11 +402,24 @@ void main() {
 
     test('hands back when ssh fails', () async {
       final calls = <String>[];
-      when(openAnyTunnel).thenAnswer(
-        logsLogin(
-          () async => throw const SshTunnelException('Permission denied'),
-        ),
+      final manager = await loggingIn(
+        calls,
+        opened: () async => throw const SshTunnelException('Permission denied'),
       );
+
+      await manager.toggle('a1');
+      await pumpEventQueue();
+
+      expect(calls, ['forward', 'forward', 'back', 'back']);
+    });
+
+    test('does not come forward for a line after the attempt', () async {
+      final calls = <String>[];
+      late void Function(SshLog log) sshSays;
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        sshSays = invocation.namedArguments[#onLog]! as void Function(SshLog);
+        throw const SshTunnelException('Permission denied');
+      });
       final manager = TunnelManager(
         store: store,
         client: client,
@@ -411,11 +427,32 @@ void main() {
       );
       addTearDown(manager.close);
       await manager.load();
-
       await manager.toggle('a1');
+
+      sshSays(const SshProgress(connectingLine));
       await pumpEventQueue();
 
-      expect(calls, ['forward', 'forward', 'back', 'back']);
+      expect(calls, isEmpty);
+    });
+
+    test('hands each tunnel back as it is up', () async {
+      final calls = <String>[];
+      final databaseUp = Completer<SshTunnel>();
+      final proxyUp = Completer<SshTunnel>();
+      when(openAnySocksProxy).thenAnswer(logsLogin(() => proxyUp.future));
+      final manager = await loggingIn(calls, opened: () => databaseUp.future);
+      unawaited(manager.toggle('a1'));
+      unawaited(manager.toggle('b2'));
+      await pumpEventQueue();
+      expect(calls, ['forward', 'forward', 'forward', 'forward']);
+
+      databaseUp.complete(tunnel);
+      await pumpEventQueue();
+      expect(calls.where((call) => call == 'back'), hasLength(2));
+
+      proxyUp.complete(FakeTunnel(1080));
+      await pumpEventQueue();
+      expect(calls.where((call) => call == 'back'), hasLength(4));
     });
 
     test('hands back when turned off while it logs in', () async {
@@ -463,23 +500,6 @@ void main() {
       await pumpEventQueue();
 
       expect(calls, ['forward', 'back', 'forward', 'back']);
-    });
-
-    test('connects anyway when it cannot come forward', () async {
-      when(openAnyTunnel).thenAnswer(logsLogin(() async => tunnel));
-      final manager = TunnelManager(
-        store: store,
-        client: client,
-        comeForward: () async => throw StateError('no window'),
-      );
-      addTearDown(manager.close);
-      await manager.load();
-
-      await manager.toggle('a1');
-
-      expect(manager.snapshot.statusOf('a1'), const Connected());
-      expect(store.on, {'a1'});
-      verify(openAnyTunnel).called(1);
     });
 
     test('opens a local tunnel with its fields', () async {
@@ -2102,7 +2122,7 @@ void main() {
       });
     });
 
-    test('a restored tunnel comes forward until it is first up', () {
+    test('a restored tunnel comes forward on its first try only', () {
       fakeAsync((time) {
         final calls = <String>[];
         store = FakeStore([database], {'a1'});
@@ -2126,8 +2146,9 @@ void main() {
 
         time.elapse(const Duration(seconds: 1));
 
+        // A retry with the network down mustn't take focus each time.
         expect(manager.snapshot.statusOf('a1'), const Connected());
-        expect(calls, hasLength(8));
+        expect(calls, ['forward', 'forward', 'back', 'back']);
 
         unawaited(manager.close());
         time.flushMicrotasks();

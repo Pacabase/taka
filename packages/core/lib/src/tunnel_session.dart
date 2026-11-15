@@ -46,6 +46,7 @@ class TunnelSession({
   bool _hasChecked = false;
   bool _isChecking = false;
   bool _wasConnected = false;
+  bool _isOpening = false;
   final List<Future<HandBack?>> _cameForward = [];
 
   TunnelStatus get status => _status;
@@ -54,11 +55,13 @@ class TunnelSession({
 
   Future<void> connect() async {
     final _Opened opened;
+    _isOpening = true;
     try {
       opened = _opened = await _open();
     } on Object catch (exception) {
       return _drop(exception);
     } finally {
+      _isOpening = false;
       _handBack();
     }
     if (isStopped) return opened.close();
@@ -109,6 +112,7 @@ class TunnelSession({
     _status = const Connecting();
     // The user is at the screen to trust it.
     _wasConnected = false;
+    _attempts = 0;
     onChange();
     try {
       await client.trustHostKey(
@@ -127,11 +131,11 @@ class TunnelSession({
     return !isStopped;
   }
 
-  // 1Password shows its prompt only while the app asking is in front.
-  // A reconnect after a drop doesn't: nobody may be at the screen.
+  // 1Password prompts only for the app in front; a retry may find nobody there.
   void _comeForward() {
     final come = comeForward;
-    if (come == null || _wasConnected) return;
+    // A line after the attempt would hold the front with nothing to hand back.
+    if (come == null || _wasConnected || _attempts > 0 || !_isOpening) return;
 
     _cameForward.add(
       Future.sync(come).then<HandBack?>(

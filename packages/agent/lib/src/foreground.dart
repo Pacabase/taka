@@ -12,13 +12,14 @@ class Foreground({
   required final int self,
 }) {
   int _holds = 0;
+  // Kept between holds: just after a hand back, Taka may still be in front.
   int? _previous;
+  Future<void>? _activating;
 
   Future<HandBack> comeForward() async {
-    if (_holds == 0) {
-      final front = frontmostApp();
-      _previous = front == self ? null : front;
-    }
+    final front = frontmostApp();
+    final isHeld = _holds > 0 && front == self;
+    if (_holds == 0 && front != self) _previous = front;
     _holds++;
     var isHandedBack = false;
     Future<void> handBack() async {
@@ -27,18 +28,29 @@ class Foreground({
       if (--_holds > 0) return;
 
       final previous = _previous;
-      _previous = null;
       // The user, or 1Password's prompt, may have moved on by now.
       if (previous != null && frontmostApp() == self) activateApp(previous);
     }
 
     try {
-      await activate();
+      if (!isHeld) {
+        await (_activating ??= _activate().whenComplete(
+          () => _activating = null,
+        ));
+      }
     } on Object {
       await handBack();
       rethrow;
     }
     return handBack;
+  }
+
+  // open returns before the switch it asks for, which a hand back must see.
+  Future<void> _activate() async {
+    await activate();
+    for (var tries = 0; tries < 20 && frontmostApp() != self; tries++) {
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+    }
   }
 }
 
