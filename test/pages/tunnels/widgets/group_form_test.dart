@@ -32,6 +32,19 @@ void main() {
     );
   }
 
+  testWidgets('A window shorter than the form scrolls to Save', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 80));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpForm(tester);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+
+    expect(saved, [('Prod', TunnelColour.green)]);
+  });
+
   testWidgets('No colour saves the group with none', (tester) async {
     await pumpForm(tester);
 
