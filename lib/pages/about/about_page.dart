@@ -99,8 +99,7 @@ class const AboutPage({super.key, required final String version})
           Padding(
             padding: const EdgeInsets.all(12),
             child: Text(
-              'Icons by Lucide. Fonts: Inter and JetBrains Mono. Colors from '
-              "base16 One Light and OneDark, after Atom's One themes.\n"
+              'Icons by Lucide. Fonts: Inter and JetBrains Mono.\n'
               '$_legalese',
               textAlign: TextAlign.center,
               style: secondary.copyWith(fontSize: 12, height: 18 / 12),
