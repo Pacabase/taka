@@ -165,6 +165,18 @@ void main() {
         'b2',
       ]);
     });
+    test(
+      'keeps a tunnel that is on connected when only its colour changes',
+      () async {
+        final manager = await loaded();
+        await manager.toggle('a1');
+
+        await manager.save(database.copyWith(colour: TunnelColour.blue));
+
+        expect(tunnel.closeCount, 0);
+        verify(openAnyTunnel).called(1);
+      },
+    );
 
     test('keeps a tunnel that is on connected when only renamed', () async {
       final manager = await loaded();
@@ -179,6 +191,55 @@ void main() {
   });
 
   group('import', () {
+    test(
+      'skips a tunnel already saved, keeping the colour it has here',
+      () async {
+        store = FakeStore([database.copyWith(colour: TunnelColour.red), proxy]);
+        final manager = await loaded();
+
+        await manager.import([database]);
+
+        expect(manager.snapshot.tunnels, [
+          database.copyWith(colour: TunnelColour.red),
+          proxy,
+        ]);
+      },
+    );
+
+    test('brings a group colour named with stray spaces', () async {
+      final manager = await loaded();
+
+      await manager.import(
+        [const Tunnel(id: 'c3', localPort: 6379, group: 'cache')],
+        groupColours: const {' cache ': TunnelColour.green},
+      );
+
+      expect(manager.snapshot.groupColours, {'cache': TunnelColour.green});
+    });
+
+    test('brings group colours, but keeps the ones set here', () async {
+      store = FakeStore([database.copyWith(group: 'Prod'), proxy])
+        ..groupColours = const {'Prod': TunnelColour.red};
+      final manager = await loaded();
+
+      await manager.import(
+        [
+          const Tunnel(id: 'c3', localPort: 6379, group: 'cache'),
+          const Tunnel(id: 'd4', localPort: 1, group: 'prod'),
+        ],
+        groupColours: const {
+          'cache': TunnelColour.green,
+          'prod': TunnelColour.blue,
+          'gone': TunnelColour.purple,
+        },
+      );
+
+      expect(manager.snapshot.groupColours, {
+        'Prod': TunnelColour.red,
+        'cache': TunnelColour.green,
+      });
+    });
+
     test('adds new tunnels after the others and saves them', () async {
       final manager = await loaded();
       const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
@@ -2031,6 +2092,162 @@ void main() {
     await manager.arrange([(id: 'a1', group: null), (id: 'b2', group: null)]);
 
     expect(store.saveCount, saves);
+  });
+
+  group('a group colour', () {
+    setUp(() => store = FakeStore([database.copyWith(group: 'Prod'), proxy]));
+
+    test('is saved and shown', () async {
+      final manager = await loaded();
+
+      await manager.editGroup('Prod', name: 'Prod', colour: TunnelColour.blue);
+
+      expect(manager.snapshot.groupColours, {'Prod': TunnelColour.blue});
+      expect(store.groupColours, {'Prod': TunnelColour.blue});
+    });
+
+    test('is taken away with none', () async {
+      final manager = await loaded();
+      await manager.editGroup('Prod', name: 'Prod', colour: TunnelColour.blue);
+
+      await manager.editGroup('Prod', name: 'Prod', colour: null);
+
+      expect(manager.snapshot.groupColours, isEmpty);
+      expect(store.groupColours, isEmpty);
+    });
+
+    test('is read back when the tunnels load', () async {
+      store.groupColours = const {'Prod': TunnelColour.red};
+
+      final manager = await loaded();
+
+      expect(manager.snapshot.groupColours, {'Prod': TunnelColour.red});
+    });
+
+    test('goes once the group has no tunnels left', () async {
+      final manager = await loaded();
+      await manager.editGroup('Prod', name: 'Prod', colour: TunnelColour.blue);
+
+      await manager.remove('a1');
+
+      expect(manager.snapshot.groupColours, isEmpty);
+      expect(store.groupColours, isEmpty);
+    });
+
+    test('changes with the name in one edit', () async {
+      final manager = await loaded();
+      final changes = <TunnelsSnapshot>[];
+      manager.changes.listen(changes.add);
+
+      await manager.editGroup('Prod', name: 'Live', colour: TunnelColour.green);
+
+      expect(manager.snapshot.tunnels.first.group, 'Live');
+      expect(manager.snapshot.groupColours, {'Live': TunnelColour.green});
+      expect(changes, hasLength(1));
+    });
+
+    test('goes with a renamed group', () async {
+      final manager = await loaded();
+      await manager.editGroup('Prod', name: 'Prod', colour: TunnelColour.blue);
+
+      await manager.editGroup(
+        'Prod',
+        name: ' prod ',
+        colour: TunnelColour.blue,
+      );
+
+      expect(manager.snapshot.tunnels.first.group, 'prod');
+      expect(manager.snapshot.groupColours, {'prod': TunnelColour.blue});
+      expect(store.groupColours, {'prod': TunnelColour.blue});
+    });
+
+    test('of a group renamed into another is the one picked', () async {
+      store = FakeStore([
+        database.copyWith(group: 'Prod'),
+        proxy.copyWith(group: 'Live'),
+      ]);
+      final manager = await loaded();
+      await manager.editGroup('Prod', name: 'Prod', colour: TunnelColour.blue);
+      await manager.editGroup('Live', name: 'Live', colour: TunnelColour.red);
+
+      await manager.editGroup('Prod', name: 'live', colour: TunnelColour.blue);
+
+      expect(manager.snapshot.tunnels.map((tunnel) => tunnel.group), [
+        'Live',
+        'Live',
+      ]);
+      expect(manager.snapshot.groupColours, {'Live': TunnelColour.blue});
+    });
+
+    test('of a group joined with none picked stays that group\'s', () async {
+      store = FakeStore([
+        database.copyWith(group: 'Prod'),
+        proxy.copyWith(group: 'Live'),
+      ]);
+      final manager = await loaded();
+      await manager.editGroup('Live', name: 'Live', colour: TunnelColour.red);
+
+      await manager.editGroup('Prod', name: 'live', colour: null);
+
+      expect(manager.snapshot.groupColours, {'Live': TunnelColour.red});
+    });
+
+    test('saves nothing when nothing changes', () async {
+      final manager = await loaded();
+      final saves = store.saveCount;
+
+      await manager.editGroup('Prod', name: 'Prod', colour: null);
+
+      expect(store.saveCount, saves);
+    });
+
+    test('keeps the name for a blank one', () async {
+      final manager = await loaded();
+
+      await manager.editGroup('Prod', name: '  ', colour: TunnelColour.blue);
+
+      expect(manager.snapshot.tunnels.first.group, 'Prod');
+      expect(manager.snapshot.groupColours, {'Prod': TunnelColour.blue});
+    });
+
+    test(
+      'does not come back when the group is renamed away and back',
+      () async {
+        final manager = await loaded();
+        await manager.editGroup(
+          'Prod',
+          name: 'Prod',
+          colour: TunnelColour.blue,
+        );
+        await manager.editGroup('Prod', name: 'Live', colour: null);
+
+        await manager.editGroup('Live', name: 'Prod', colour: null);
+
+        expect(manager.snapshot.groupColours, isEmpty);
+      },
+    );
+
+    test('does not come back when the group is made again', () async {
+      final manager = await loaded();
+      await manager.editGroup('Prod', name: 'Prod', colour: TunnelColour.blue);
+      await manager.arrange([
+        (id: 'a1', group: 'Live'),
+        (id: 'b2', group: null),
+      ]);
+
+      await manager.save(proxy.copyWith(group: 'Prod'));
+
+      expect(manager.snapshot.groupColours, isEmpty);
+    });
+
+    test('is ignored for a group with no tunnels', () async {
+      final manager = await loaded();
+
+      await manager.editGroup('Live', name: 'Live', colour: TunnelColour.blue);
+      await manager.save(proxy.copyWith(group: 'Live'));
+
+      expect(manager.snapshot.groupColours, isEmpty);
+    });
   });
 
   test('arrange saves nothing and says nothing for an unknown id', () async {

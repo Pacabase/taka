@@ -41,10 +41,16 @@ void main() {
         (id: 'a1', group: null),
       ]),
       AgentCommand.trustHostKey('a1', 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY'),
+      AgentCommand.editGroup('Prod', name: 'Live', colour: TunnelColour.purple),
+      AgentCommand.editGroup('Prod', name: 'Prod', colour: null),
       AgentCommand.setLaunchAtLogin(on: true),
       AgentCommand.setDebugLogging(on: false),
       AgentCommand.showLogs(),
       AgentCommand.importTunnels([database, proxy]),
+      AgentCommand.importTunnels(
+        [database],
+        groupColours: {'Prod': TunnelColour.green},
+      ),
       AgentCommand.exportTunnels('/Users/me/tunnels.json'),
       AgentCommand.quit(),
     ]) {
