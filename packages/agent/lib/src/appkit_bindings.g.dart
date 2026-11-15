@@ -105,6 +105,19 @@ extension NSRunningApplication$Methods on NSRunningApplication {
     );
   }
 
+  /// Indicates the `CFBundleIdentifier` of the application, or nil if the application does not have an `Info.plist`.
+  objc.NSString? get bundleIdentifier {
+    final _$$ref = object$.ref;
+    objc.checkOsVersionInternal(
+      'NSRunningApplication.bundleIdentifier',
+      iOS: (true, null),
+    );
+    final $ret = _objc_msgSend_151sglz(_$$ref.pointer, _sel_bundleIdentifier);
+    return $ret.address == 0
+        ? null
+        : objc.NSString.fromPointer($ret, retain: true, release: true);
+  }
+
   /// Indicates the process identifier (pid) of the application.
   /// Do not rely on this for comparing processes.  Use `-isEqual:` instead.
   /// @note Not all applications have a pid.  Applications without a pid return -1 from this method.
@@ -284,6 +297,7 @@ final _objc_msgSend_wa38xu = objc.msgSendPointer
 late final _sel_activateWithOptions_ = objc.registerName(
   "activateWithOptions:",
 );
+late final _sel_bundleIdentifier = objc.registerName("bundleIdentifier");
 late final _sel_frontmostApplication = objc.registerName(
   "frontmostApplication",
 );

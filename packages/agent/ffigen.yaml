@@ -6,11 +6,8 @@ language: objc
 output: lib/src/appkit_bindings.g.dart
 headers:
   entry-points:
-    - /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSRunningApplication.h
-    - /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSWorkspace.h
-compiler-opts:
-  - '-isysroot'
-  - '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk'
+    - $MACOS_SDK/System/Library/Frameworks/AppKit.framework/Headers/NSRunningApplication.h
+    - $MACOS_SDK/System/Library/Frameworks/AppKit.framework/Headers/NSWorkspace.h
 objc-interfaces:
   include:
     - NSWorkspace
@@ -24,6 +21,7 @@ objc-interfaces:
       include:
         - 'runningApplicationWithProcessIdentifier:'
         - processIdentifier
+        - bundleIdentifier
         - 'activateWithOptions:'
 preamble: |
   // ignore_for_file: type=lint
@@ -35,6 +33,7 @@ structs:
 unions:
   include: []
 enums:
+  # activateWithOptions: takes it, so ffigen brings it either way.
   include:
     - NSApplicationActivationOptions
 unnamed-enums:

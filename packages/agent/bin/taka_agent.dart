@@ -38,9 +38,20 @@ Future<void> _start() async {
         ? null
         : Foreground(
             // A background app can't bring itself forward; open can.
-            activate: () => Process.run('open', [agentBundle]),
+            activate: () async {
+              final opened = await Process.run('open', [agentBundle]);
+              if (opened.exitCode != 0) {
+                throw ProcessException(
+                  'open',
+                  [agentBundle],
+                  '${opened.stderr}'.trim(),
+                  opened.exitCode,
+                );
+              }
+            },
             frontmostApp: macFrontmostApp,
             activateApp: macActivateApp,
+            isApproving: macIsOnePassword,
             self: pid,
           ).comeForward,
     isLocked: isScreenLocked,

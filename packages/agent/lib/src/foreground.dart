@@ -10,6 +10,9 @@ class Foreground({
   required final Future<void> Function() activate,
   required final int? Function() frontmostApp,
   required final void Function(int pid) activateApp,
+
+  /// Whether the app with this pid is showing an approval, such as 1Password.
+  final bool Function(int pid) isApproving = _never,
   required final int self,
 }) {
   int _holds = 0;
@@ -19,7 +22,9 @@ class Foreground({
 
   Future<HandBack> comeForward() async {
     final front = frontmostApp();
-    final isHeld = _holds > 0 && front == self;
+    // A tunnel's 1Password prompt in front mustn't be covered by the next's.
+    final isHeld =
+        _holds > 0 && (front == self || (front != null && isApproving(front)));
     if (_holds == 0 && front != self) _previous = front;
     _holds++;
     var isHandedBack = false;
@@ -62,6 +67,15 @@ T _inAppKit<T>(T Function() body) {
   return autoReleasePool(body);
 }
 
+/// Whether the macOS app with [pid] is 1Password.
+bool macIsOnePassword(int pid) => _inAppKit(
+  () =>
+      NSRunningApplication.runningApplicationWithProcessIdentifier(pid)
+          ?.bundleIdentifier
+          ?.toDartString() ==
+      'com.1password.1password',
+);
+
 /// The pid of the app in front on macOS, or null if none is.
 int? macFrontmostApp() => _inAppKit(
   () =>
@@ -70,10 +84,9 @@ int? macFrontmostApp() => _inAppKit(
 
 /// Brings the macOS app with [pid] in front, if it still runs.
 void macActivateApp(int pid) => _inAppKit(
-  // Ignoring other apps does nothing since macOS 14, where activating is a
-  // request; Taka is in front when it asks, so it's granted.
-  () => NSRunningApplication.runningApplicationWithProcessIdentifier(pid)
-      ?.activateWithOptions(
-        NSApplicationActivationOptions.NSApplicationActivateIgnoringOtherApps,
-      ),
+  () =>
+      NSRunningApplication.runningApplicationWithProcessIdentifier(pid)
+          ?.activateWithOptions(0),
 );
+
+bool _never(int pid) => false;

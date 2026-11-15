@@ -200,4 +200,30 @@ void main() {
       await handBack();
     }
   });
+
+  test(
+    "does not come over 1Password's prompt while it holds the front",
+    () async {
+      const onePassword = 4;
+      final shared = Foreground(
+        activate: () async {
+          activations++;
+          front = taka;
+        },
+        frontmostApp: () => front,
+        activateApp: activated.add,
+        isApproving: (pid) => pid == onePassword,
+        self: taka,
+      );
+      final first = await shared.comeForward();
+      front = onePassword;
+
+      final second = await shared.comeForward();
+
+      expect(activations, 1);
+      expect(front, onePassword);
+      await second();
+      await first();
+    },
+  );
 }
