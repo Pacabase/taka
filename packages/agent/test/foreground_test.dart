@@ -1,6 +1,8 @@
 @Tags(['unit'])
 library;
 
+import 'dart:async';
+
 import 'package:agent/src/foreground.dart';
 import 'package:test/test.dart';
 
@@ -131,5 +133,71 @@ void main() {
     await (await shared.comeForward())();
 
     expect(activated, [terminal, browser]);
+  });
+
+  test('waits for the activation open asks for, so it can hand back', () async {
+    final handBack = await foreground(
+      activate: () async {
+        activations++;
+        // open returns before the switch it asks for.
+        Timer(const Duration(milliseconds: 30), () => front = taka);
+      },
+    ).comeForward();
+    expect(front, taka);
+
+    await handBack();
+
+    expect(activated, [terminal]);
+  });
+
+  test(
+    'hands back to the same app for a login just after a hand back',
+    () async {
+      final shared = Foreground(
+        activate: () async => front = taka,
+        frontmostApp: () => front,
+        // It takes effect a little later, so Taka stays in front for now.
+        activateApp: activated.add,
+        self: taka,
+      );
+      await (await shared.comeForward())();
+
+      final second = await shared.comeForward();
+      await second();
+
+      expect(activated, [terminal, terminal]);
+    },
+  );
+
+  test('logins at once share one activation', () async {
+    final activating = Completer<void>();
+    final shared = foreground(
+      activate: () async {
+        activations++;
+        await activating.future;
+        front = taka;
+      },
+    );
+
+    final comings = [shared.comeForward(), shared.comeForward()];
+    activating.complete();
+    await Future.wait(comings);
+
+    expect(activations, 1);
+  });
+
+  test('does not open again while it holds the front', () async {
+    final shared = foreground();
+    final first = await shared.comeForward();
+    final second = await shared.comeForward();
+    expect(activations, 1);
+
+    front = browser;
+    final third = await shared.comeForward();
+    expect(activations, 2);
+
+    for (final handBack in [first, second, third]) {
+      await handBack();
+    }
   });
 }
