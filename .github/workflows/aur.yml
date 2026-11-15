@@ -1,0 +1,129 @@
+name: AUR
+
+# Publishes taka-bin to the AUR for a published, stable release. Releases start
+# as drafts, so publishing one is what triggers this. A release made on GitHub's
+# website is published before its files are attached; Release calls this once
+# they are. To run it again, run it by hand from the release's tag.
+on:
+  release:
+    types: [published]
+  workflow_call:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: archlinux:latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - run: pacman -Syu --noconfirm --needed jq
+      - id: release
+        name: Check the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          API: ${{ github.api_url }}
+          REPO: ${{ github.repository }}
+          REF_TYPE: ${{ github.ref_type }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ "$REF_TYPE" != tag ]; then
+            echo "::error::Run this from a release tag."
+            exit 1
+          fi
+          version=${TAG#v}
+          case "$version" in
+            *-* | *+*)
+              echo "::notice::$TAG is a pre-release; the AUR gets stable releases only."
+              exit 0
+              ;;
+          esac
+          status=$(curl -sS -o "$RUNNER_TEMP/release.json" -w '%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" "$API/repos/$REPO/releases/tags/$TAG")
+          case "$status" in
+            200) ;;
+            404)
+              echo "::notice::$TAG has no published release."
+              exit 0
+              ;;
+            *)
+              echo "::error::GitHub answered $status for the release $TAG."
+              exit 1
+              ;;
+          esac
+          if jq -e .prerelease "$RUNNER_TEMP/release.json" >/dev/null; then
+            echo "::notice::$TAG is a pre-release; the AUR gets stable releases only."
+            exit 0
+          fi
+          sums=$(jq -r '.assets[] | select(.name == "SHA256SUMS") | .browser_download_url' "$RUNNER_TEMP/release.json")
+          if [ -z "$sums" ]; then
+            echo "::notice::$TAG has no SHA256SUMS yet; Release publishes to the AUR once its files are attached."
+            exit 0
+          fi
+          curl -fsSLo "$RUNNER_TEMP/SHA256SUMS" "$sums"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - if: steps.release.outputs.version
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: steps.release.outputs.version
+        name: Build and install the package from the release
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          sh linux/packaging/aur/render.sh "$VERSION" "$RUNNER_TEMP/SHA256SUMS" aur
+          sh linux/packaging/aur/build.sh aur
+          sh linux/packaging/check_install.sh aur
+      - if: steps.release.outputs.version
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: taka-bin
+          path: |
+            aur/PKGBUILD
+            aur/.SRCINFO
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+  # Its own job, so the AUR key never meets the build's tools.
+  publish:
+    needs: package
+    if: needs.package.outputs.version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: aur
+    concurrency:
+      group: aur
+      cancel-in-progress: false
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: taka-bin
+          path: aur
+      - name: Push to the AUR
+        env:
+          VERSION: ${{ needs.package.outputs.version }}
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > "$HOME/.ssh/aur"
+          chmod 600 "$HOME/.ssh/aur"
+          # aur.archlinux.org's key, as listed on its home page.
+          echo 'aur.archlinux.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEuBKrPzbawxA/k2g6NcyV5jmqwJ2s+zpgZGZ7tpLIcN' > "$HOME/.ssh/known_hosts"
+          export GIT_SSH_COMMAND="ssh -i $HOME/.ssh/aur -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          git clone ssh://aur@aur.archlinux.org/taka-bin.git "$RUNNER_TEMP/taka-bin"
+          cp aur/PKGBUILD aur/.SRCINFO "$RUNNER_TEMP/taka-bin/"
+          cd "$RUNNER_TEMP/taka-bin"
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then
+            echo "::notice::The AUR already has taka-bin $VERSION."
+            exit 0
+          fi
+          git -c user.name=Pacabase -c user.email=taka@pacabase.com commit -m "Taka $VERSION"
+          git push origin HEAD:master

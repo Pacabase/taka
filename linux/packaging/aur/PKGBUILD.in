@@ -1,0 +1,32 @@
+# Maintainer: Pacabase <taka@pacabase.com>
+pkgname=taka-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="A menu bar app for SSH tunnels and SOCKS proxies, through the system's own ssh"
+arch=('x86_64' 'aarch64')
+url="https://github.com/Pacabase/taka"
+license=('BSD-3-Clause')
+depends=('gtk3' 'libx11' 'libxi' 'libstdc++' 'openssh')
+provides=('taka')
+conflicts=('taka')
+options=('!strip' '!debug')
+_raw="https://raw.githubusercontent.com/Pacabase/taka/v$pkgver"
+source=("taka-$pkgver.desktop::$_raw/linux/packaging/com.pacabase.taka.desktop"
+        "taka-$pkgver.png::$_raw/assets/icon/icon.png"
+        "taka-$pkgver-LICENSE::$_raw/LICENSE")
+source_x86_64=("https://github.com/Pacabase/taka/releases/download/v$pkgver/Taka-$pkgver-linux-x64.tar.gz")
+source_aarch64=("https://github.com/Pacabase/taka/releases/download/v$pkgver/Taka-$pkgver-linux-arm64.tar.gz")
+sha256sums=('@SHA256_DESKTOP@'
+            '@SHA256_ICON@'
+            '@SHA256_LICENSE@')
+sha256sums_x86_64=('@SHA256_X64@')
+sha256sums_aarch64=('@SHA256_ARM64@')
+
+package() {
+  install -d "$pkgdir/opt" "$pkgdir/usr/bin"
+  cp -R taka "$pkgdir/opt/taka"
+  ln -s /opt/taka/taka "$pkgdir/usr/bin/taka"
+  install -Dm644 "taka-$pkgver.desktop" "$pkgdir/usr/share/applications/com.pacabase.taka.desktop"
+  install -Dm644 "taka-$pkgver.png" "$pkgdir/usr/share/pixmaps/com.pacabase.taka.png"
+  install -Dm644 "taka-$pkgver-LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
