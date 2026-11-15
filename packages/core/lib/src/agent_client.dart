@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:core/src/agent_command.dart';
 import 'package:core/src/agent_message.dart';
 import 'package:core/src/agent_settings.dart';
+import 'package:core/src/agent_socket.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 import 'package:fimber/fimber.dart';
 
@@ -50,13 +51,11 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
         );
   }
 
-  static Future<SocketAgentClient> connect(String path) async =>
-      SocketAgentClient(
-        await Socket.connect(
-          InternetAddress(path, type: InternetAddressType.unix),
-          0,
-        ),
-      );
+  static Future<SocketAgentClient> connect(
+    String path, {
+    bool? loopback,
+  }) async =>
+      SocketAgentClient(await connectAgentSocket(path, loopback: loopback));
 
   @override
   Future<String> get identity => _identity.future;

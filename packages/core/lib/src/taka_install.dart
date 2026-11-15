@@ -19,43 +19,54 @@ sealed class const TakaInstall._() with _$TakaInstall {
     Map<String, String>? environment,
     String? operatingSystem,
   }) {
-    final window = File(executable);
-    final (
-      agent,
-      app,
-    ) = (operatingSystem ?? Platform.operatingSystem) == 'macos'
-        ? (
-            '${window.parent.parent.path}/Library/LoginItems/Taka.app/Contents/MacOS/Taka',
-            window.parent.parent.parent.path,
-          )
-        : ('${window.parent.path}/agent/bin/taka_agent', executable);
+    final system = operatingSystem ?? Platform.operatingSystem;
+    final folder = _parent(executable, system);
+    final (agent, app) = switch (system) {
+      'macos' => (
+        '${_parent(folder, system)}/Library/LoginItems/Taka.app/Contents/MacOS/Taka',
+        _parent(_parent(folder, system), system),
+      ),
+      'windows' => ('$folder\\agent\\bin\\taka_agent.exe', executable),
+      _ => ('$folder/agent/bin/taka_agent', executable),
+    };
 
     return _around(
       (environment ?? Platform.environment)['TAKA_AGENT'] ?? agent,
       app: app,
+      system: system,
     );
   }
 
   static TakaInstall fromAgent(
     String executable, {
     Map<String, String>? environment,
+    String? operatingSystem,
   }) {
-    final folder = File(executable).parent.path;
+    final system = operatingSystem ?? Platform.operatingSystem;
+    final folder = _parent(executable, system);
     final loginItems = folder.indexOf('/Contents/Library/LoginItems/');
+    final root = _parent(_parent(folder, system), system);
 
     return _around(
       executable,
       app:
           (environment ?? Platform.environment)['TAKA_APP'] ??
-          (loginItems == -1
-              ? '${File(folder).parent.parent.path}/taka'
-              : folder.substring(0, loginItems)),
+          switch (system) {
+            _ when loginItems != -1 => folder.substring(0, loginItems),
+            'windows' => '$root\\taka.exe',
+            _ => '$root/taka',
+          },
+      system: system,
     );
   }
 
-  static TakaInstall _around(String agent, {required String app}) {
-    final folder = File(agent).parent;
-    final bundle = folder.parent.parent.path;
+  static TakaInstall _around(
+    String agent, {
+    required String app,
+    required String system,
+  }) {
+    final folder = _parent(agent, system);
+    final bundle = _parent(_parent(folder, system), system);
     final isBundle = bundle.endsWith('.app');
 
     return TakaInstall(
@@ -63,8 +74,16 @@ sealed class const TakaInstall._() with _$TakaInstall {
       agent: agent,
       agentBundle: isBundle ? bundle : null,
       agentAssets: isBundle
-          ? '${folder.parent.path}/Resources'
-          : folder.parent.path,
+          ? '${_parent(folder, system)}/Resources'
+          : _parent(folder, system),
     );
+  }
+
+  // Not File.parent, so a Windows install can be worked out on any system.
+  static String _parent(String path, String system) {
+    final separator = path.lastIndexOf(
+      system == 'windows' ? RegExp(r'[\\/]') : RegExp('/'),
+    );
+    return separator == -1 ? '.' : path.substring(0, separator);
   }
 }

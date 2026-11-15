@@ -22,6 +22,21 @@ fvm flutter run -d linux              # the app from source
 fvm flutter build linux --release     # build/linux/<x64 or arm64>/release/bundle/taka
 ```
 
+### Windows
+
+Building needs Visual Studio 2022 with the "Desktop development with C++" workload, which also builds the agent's native library.
+
+```bash
+fvm flutter run -d windows            # the app from source
+fvm flutter build windows --release   # build/windows/x64/runner/Release/taka.exe
+```
+
+The installer is made with [Inno Setup](https://jrsoftware.org/isinfo.php) 6 from the release folder, as `build.yml` does:
+
+```bash
+iscc /DVersion=0.1.0 /DSource=<the release folder> /DOutput=dist windows/packaging/taka.iss
+```
+
 ## Tests
 
 The unit tests run per package:

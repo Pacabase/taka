@@ -33,7 +33,11 @@ Future<void> _start() async {
 
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
-    client: const SystemSshClient(loginShell: true, shareConnections: true),
+    client: SystemSshClient(
+      executable: sshExecutable(),
+      loginShell: true,
+      shareConnections: true,
+    ),
     comeForward: agentBundle == null || !Platform.isMacOS
         ? null
         : Foreground(
@@ -119,8 +123,8 @@ Future<void> _start() async {
     onManageTunnels: () => unawaited(_open(app)),
     onOpenTunnel: (id) {
       // Opening the app again presents its window; Wayland may only flag it.
-      final isOpen = server.show(AgentMessage.openTunnel(id));
-      if (!isOpen || !Platform.isWindows) unawaited(_open(app));
+      server.show(AgentMessage.openTunnel(id));
+      unawaited(_open(app));
     },
     onQuit: manager.close,
   ).show();

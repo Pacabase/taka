@@ -11,6 +11,10 @@ on:
         description: The Linux targets to build, as a JSON list; both by default.
         type: string
         default: '["linux-x64", "linux-arm64"]'
+      windows-targets:
+        description: The Windows targets to build, as a JSON list.
+        type: string
+        default: '["windows-x64"]'
 
 permissions: {}
 
@@ -135,6 +139,79 @@ jobs:
             "$RUNNER_TEMP/nfpm" package --config linux/packaging/nfpm.yaml --packager "$packager" \
               --target "dist/Taka-$VERSION-$TARGET.$packager"
           done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: Taka-${{ matrix.target }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    name: ${{ matrix.target }}
+    needs: version
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.windows-targets) }}
+    runs-on: >-
+      ${{ fromJSON('{
+        "windows-x64": "windows-2025"
+      }')[matrix.target] }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/flutter
+      - run: fvm flutter build windows --release
+      - name: Make the archive
+        env:
+          ZIP: Taka-${{ needs.version.outputs.version }}-${{ matrix.target }}.zip
+        run: |
+          release=build/windows/x64/runner/Release
+          test -f "$release/taka.exe" && test -f "$release/agent/bin/taka_agent.exe"
+          mkdir -p build/package dist
+          cp -R "$release" build/package/Taka
+          # Flutter and the agent's native library need the Visual C++ runtime.
+          for dll in msvcp140.dll vcruntime140.dll vcruntime140_1.dll; do
+            cp "/c/Windows/System32/$dll" build/package/Taka/
+            cp "/c/Windows/System32/$dll" build/package/Taka/agent/bin/
+          done
+          (cd build/package && 7z a -tzip "../../dist/$ZIP" Taka)
+      - name: Make the installer
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          INNO_SETUP: 6.7.4
+        run: |
+          $installer = "$env:RUNNER_TEMP\innosetup.exe"
+          Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/is-$($env:INNO_SETUP -replace '\.', '_')/innosetup-$env:INNO_SETUP.exe" -OutFile $installer
+          if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne 'a549929319f9120716677c685535ca4671e4b937b5fdc87e2585f32d8eb30e8c') {
+            throw "innosetup-$env:INNO_SETUP.exe doesn't match its checksum"
+          }
+          $inno = "$env:RUNNER_TEMP\inno"
+          Start-Process $installer -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=$inno"
+          & "$inno\ISCC.exe" "/DVersion=$env:VERSION" "/DSource=$PWD\build\package\Taka" "/DOutput=$PWD\dist" windows\packaging\taka.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check the installer
+        shell: pwsh
+        env:
+          SETUP: Taka-${{ needs.version.outputs.version }}-${{ matrix.target }}-setup.exe
+        run: |
+          $app = "$env:RUNNER_TEMP\installed"
+          Start-Process "dist\$env:SETUP" -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$app"
+          if (-not (Test-Path "$app\taka.exe") -or -not (Test-Path "$app\agent\bin\taka_agent.exe")) {
+            throw "The installer didn't install Taka"
+          }
+          Start-Process "$app\unins000.exe" -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+          # The uninstaller hands over to a copy of itself and returns at once.
+          for ($second = 0; (Test-Path "$app\taka.exe") -and $second -lt 60; $second++) { Start-Sleep 1 }
+          if (Test-Path "$app\taka.exe") { throw "The uninstaller left Taka behind" }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Taka-${{ matrix.target }}

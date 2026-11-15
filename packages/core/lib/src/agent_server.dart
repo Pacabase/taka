@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:core/src/agent_command.dart';
 import 'package:core/src/agent_message.dart';
 import 'package:core/src/agent_settings.dart';
+import 'package:core/src/agent_socket.dart';
 import 'package:core/src/tunnel_manager.dart';
 import 'package:core/src/tunnels_file.dart';
 import 'package:core/src/tunnels_snapshot.dart';
@@ -16,8 +17,10 @@ class AgentServer(
   final ServerSocket _server,
   final TunnelManager _manager,
   final AgentPreferences _preferences,
-  final String _identity,
-) {
+  final String _identity, [
+  final String? _ticketPath,
+  final AgentTicket? _ticket,
+]) {
   final Set<Socket> _clients = {};
   AgentMessage? _pending;
   late final StreamSubscription<TunnelsSnapshot> _changes;
@@ -38,7 +41,12 @@ class AgentServer(
     TunnelManager manager,
     AgentPreferences preferences, {
     String identity = '',
+    bool? loopback,
   }) async {
+    if (loopback ?? listensOnLoopback) {
+      return _bindLoopback(path, manager, preferences, identity);
+    }
+
     final address = InternetAddress(path, type: InternetAddressType.unix);
     final file = File(path);
     Future<bool> isAnswered() async {
@@ -70,6 +78,50 @@ class AgentServer(
     }
   }
 
+  static Future<AgentServer?> _bindLoopback(
+    String path,
+    TunnelManager manager,
+    AgentPreferences preferences,
+    String identity,
+  ) async {
+    if (await _isAnsweredOverLoopback(path)) return null;
+
+    final file = File(path);
+    await file.parent.create(recursive: true);
+    if (await file.exists()) await file.delete();
+    final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+    final ticket = AgentTicket.random(server.port);
+    try {
+      await file.create(exclusive: true);
+      await file.writeAsString(ticket.encoded, flush: true);
+    } on FileSystemException catch (exception) {
+      await server.close();
+      // Another agent may have written its ticket a moment ago.
+      if (await _isAnsweredOverLoopback(path)) return null;
+      throw SocketException('Could not write $path: ${exception.message}');
+    }
+    return AgentServer(server, manager, preferences, identity, path, ticket);
+  }
+
+  // Another program may have the port of an agent that has since died.
+  static Future<bool> _isAnsweredOverLoopback(String path) async {
+    final Socket socket;
+    try {
+      socket = await connectAgentSocket(path, loopback: true);
+    } on SocketException {
+      return false;
+    }
+
+    try {
+      await socket.first.timeout(const Duration(seconds: 1));
+      return true;
+    } on Object {
+      return false;
+    } finally {
+      socket.destroy();
+    }
+  }
+
   bool show(AgentMessage request) {
     if (_clients.isEmpty) {
       _pending = request;
@@ -81,8 +133,33 @@ class AgentServer(
   }
 
   void _accept(Socket client) {
-    _clients.add(client);
     client.done.ignore();
+    final ticket = _ticket;
+    var isAdmitted = ticket == null;
+    if (isAdmitted) _admit(client);
+
+    utf8.decoder
+        .bind(client)
+        .transform(const LineSplitter())
+        .listen(
+          (line) {
+            if (isAdmitted) {
+              unawaited(_handle(line));
+            } else if (ticket!.admits(line)) {
+              isAdmitted = true;
+              _admit(client);
+            } else {
+              _drop(client);
+            }
+          },
+          onDone: () => _drop(client),
+          onError: (Object _) => _drop(client),
+          cancelOnError: true,
+        );
+  }
+
+  void _admit(Socket client) {
+    _clients.add(client);
     _send(client, AgentMessage.identity(_identity));
     _send(client, AgentMessage.snapshot(_manager.snapshot));
     _send(client, AgentMessage.settings(_preferences.settings));
@@ -90,16 +167,6 @@ class AgentServer(
       _pending = null;
       _send(client, request);
     }
-
-    utf8.decoder
-        .bind(client)
-        .transform(const LineSplitter())
-        .listen(
-          _handle,
-          onDone: () => _drop(client),
-          onError: (Object _) => _drop(client),
-          cancelOnError: true,
-        );
   }
 
   Future<void> _handle(String line) async {
@@ -164,5 +231,10 @@ class AgentServer(
     await _settingsChanges.cancel();
     await _server.close();
     [..._clients].forEach(_drop);
+    if (_ticketPath case final path?) {
+      if ((await AgentTicket.read(path))?.token == _ticket?.token) {
+        await File(path).delete();
+      }
+    }
   }
 }

@@ -53,8 +53,17 @@ void main() {
   });
 
   group('FileLogTree', () {
-    FileLogTree open({int keep = 10}) =>
-        FileLogTree.open(directory, process: 'agent', keep: keep, clock: clock);
+    // Windows can't delete the folder while a log in it is open.
+    FileLogTree open({int keep = 10}) {
+      final tree = FileLogTree.open(
+        directory,
+        process: 'agent',
+        keep: keep,
+        clock: clock,
+      );
+      addTearDown(tree.close);
+      return tree;
+    }
 
     test('starts a stamped file for its process and writes lines to it', () {
       final tree = open()..log('I', 'Connected', tag: 'Tunnels');
@@ -91,11 +100,15 @@ void main() {
   group('DebugLogging', () {
     late File flag;
 
-    DebugLogging logging() => DebugLogging(
-      'agent',
-      logs: Directory('${directory.path}/logs'),
-      flag: flag,
-    );
+    DebugLogging logging({String process = 'agent'}) {
+      final debugLogging = DebugLogging(
+        process,
+        logs: Directory('${directory.path}/logs'),
+        flag: flag,
+      );
+      addTearDown(() => debugLogging.turn(on: false));
+      return debugLogging;
+    }
 
     setUp(() => flag = File('${directory.path}/debug-logging'));
 
@@ -163,11 +176,7 @@ void main() {
       logging().turn(on: true);
       Fimber.clearAll();
 
-      final window = DebugLogging(
-        'window',
-        logs: Directory('${directory.path}/logs'),
-        flag: flag,
-      )..start();
+      final window = logging(process: 'window')..start();
       Fimber.i('window started');
 
       expect(window.isOn, isTrue);
@@ -179,30 +188,6 @@ void main() {
             .single
             .readAsStringSync(),
         contains('window started'),
-      );
-    });
-  });
-
-  group('logDirectory', () {
-    test('is in ~/Library/Logs on macOS and the XDG state folder on Linux', () {
-      final logs = logDirectory(environment: {'HOME': '/home/me'}).path;
-
-      expect(
-        logs,
-        Platform.isMacOS
-            ? '/home/me/Library/Logs/Taka'
-            : '/home/me/.local/state/taka/logs',
-      );
-    });
-
-    test('follows XDG_STATE_HOME on Linux', () {
-      final logs = logDirectory(
-        environment: {'HOME': '/home/me', 'XDG_STATE_HOME': '/state'},
-      ).path;
-
-      expect(
-        logs,
-        Platform.isMacOS ? '/home/me/Library/Logs/Taka' : '/state/taka/logs',
       );
     });
   });

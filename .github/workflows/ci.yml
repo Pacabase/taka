@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -34,7 +34,9 @@ jobs:
           # The Dart that ships with the Flutter in .fvmrc.
           sdk: 3.13.7
       - run: dart pub get --enforce-lockfile
-      - run: dart format --output=none --set-exit-if-changed .
+      # A Windows checkout has CRLF line endings.
+      - if: runner.os != 'Windows'
+        run: dart format --output=none --set-exit-if-changed .
       - run: dart analyze --fatal-infos
       - run: dart test --tags unit
 
@@ -44,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -60,7 +62,9 @@ jobs:
           # The Dart that ships with the Flutter in .fvmrc.
           sdk: 3.13.7
       - run: dart pub get --enforce-lockfile
-      - run: dart format --output=none --set-exit-if-changed .
+      # A Windows checkout has CRLF line endings.
+      - if: runner.os != 'Windows'
+        run: dart format --output=none --set-exit-if-changed .
       - run: dart analyze --fatal-infos
       - run: dart test --tags unit
       - run: dart build cli
@@ -84,6 +88,7 @@ jobs:
     with:
       macos-targets: '["macos-apple-silicon"]'
       linux-targets: '["linux-x64"]'
+      windows-targets: '["windows-x64"]'
 
   # The one required check, so jobs can be added without touching branch rules.
   ci:

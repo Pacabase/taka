@@ -56,6 +56,13 @@ Future<AgentClient> connectToAgent({
     if (result.exitCode != 0) {
       throw ProcessException('open', [bundle], '${result.stderr}'.trim());
     }
+  } else if (Platform.isWindows) {
+    await Process.start(
+      agent,
+      [],
+      mode: ProcessStartMode.detached,
+      environment: {'TAKA_APP': app},
+    );
   } else {
     await Process.start(
       '/bin/sh',

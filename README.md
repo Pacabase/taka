@@ -10,6 +10,7 @@ Get the latest build from [Releases](https://github.com/Pacabase/taka/releases):
 - **Debian, Ubuntu:** `sudo apt install ./Taka-<version>-linux-x64.deb` (or `-linux-arm64.deb`), which brings the libraries Taka needs. Then open Taka from your applications, or run `taka`.
 - **Fedora:** `sudo dnf install ./Taka-<version>-linux-x64.rpm` (or `-linux-arm64.rpm`).
 - **Other Linux:** `Taka-<version>-linux-x64.tar.gz` or `Taka-<version>-linux-arm64.tar.gz`. Extract it and run `taka/taka`.
+- **Windows:** `Taka-<version>-windows-x64-setup.exe` installs Taka for your user, with no administrator rights needed. Or extract `Taka-<version>-windows-x64.zip` and run `Taka\taka.exe`. The builds aren't signed yet, so SmartScreen may say it protected your PC: click **More info**, then **Run anyway**. With Smart App Control on, Windows blocks unsigned apps outright, so Taka won't open there until the builds are signed.
 
 Each release lists the files' checksums in `SHA256SUMS`.
 
@@ -41,8 +42,7 @@ An error such as `libgtk-3.so.0: cannot open shared object file` means GTK 3 is 
 
 - **macOS** 14 (Sonoma) or later, on Apple Silicon or Intel.
 - **Linux** on x64 or arm64 with glibc 2.35 or later (Ubuntu 22.04, Debian 12, Fedora 36 or newer) and GTK 3. The tray icon needs StatusNotifierItem support, which KDE, Xfce, Cinnamon and Ubuntu have; on other GNOME desktops, install the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/).
-
-Windows is on the [roadmap](#roadmap).
+- **Windows** 10 or 11 on x64, with the OpenSSH Client that Windows includes (Settings → System → Optional features). Taka always runs `%SystemRoot%\System32\OpenSSH\ssh.exe`, whatever else is on the `PATH`. Click the tray icon to open Taka and right-click it for the menu.
 
 ## Mac App Store
 
@@ -71,7 +71,8 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### Windows (0.3)
 
-- [ ] **Windows support** — the agent's transport, paths, an installer and `winget`.
+- [ ] **Signed Windows builds**, so Smart App Control lets Taka run and SmartScreen opens it without a warning.
+- [ ] **`winget`** — `winget install Taka`, from the release installer.
 
 ### Logins (0.4)
 

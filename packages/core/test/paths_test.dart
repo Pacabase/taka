@@ -7,39 +7,160 @@ import 'package:core/core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('the folder lives in the home directory', () {
-    final directory = takaDirectory(environment: {'HOME': '/home/someone'});
+  const home = {'HOME': '/home/someone'};
+  const windows = {
+    'APPDATA': r'C:\Users\someone\AppData\Roaming',
+    'LOCALAPPDATA': r'C:\Users\someone\AppData\Local',
+    'SystemRoot': r'C:\Windows',
+  };
 
-    expect(
-      directory.path,
-      Platform.isMacOS
-          ? '/home/someone/Library/Application Support/com.pacabase.taka'
-          : '/home/someone/.local/share/com.pacabase.taka',
-    );
+  group('takaDirectory', () {
+    test('is in Application Support on macOS', () {
+      expect(
+        takaDirectory(environment: home, operatingSystem: 'macos').path,
+        '/home/someone/Library/Application Support/com.pacabase.taka',
+      );
+    });
+
+    test('is in the XDG data folder on Linux', () {
+      expect(
+        takaDirectory(environment: home, operatingSystem: 'linux').path,
+        '/home/someone/.local/share/com.pacabase.taka',
+      );
+    });
+
+    test('an empty XDG_DATA_HOME counts as unset', () {
+      expect(
+        takaDirectory(
+          environment: {...home, 'XDG_DATA_HOME': ''},
+          operatingSystem: 'linux',
+        ).path,
+        '/home/someone/.local/share/com.pacabase.taka',
+      );
+    });
+
+    test('XDG_DATA_HOME moves the folder', () {
+      expect(
+        takaDirectory(
+          environment: {...home, 'XDG_DATA_HOME': '/data'},
+          operatingSystem: 'linux',
+        ).path,
+        '/data/com.pacabase.taka',
+      );
+    });
+
+    test('is in the roaming AppData on Windows', () {
+      expect(
+        takaDirectory(environment: windows, operatingSystem: 'windows').path,
+        r'C:\Users\someone\AppData\Roaming\Taka',
+      );
+    });
+
+    test('finds AppData in the profile when APPDATA is unset', () {
+      expect(
+        takaDirectory(
+          environment: {'USERPROFILE': r'C:\Users\someone', 'APPDATA': ''},
+          operatingSystem: 'windows',
+        ).path,
+        r'C:\Users\someone\AppData\Roaming\Taka',
+      );
+    });
+
+    test('reads Windows variables in any case', () {
+      expect(
+        takaDirectory(
+          environment: {'AppData': r'D:\Roaming'},
+          operatingSystem: 'windows',
+        ).path,
+        r'D:\Roaming\Taka',
+      );
+    });
+
+    test('is unsupported elsewhere', () {
+      expect(
+        () => takaDirectory(environment: home, operatingSystem: 'fuchsia'),
+        throwsUnsupportedError,
+      );
+    });
   });
 
-  test('an empty XDG_DATA_HOME counts as unset', () {
-    expect(
-      takaDirectory(environment: {'HOME': '/home/someone', 'XDG_DATA_HOME': ''})
-          .path,
-      '/home/someone/.local/share/com.pacabase.taka',
-    );
-  }, testOn: 'linux');
+  group('agentSocketPath', () {
+    test('is in the folder on macOS and Linux', () {
+      for (final system in ['macos', 'linux']) {
+        expect(
+          agentSocketPath(environment: home, operatingSystem: system),
+          endsWith('com.pacabase.taka/agent.sock'),
+        );
+      }
+    });
 
-  test('XDG_DATA_HOME moves the folder', () {
-    expect(
-      takaDirectory(
-        environment: {'HOME': '/home/someone', 'XDG_DATA_HOME': '/data'},
-      ).path,
-      '/data/com.pacabase.taka',
-    );
-  }, testOn: 'linux');
+    test('is a ticket in the local AppData on Windows', () {
+      expect(
+        agentSocketPath(environment: windows, operatingSystem: 'windows'),
+        r'C:\Users\someone\AppData\Local\Taka\agent.port',
+      );
+    });
+  });
 
-  test('the agent socket is in the folder', () {
-    expect(
-      agentSocketPath(environment: {'HOME': '/home/someone'}),
-      endsWith('com.pacabase.taka/agent.sock'),
-    );
+  group('logDirectory', () {
+    test('is in ~/Library/Logs on macOS', () {
+      expect(
+        logDirectory(environment: home, operatingSystem: 'macos').path,
+        '/home/someone/Library/Logs/Taka',
+      );
+    });
+
+    test('is in the XDG state folder on Linux', () {
+      expect(
+        logDirectory(environment: home, operatingSystem: 'linux').path,
+        '/home/someone/.local/state/taka/logs',
+      );
+    });
+
+    test('follows XDG_STATE_HOME on Linux', () {
+      expect(
+        logDirectory(
+          environment: {...home, 'XDG_STATE_HOME': '/state'},
+          operatingSystem: 'linux',
+        ).path,
+        '/state/taka/logs',
+      );
+    });
+
+    test('is in the local AppData on Windows', () {
+      expect(
+        logDirectory(environment: windows, operatingSystem: 'windows').path,
+        r'C:\Users\someone\AppData\Local\Taka\logs',
+      );
+    });
+  });
+
+  group('sshExecutable', () {
+    test('is the ssh on the PATH on macOS and Linux', () {
+      for (final system in ['macos', 'linux']) {
+        expect(
+          sshExecutable(environment: home, operatingSystem: system),
+          'ssh',
+        );
+      }
+    });
+
+    test("is Windows' own OpenSSH on Windows", () {
+      expect(
+        sshExecutable(
+          environment: {...windows, 'SystemRoot': r'D:\Windows'},
+          operatingSystem: 'windows',
+        ),
+        r'D:\Windows\System32\OpenSSH\ssh.exe',
+      );
+    });
+
+    test('falls back to C:\\Windows without SystemRoot', () {
+      expect(
+        sshExecutable(environment: {}, operatingSystem: 'windows'),
+        r'C:\Windows\System32\OpenSSH\ssh.exe',
+      );
+    });
   });
 
   group('agentIdentity', () {
@@ -96,6 +217,11 @@ void main() {
       agent: '/opt/taka/agent/bin/taka_agent',
       agentAssets: '/opt/taka/agent',
     );
+    const onWindows = TakaInstall(
+      app: r'C:\Users\someone\AppData\Local\Programs\Taka\taka.exe',
+      agent: r'C:\Users\someone\AppData\Local\Programs\Taka\agent\bin\taka_agent.exe',
+      agentAssets: r'C:\Users\someone\AppData\Local\Programs\Taka\agent',
+    );
     const development = TakaInstall(
       app: '/src/taka/build/macos/Build/Products/Debug/Taka.app',
       agent: '/src/taka/packages/agent/build/cli/macos_arm64/bundle/bin/taka_agent',
@@ -112,7 +238,11 @@ void main() {
         installed,
       );
       expect(
-        TakaInstall.fromAgent(installed.agent, environment: {}),
+        TakaInstall.fromAgent(
+          installed.agent,
+          environment: {},
+          operatingSystem: 'macos',
+        ),
         installed,
       );
     });
@@ -126,7 +256,33 @@ void main() {
         ),
         onLinux,
       );
-      expect(TakaInstall.fromAgent(onLinux.agent, environment: {}), onLinux);
+      expect(
+        TakaInstall.fromAgent(
+          onLinux.agent,
+          environment: {},
+          operatingSystem: 'linux',
+        ),
+        onLinux,
+      );
+    });
+
+    test('is the same Windows install from the window and from the agent', () {
+      expect(
+        TakaInstall.fromWindow(
+          onWindows.app,
+          environment: {},
+          operatingSystem: 'windows',
+        ),
+        onWindows,
+      );
+      expect(
+        TakaInstall.fromAgent(
+          onWindows.agent,
+          environment: {},
+          operatingSystem: 'windows',
+        ),
+        onWindows,
+      );
     });
 
     test('follows TAKA_AGENT and TAKA_APP to development builds', () {
