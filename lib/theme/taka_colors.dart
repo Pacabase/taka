@@ -29,8 +29,8 @@ class const TakaColors({
     yellow: Color(0xff816300),
     green: Color(0xff097820),
     blue: Color(0xff1a67be),
-    purple: Color(0xff9948b0),
-    accent: Color(0xff9948b0),
+    purple: Color(0xff864fc0),
+    accent: Color(0xff864fc0),
     onAccent: Color(0xfff9f6fa),
   );
 
@@ -45,8 +45,8 @@ class const TakaColors({
     yellow: Color(0xffe8bf51),
     green: Color(0xff60b164),
     blue: Color(0xff62a2f1),
-    purple: Color(0xffc678dd),
-    accent: Color(0xffc678dd),
+    purple: Color(0xffb27fed),
+    accent: Color(0xffb27fed),
     onAccent: Color(0xff201c21),
   );
 
