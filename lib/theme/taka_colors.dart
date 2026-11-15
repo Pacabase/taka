@@ -35,19 +35,19 @@ class const TakaColors({
   );
 
   static const dark = TakaColors(
-    background: Color(0xff201c21),
-    surface: Color(0xff2b262c),
-    selection: Color(0xff39343a),
-    text: Color(0xffcac7cb),
-    textBrilliant: Color(0xfff3f1f3),
-    red: Color(0xffed7f7d),
+    background: Color(0xff1f1b25),
+    surface: Color(0xff2a2630),
+    selection: Color(0xff38343e),
+    text: Color(0xffc9c6cd),
+    textBrilliant: Color(0xfff2f1f4),
+    red: Color(0xffed807e),
     orange: Color(0xffe28a48),
     yellow: Color(0xffe8bf51),
     green: Color(0xff60b164),
     blue: Color(0xff62a2f1),
     purple: Color(0xffb27fed),
     accent: Color(0xffb27fed),
-    onAccent: Color(0xff201c21),
+    onAccent: Color(0xff1f1b25),
   );
 
   static TakaColors of(BuildContext context) =>
