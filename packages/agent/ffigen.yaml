@@ -1,0 +1,52 @@
+# Bindings for the AppKit calls that hand focus back; regenerate with
+# `fvm dart run ffigen --config ffigen.yaml` after changing what's included.
+name: AppKit
+description: The AppKit classes the agent uses to find and activate apps.
+language: objc
+output: lib/src/appkit_bindings.g.dart
+headers:
+  entry-points:
+    - /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSRunningApplication.h
+    - /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/AppKit.framework/Headers/NSWorkspace.h
+compiler-opts:
+  - '-isysroot'
+  - '/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk'
+objc-interfaces:
+  include:
+    - NSWorkspace
+    - NSRunningApplication
+  member-filter:
+    NSWorkspace:
+      include:
+        - sharedWorkspace
+        - frontmostApplication
+    NSRunningApplication:
+      include:
+        - 'runningApplicationWithProcessIdentifier:'
+        - processIdentifier
+        - 'activateWithOptions:'
+preamble: |
+  // ignore_for_file: type=lint
+# Nothing else from the headers: they reach most of Foundation and libc.
+functions:
+  include: []
+structs:
+  include: []
+unions:
+  include: []
+enums:
+  include:
+    - NSApplicationActivationOptions
+unnamed-enums:
+  include: []
+macros:
+  include: []
+globals:
+  include: []
+typedefs:
+  include: []
+objc-protocols:
+  include: []
+objc-categories:
+  include: []
+include-transitive-objc-categories: false
