@@ -11,11 +11,19 @@ final _sshLog = FimberLog('ssh');
 
 typedef _Opened = ({Future<void> done, Future<void> Function() close});
 
+/// Hands focus back to the app that had it before Taka came forward.
+typedef HandBack = Future<void> Function();
+
+// A ProxyCommand such as a browser sign-in may take focus between these lines.
+final _newLogin = RegExp(
+  '^debug1: (Connecting to |Executing proxy command|Authenticating to )',
+);
+
 class TunnelSession({
   required final Tunnel tunnel,
   required final SshClient client,
   required final void Function() onChange,
-  required final Future<void> Function()? beforeConnect,
+  required final Future<HandBack> Function()? comeForward,
   required final Future<bool> Function()? isLocked,
   required final Future<void> Function(String address, int localPort)?
   checkDestination,
@@ -37,23 +45,27 @@ class TunnelSession({
   bool _waitsForUnlock = false;
   bool _hasChecked = false;
   bool _isChecking = false;
+  bool _wasConnected = false;
+  final List<Future<HandBack?>> _cameForward = [];
 
   TunnelStatus get status => _status;
 
   bool get isStopped => _abort.isCompleted;
 
   Future<void> connect() async {
-    await _prepare();
     final _Opened opened;
     try {
       opened = _opened = await _open();
     } on Object catch (exception) {
       return _drop(exception);
+    } finally {
+      _handBack();
     }
     if (isStopped) return opened.close();
 
     _status = const Connected();
     _retries = true;
+    _wasConnected = true;
     _stable = Timer(stableAfter, () => _attempts = 0);
     onChange();
     _log.i('Connected ${tunnel.title}');
@@ -95,8 +107,9 @@ class TunnelSession({
 
     _log.i('${tunnel.title}: trusting ${asking.type} ${asking.fingerprint}');
     _status = const Connecting();
+    // The user is at the screen to trust it.
+    _wasConnected = false;
     onChange();
-    await _prepare();
     try {
       await client.trustHostKey(
         tunnel.target,
@@ -114,14 +127,36 @@ class TunnelSession({
     return !isStopped;
   }
 
-  Future<void> _prepare() async {
-    try {
-      await beforeConnect?.call();
-    } on Object catch (exception) {
-      _log.w(
-        '${tunnel.title}: beforeConnect failed, connecting anyway ($exception)',
+  // 1Password shows its prompt only while the app asking is in front.
+  // A reconnect after a drop doesn't: nobody may be at the screen.
+  void _comeForward() {
+    final come = comeForward;
+    if (come == null || _wasConnected) return;
+
+    _cameForward.add(
+      Future.sync(come).then<HandBack?>(
+        (handBack) => handBack,
+        onError: (Object exception) {
+          _log.w('${tunnel.title}: could not come to the front ($exception)');
+          return null;
+        },
+      ),
+    );
+  }
+
+  void _handBack() {
+    for (final cameForward in _cameForward) {
+      unawaited(
+        cameForward
+            .then((handBack) => handBack?.call())
+            .catchError(
+              (Object exception) => _log.w(
+                '${tunnel.title}: could not hand focus back ($exception)',
+              ),
+            ),
       );
     }
+    _cameForward.clear();
   }
 
   Future<_Opened> _open() async {
@@ -129,6 +164,9 @@ class TunnelSession({
     // ssh's lines, named since tunnels connect at once.
     void onLog(SshLog log) {
       _sshLog.d('${tunnel.title}: ${log.line}');
+      if (log is SshProgress && _newLogin.hasMatch(log.line)) {
+        _comeForward();
+      }
       if (log case SshForwardFailed(:final reason)) {
         _isChecking ? _refuse(log.line) : _warn(reason);
       }
