@@ -10,6 +10,7 @@ import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/widgets/colour_dot.dart';
 
 import '../fake_agent.dart';
 
@@ -28,7 +29,8 @@ void main() {
     WidgetTester tester, {
     Tunnel tunnel = unnamed,
     TunnelStatus status = const Stopped(),
-    bool isInGroup = false,
+    TunnelColour? colour,
+    ({Color colour, bool isFirst, bool isLast})? guide,
   }) async {
     toggles = 0;
     trusted = [];
@@ -39,7 +41,8 @@ void main() {
           body: TunnelTile(
             tunnel: tunnel,
             status: status,
-            isInGroup: isInGroup,
+            colour: colour,
+            guide: guide,
             onToggle: () => toggles++,
             onTrust: trusted.add,
             onEdit: () {},
@@ -52,22 +55,67 @@ void main() {
 
   testWidgets("in a group, it's indented behind a guide line", (tester) async {
     double left() => tester.getTopLeft(find.text(unnamed.summary)).dx;
-    bool hasGuide() => tester
-        .widgetList<Container>(find.byType(Container))
-        .any(
-          (container) => switch (container.decoration) {
-            BoxDecoration(border: Border(:final left)) => left.width == 2,
-            _ => false,
-          },
-        );
-
     await pumpTile(tester);
     final outside = left();
-    expect(hasGuide(), isFalse);
+    expect(find.byType(GuideLine), findsNothing);
 
-    await pumpTile(tester, isInGroup: true);
+    await pumpTile(
+      tester,
+      guide: (colour: Colors.blue, isFirst: true, isLast: false),
+    );
     expect(left() - outside, 16);
-    expect(hasGuide(), isTrue);
+    final guide = tester.widget<GuideLine>(find.byType(GuideLine));
+    expect(guide.colour, Colors.blue);
+    expect((guide.isFirst, guide.isLast), (true, false));
+    // It runs the tile's whole height.
+    expect(
+      tester.getSize(find.byType(GuideLine)).height,
+      tester.getSize(find.byType(TunnelTile)).height,
+    );
+  });
+
+  testWidgets('a guide line is rounded only at the ends it has', (
+    tester,
+  ) async {
+    BorderRadius radius() =>
+        (tester
+                        .widget<DecoratedBox>(
+                          find.descendant(
+                            of: find.byType(GuideLine),
+                            matching: find.byType(DecoratedBox),
+                          ),
+                        )
+                        .decoration
+                    as BoxDecoration)
+                .borderRadius!
+            as BorderRadius;
+
+    await pumpTile(
+      tester,
+      guide: (colour: Colors.blue, isFirst: true, isLast: false),
+    );
+    expect(radius().topLeft, const Radius.circular(1));
+    expect(radius().bottomLeft, Radius.zero);
+
+    await pumpTile(
+      tester,
+      guide: (colour: Colors.blue, isFirst: false, isLast: true),
+    );
+    expect(radius().topLeft, Radius.zero);
+    expect(radius().bottomLeft, const Radius.circular(1));
+  });
+
+  testWidgets('shows its colour as a dot, and no dot without one', (
+    tester,
+  ) async {
+    await pumpTile(tester, colour: TunnelColour.blue);
+    expect(
+      tester.widget<ColourDot>(find.byType(ColourDot)).colour,
+      TunnelColour.blue,
+    );
+
+    await pumpTile(tester);
+    expect(find.byType(ColourDot), findsNothing);
   });
 
   testWidgets('an unnamed tunnel shows its summary once', (tester) async {

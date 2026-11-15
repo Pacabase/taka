@@ -6,6 +6,7 @@ import 'package:taka/pages/tunnels/widgets/host_input.dart';
 import 'package:taka/pages/tunnels/widgets/route_step.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/widgets/colour_picker.dart';
 
 final _notInAddress = RegExp('[^0-9a-fA-F.:]');
 
@@ -15,6 +16,7 @@ class const TunnelForm({
   final TunnelKind kind = TunnelKind.local,
   final List<String> hosts = const [],
   final List<String> groups = const [],
+  final Map<String, TunnelColour> groupColours = const {},
   required final void Function(Tunnel tunnel) onSave,
   required final void Function() onCancel,
 }) extends StatefulWidget {
@@ -32,6 +34,7 @@ class _TunnelFormState extends State<TunnelForm> {
   late final _toPort = TextEditingController();
   late final _name = TextEditingController(text: widget.initial?.name);
   late final _group = TextEditingController(text: widget.initial?.group);
+  late TunnelColour? _colour = widget.initial?.colour;
   late final _fields = [
     _fromHost,
     _fromPort,
@@ -49,6 +52,18 @@ class _TunnelFormState extends State<TunnelForm> {
   bool get _isRemote => _kind == TunnelKind.remote;
 
   bool get _isSocket => _isLocal && _toHost.text.trim().startsWith('/');
+
+  // Retyped in another case, the group a tunnel is edited in is new.
+  String? get _typedGroup => switch (groupNamed(_group.text)) {
+    final typed? => groupLike(
+      widget.groups,
+      typed,
+      except: widget.initial?.group,
+    ),
+    null => null,
+  };
+
+  TunnelColour? get _groupColour => widget.groupColours[_typedGroup];
 
   String? get _bindAddress => bindAddressNamed(_fromHost.text);
 
@@ -245,6 +260,18 @@ class _TunnelFormState extends State<TunnelForm> {
                   _ => const SizedBox.shrink(),
                 },
               ),
+              ListenableBuilder(
+                listenable: _group,
+                builder: (context, _) => _groupColour == null
+                    ? Labelled(
+                        label: 'Colour',
+                        child: ColourPicker(
+                          selected: _colour,
+                          onPick: (colour) => setState(() => _colour = colour),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
               const Spacer(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -349,14 +376,8 @@ class _TunnelFormState extends State<TunnelForm> {
       TunnelKind.remote => _port(_fromPort.text),
     },
     remoteSocket: _isSocket ? _toHost.text.trim() : null,
-    group: switch (groupNamed(_group.text)) {
-      final typed? => groupLike(
-        widget.groups,
-        typed,
-        except: widget.initial?.group,
-      ),
-      null => null,
-    },
+    group: _typedGroup,
+    colour: _colour,
   );
 }
 

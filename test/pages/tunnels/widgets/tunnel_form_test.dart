@@ -17,6 +17,7 @@ void main() {
     Tunnel? initial,
     List<String> hosts = const [],
     List<String> groups = const [],
+    Map<String, TunnelColour> groupColours = const {},
   }) async {
     saved = [];
     cancels = 0;
@@ -28,6 +29,7 @@ void main() {
             initial: initial,
             hosts: hosts,
             groups: groups,
+            groupColours: groupColours,
             onSave: saved.add,
             onCancel: () => cancels++,
           ),
@@ -477,6 +479,83 @@ void main() {
     await tester.enterText(field(3), '15432');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     expect(saved, isEmpty);
+  });
+
+  group('the colour', () {
+    testWidgets('is saved once picked', (tester) async {
+      await pumpForm(tester);
+      await fillLocal(tester);
+
+      await tester.tap(find.byTooltip('Blue'));
+      await tester.pump();
+      await tester.tap(find.text('Add'));
+
+      expect(saved.single.colour, TunnelColour.blue);
+    });
+
+    testWidgets('is none until one is picked', (tester) async {
+      await pumpForm(tester);
+
+      expect(find.byTooltip('No colour'), findsOneWidget);
+    });
+
+    testWidgets("is the group's for a new tunnel typed into it in any case", (
+      tester,
+    ) async {
+      await pumpForm(
+        tester,
+        groups: const ['Prod'],
+        groupColours: const {'Prod': TunnelColour.blue},
+      );
+
+      await tester.enterText(field(0), 'prod');
+      await tester.pump();
+
+      expect(find.text('Colour'), findsNothing);
+    });
+
+    testWidgets("is the group's in a coloured group, and comes back out", (
+      tester,
+    ) async {
+      const tunnel = Tunnel(
+        id: 'a',
+        sshHost: 'db',
+        localPort: 15432,
+        remoteHost: 'localhost',
+        remotePort: 5432,
+        group: 'Prod',
+        colour: TunnelColour.red,
+      );
+      await pumpForm(
+        tester,
+        initial: tunnel,
+        groups: const ['Prod'],
+        groupColours: const {'Prod': TunnelColour.blue},
+      );
+
+      expect(find.text('Colour'), findsNothing);
+      await tester.tap(find.text('Save'));
+      expect(saved.single.colour, TunnelColour.red);
+
+      // Retyped in another case, it's a group of its own, as when saved.
+      await tester.enterText(field(0), 'prod');
+      await tester.pump();
+      expect(find.text('Colour'), findsOneWidget);
+      await tester.enterText(field(0), 'Staging');
+      await tester.pump();
+      expect(find.text('Colour'), findsOneWidget);
+      expect(
+        tester
+            .widgetList<Semantics>(
+              find.descendant(
+                of: find.byTooltip('Red'),
+                matching: find.byType(Semantics),
+              ),
+            )
+            .any((semantics) => semantics.properties.selected ?? false),
+        isTrue,
+      );
+    });
   });
 
   group('the group', () {

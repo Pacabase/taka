@@ -127,10 +127,18 @@ class AgentServer(
       id,
       fingerprint,
     ),
-    ImportTunnels(:final tunnels) => await _manager.import(tunnels),
-    ExportTunnels(:final path) => await File(
-      path,
-    ).writeAsString(encodeTunnels(_manager.snapshot.tunnels)),
+    EditGroup(:final group, :final name, :final colour) =>
+      await _manager.editGroup(group, name: name, colour: colour),
+    ImportTunnels(:final tunnels, :final groupColours) => await _manager.import(
+      tunnels,
+      groupColours: groupColours,
+    ),
+    ExportTunnels(:final path) => await File(path).writeAsString(
+      encodeTunnels(
+        _manager.snapshot.tunnels,
+        groupColours: _manager.snapshot.groupColours,
+      ),
+    ),
     QuitAgent() => await _manager.close(),
     SetLaunchAtLogin(:final on) => _preferences.setLaunchAtLogin(on: on),
     SetDebugLogging(:final on) => _preferences.setDebugLogging(on: on),

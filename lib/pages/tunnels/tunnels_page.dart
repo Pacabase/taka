@@ -6,12 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
+import 'package:taka/pages/tunnels/widgets/group_form.dart';
 import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_form.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
 import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/widgets/app_icon.dart';
+import 'package:taka/widgets/colour_dot.dart';
 
 class const TunnelsPage({
   super.key,
@@ -24,6 +27,7 @@ class const TunnelsPage({
 class _TunnelsPageState extends State<TunnelsPage> {
   var _isFormOpen = false;
   Tunnel? _editing;
+  ({String group, TunnelColour? colour})? _editingGroup;
   var _newKind = TunnelKind.local;
   var _hosts = const <String>[];
   late final StreamSubscription<OpenTunnel> _tunnelRequests;
@@ -61,24 +65,40 @@ class _TunnelsPageState extends State<TunnelsPage> {
     _openForm(tunnel);
   }
 
+  bool get _isOpen => _isFormOpen || _editingGroup != null;
+
   @override
   Widget build(BuildContext context) {
-    return BlocListener<TunnelsBloc, TunnelsState>(
-      listenWhen: (_, state) => state is Closed,
-      listener: (_, _) => unawaited(
-        ServicesBinding.instance.exitApplication(AppExitType.required),
-      ),
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<TunnelsBloc, TunnelsState>(
+          listenWhen: (_, state) => state is Closed,
+          listener: (_, _) => unawaited(
+            ServicesBinding.instance.exitApplication(AppExitType.required),
+          ),
+        ),
+        // A group whose tunnels went, from the tray say, has nothing to edit.
+        BlocListener<TunnelsBloc, TunnelsState>(
+          listenWhen: (_, state) => switch ((_editingGroup, state)) {
+            ((:final group, colour: _), Ready(:final snapshot)) =>
+              !snapshot.tunnels.groups.contains(group),
+            _ => false,
+          },
+          listener: (_, _) => _closeForm(),
+        ),
+      ],
       child: Scaffold(
         body: Column(
           children: [
             TunnelsHeader(
-              title: switch ((_isFormOpen, _editing)) {
-                (false, _) => 'Tunnels',
-                (true, null) => 'New tunnel',
-                (true, _?) => 'Edit tunnel',
+              title: switch ((_editingGroup, _isFormOpen, _editing)) {
+                (_?, _, _) => 'Edit group',
+                (null, false, _) => 'Tunnels',
+                (null, true, null) => 'New tunnel',
+                (null, true, _?) => 'Edit tunnel',
               },
-              isFormOpen: _isFormOpen,
-              onPressed: _isFormOpen ? _closeForm : _openForm,
+              isFormOpen: _isOpen,
+              onPressed: _isOpen ? _closeForm : _openForm,
               onSettings: () =>
                   Navigator.pushNamed(context, TakaApp.settingsRoute),
             ),
@@ -95,31 +115,59 @@ class _TunnelsPageState extends State<TunnelsPage> {
                     child: child,
                   ),
                 ),
-                child: _isFormOpen
-                    ? TunnelForm(
-                        key: ValueKey(_editing?.id ?? 'new ${_newKind.name}'),
-                        initial: _editing,
-                        kind: _newKind,
-                        hosts: _hosts,
-                        groups: context.select(
-                          (TunnelsBloc bloc) => switch (bloc.state) {
-                            Ready(:final snapshot) => snapshot.tunnels.groups,
-                            _ => const <String>[],
-                          },
+                child: switch (_editingGroup) {
+                  (:final group, :final colour) => GroupForm(
+                    key: ValueKey('group $group'),
+                    group: group,
+                    colour: colour,
+                    onSave: (name, colour) {
+                      context.read<TunnelsBloc>().add(
+                        TunnelsEvent.send(
+                          AgentCommand.editGroup(
+                            group,
+                            name: name,
+                            colour: colour,
+                          ),
                         ),
-                        onSave: (tunnel) {
-                          context.read<TunnelsBloc>().add(
-                            TunnelsEvent.send(AgentCommand.save(tunnel)),
-                          );
-                          _closeForm();
-                        },
-                        onCancel: _closeForm,
-                      )
-                    : _TunnelList(
-                        key: const ValueKey('list'),
-                        onEdit: _openForm,
-                        onAdd: (kind) => _openForm(null, kind),
-                      ),
+                      );
+                      _closeForm();
+                    },
+                    onCancel: _closeForm,
+                  ),
+                  null when _isFormOpen => TunnelForm(
+                    key: ValueKey(_editing?.id ?? 'new ${_newKind.name}'),
+                    initial: _editing,
+                    kind: _newKind,
+                    hosts: _hosts,
+                    groups: context.select(
+                      (TunnelsBloc bloc) => switch (bloc.state) {
+                        Ready(:final snapshot) => snapshot.tunnels.groups,
+                        _ => const <String>[],
+                      },
+                    ),
+                    groupColours: context.select(
+                      (TunnelsBloc bloc) => switch (bloc.state) {
+                        Ready(:final snapshot) => snapshot.groupColours,
+                        _ => const <String, TunnelColour>{},
+                      },
+                    ),
+                    onSave: (tunnel) {
+                      context.read<TunnelsBloc>().add(
+                        TunnelsEvent.send(AgentCommand.save(tunnel)),
+                      );
+                      _closeForm();
+                    },
+                    onCancel: _closeForm,
+                  ),
+                  null => _TunnelList(
+                    key: const ValueKey('list'),
+                    onEdit: _openForm,
+                    onEditGroup: (group, colour) => setState(
+                      () => _editingGroup = (group: group, colour: colour),
+                    ),
+                    onAdd: (kind) => _openForm(null, kind),
+                  ),
+                },
               ),
             ),
           ],
@@ -132,6 +180,7 @@ class _TunnelsPageState extends State<TunnelsPage> {
   void _openForm([Tunnel? tunnel, TunnelKind kind = TunnelKind.local]) {
     setState(() {
       _isFormOpen = true;
+      _editingGroup = null;
       _editing = tunnel;
       _newKind = kind;
     });
@@ -142,12 +191,16 @@ class _TunnelsPageState extends State<TunnelsPage> {
     );
   }
 
-  void _closeForm() => setState(() => _isFormOpen = false);
+  void _closeForm() => setState(() {
+    _isFormOpen = false;
+    _editingGroup = null;
+  });
 }
 
 class const _TunnelList({
   super.key,
   required final void Function(Tunnel tunnel) onEdit,
+  required final void Function(String group, TunnelColour? colour) onEditGroup,
   required final void Function(TunnelKind kind) onAdd,
 }) extends StatelessWidget {
   @override
@@ -213,7 +266,8 @@ class const _TunnelList({
             GroupHeaderRow(:final group) => _GroupHeader(
               group,
               key: ValueKey('group $group'),
-              onRename: (name) => _rename(context, snapshot, group, name),
+              colour: snapshot.groupColours[group],
+              onEdit: () => onEditGroup(group, snapshot.groupColours[group]),
             ),
             GroupEndRow(:final group) => SizedBox(
               key: ValueKey('end $group'),
@@ -223,19 +277,32 @@ class const _TunnelList({
               key: ValueKey(tunnel.id),
               builder: (context) {
                 // Lifted, it shows the group it would land in.
-                final isInGroup =
-                    switch (ReorderableRows.dropIndexOf(context, index)) {
-                      final to? => snapshot.tunnels.groupOnDrop(index, to),
-                      null => tunnel.group,
-                    } !=
-                    null;
+                final dropAt = ReorderableRows.dropIndexOf(context, index);
+                final group = switch (dropAt) {
+                  final to? => snapshot.tunnels.groupOnDrop(index, to),
+                  null => tunnel.group,
+                };
+                final groupColour = snapshot.groupColours[group];
+                final guide = group == null
+                    ? null
+                    : (
+                        colour: colors.guideOf(groupColour),
+                        // A lifted one is between places, so neither end.
+                        isFirst:
+                            dropAt == null &&
+                            rows.elementAtOrNull(index - 1) is GroupHeaderRow,
+                        isLast:
+                            dropAt == null &&
+                            rows.elementAtOrNull(index + 1) is GroupEndRow,
+                      );
 
                 return Column(
                   children: [
                     TunnelTile(
                       tunnel: tunnel,
                       status: snapshot.statusOf(tunnel.id),
-                      isInGroup: isInGroup,
+                      colour: groupColour == null ? tunnel.colour : null,
+                      guide: guide,
                       onToggle: () =>
                           _send(context, AgentCommand.toggle(tunnel.id)),
                       onTrust: (fingerprint) => _send(
@@ -247,10 +314,10 @@ class const _TunnelList({
                           _send(context, AgentCommand.remove(tunnel.id)),
                     ),
                     if (rows.elementAtOrNull(index + 1)
-                        case TunnelRow(tunnel: Tunnel(:final group))
-                        when group == tunnel.group)
+                        case TunnelRow(tunnel: Tunnel(group: final next))
+                        when next == tunnel.group)
                       _InGroup(
-                        isInGroup: isInGroup,
+                        guide: guide?.colour,
                         child: Divider(
                           height: 1,
                           indent: 6,
@@ -267,47 +334,22 @@ class const _TunnelList({
     );
   }
 
-  void _rename(
-    BuildContext context,
-    TunnelsSnapshot snapshot,
-    String group,
-    String name,
-  ) {
-    final typed = groupNamed(name);
-    if (typed == null || typed == group) return;
-    final renamed = groupLike(snapshot.tunnels.groups, typed, except: group);
-
-    _send(
-      context,
-      AgentCommand.arrange([
-        for (final tunnel in snapshot.tunnels)
-          (
-            id: tunnel.id,
-            group: tunnel.group == group ? renamed : tunnel.group,
-          ),
-      ]),
-    );
-  }
-
   void _send(BuildContext context, AgentCommand command) =>
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
 
-class const _InGroup({
-  required final bool isInGroup,
-  required final Widget child,
-}) extends StatelessWidget {
+class const _InGroup({required final Color? guide, required final Widget child})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    if (!isInGroup) return child;
+    final guide = this.guide;
+    if (guide == null) return child;
 
     return Padding(
       padding: const EdgeInsets.only(left: 14),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          border: Border(
-            left: BorderSide(color: TakaColors.of(context).guide, width: 2),
-          ),
+          border: Border(left: BorderSide(color: guide, width: 2)),
         ),
         child: child,
       ),
@@ -318,89 +360,72 @@ class const _InGroup({
 class const _GroupHeader(
   final String group, {
   super.key,
-  required final void Function(String name) onRename,
+  required final TunnelColour? colour,
+  required final void Function() onEdit,
 }) extends StatefulWidget {
   @override
   State<_GroupHeader> createState() => _GroupHeaderState();
 }
 
 class _GroupHeaderState extends State<_GroupHeader> {
-  final _focus = FocusNode();
-  TextEditingController? _editing;
-
-  @override
-  void initState() {
-    super.initState();
-    _focus.addListener(() {
-      if (!_focus.hasFocus) _finish(save: true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _focus.dispose();
-    _editing?.dispose();
-    super.dispose();
-  }
-
-  void _start() => setState(
-    () => _editing = TextEditingController(text: widget.group)
-      ..selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: widget.group.length,
-      ),
-  );
-
-  void _finish({required bool save}) {
-    final editing = _editing;
-    if (editing == null) return;
-
-    setState(() => _editing = null);
-    if (save) widget.onRename(editing.text);
-    // The field still holds it until it's gone from the tree.
-    WidgetsBinding.instance.addPostFrameCallback((_) => editing.dispose());
-  }
+  var _hovered = false;
+  var _focused = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = TakaColors.of(context);
-    const style = TextStyle(fontSize: 12, fontWeight: FontWeight.w500);
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
-        child: switch (_editing) {
-          final editing? => CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.escape): () =>
-                  _finish(save: false),
-            },
-            child: TextField(
-              controller: editing,
-              focusNode: _focus,
-              autofocus: true,
-              style: style.copyWith(color: colors.text),
-              decoration: const InputDecoration.collapsed(hintText: ''),
-              onSubmitted: (_) => _finish(save: true),
-            ),
-          ),
-          null => Tooltip(
-            message: 'Rename',
-            child: MouseRegion(
-              cursor: SystemMouseCursors.text,
-              child: GestureDetector(
-                onTap: _start,
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: Padding(
+          // The dot's 20px box centres it on the guide line below.
+          padding: const EdgeInsets.fromLTRB(5, 12, 6, 2),
+          child: Row(
+            spacing: 2,
+            children: [
+              SizedBox.square(
+                dimension: 20,
+                child: Center(
+                  child: switch (widget.colour) {
+                    final colour? => ColourDot(colour),
+                    null => null,
+                  },
+                ),
+              ),
+              Expanded(
                 child: Text(
                   widget.group,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: style.copyWith(color: colors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: colors.textSecondary,
+                  ),
                 ),
               ),
-            ),
+              // Kept in place, so the header doesn't grow on hover.
+              Visibility.maintain(
+                visible: _hovered || _focused,
+                child: IconButton(
+                  tooltip: 'Edit ${widget.group}',
+                  onPressed: widget.onEdit,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 24,
+                    height: 20,
+                  ),
+                  padding: EdgeInsets.zero,
+                  icon: AppIcon(AppIcons.pencil, color: colors.textSecondary),
+                ),
+              ),
+            ],
           ),
-        },
+        ),
       ),
     );
   }
