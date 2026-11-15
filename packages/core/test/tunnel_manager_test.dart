@@ -370,7 +370,7 @@ void main() {
       final manager = await loggingIn(
         calls,
         lines: [
-          'debug1: Executing proxy command: exec cloudflared access ssh',
+          'debug1: Executing proxy command: exec my-proxy myserver',
           'debug1: Remote protocol version 2.0',
           authenticatingLine,
           'debug1: Server accepts key: user@host ED25519 agent',
