@@ -54,6 +54,20 @@ void main() {
     await tester.pump();
   }
 
+  testWidgets('A window shorter than the form scrolls to Add', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 240));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpForm(tester);
+    await fillLocal(tester);
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Add'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add'));
+
+    expect(saved, hasLength(1));
+  });
+
   testWidgets('Add is enabled only once every required field is valid', (
     tester,
   ) async {

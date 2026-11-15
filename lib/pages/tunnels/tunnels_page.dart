@@ -15,6 +15,7 @@ import 'package:taka/taka_app.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/widgets/app_icon.dart';
 import 'package:taka/widgets/colour_dot.dart';
+import 'package:taka/widgets/fill_or_scroll.dart';
 
 class const TunnelsPage({
   super.key,
@@ -210,35 +211,37 @@ class const _TunnelList({
     return BlocBuilder<TunnelsBloc, TunnelsState>(
       builder: (context, state) => switch (state) {
         Loading() || Closed() => const SizedBox.shrink(),
-        Ready(:final snapshot) when snapshot.tunnels.isEmpty => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 4,
-            children: [
-              const Text(
-                'No tunnels yet',
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              Text(
-                'Add the SSH host, a local port, and where it leads.',
-                style: TextStyle(fontSize: 12, color: colors.textSecondary),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 8,
-                children: [
-                  FilledButton(
-                    onPressed: () => onAdd(TunnelKind.local),
-                    child: const Text('Add Tunnel'),
-                  ),
-                  TextButton(
-                    onPressed: () => onAdd(TunnelKind.socks),
-                    child: const Text('Add SOCKS Proxy'),
-                  ),
-                ],
-              ),
-            ],
+        Ready(:final snapshot) when snapshot.tunnels.isEmpty => FillOrScroll(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 4,
+              children: [
+                const Text(
+                  'No tunnels yet',
+                  style: TextStyle(fontWeight: FontWeight.w500),
+                ),
+                Text(
+                  'Add the SSH host, a local port, and where it leads.',
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 8,
+                  children: [
+                    FilledButton(
+                      onPressed: () => onAdd(TunnelKind.local),
+                      child: const Text('Add Tunnel'),
+                    ),
+                    TextButton(
+                      onPressed: () => onAdd(TunnelKind.socks),
+                      child: const Text('Add SOCKS Proxy'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
         Ready(:final snapshot) => _rows(context, snapshot),

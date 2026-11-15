@@ -7,6 +7,7 @@ import 'package:taka/pages/tunnels/widgets/route_step.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/colour_picker.dart';
+import 'package:taka/widgets/fill_or_scroll.dart';
 
 final _notInAddress = RegExp('[^0-9a-fA-F.:]');
 
@@ -119,178 +120,190 @@ class _TunnelFormState extends State<TunnelForm> {
           ),
           PasteTextIntent: _pasteCommand,
         },
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 12,
-            children: [
-              Labelled(
-                label: 'Group',
-                child: HostInput(
-                  controller: _group,
-                  hosts: widget.groups,
-                  hint: 'Optional',
-                  style: const TextStyle(),
-                  acceptsNew: true,
-                  onSubmitted: _save,
-                ),
-              ),
-              Labelled(
-                label: 'Name',
-                child: _input(_name, hint: 'Optional', autofocus: true),
-              ),
-              _KindTabs(
-                kind: _kind,
-                onPick: (kind) => setState(() => _kind = kind),
-              ),
-              RouteStep(
-                label: _isRemote ? 'From, on the SSH host' : 'From',
-                hasNext: true,
-                child: ListenableBuilder(
-                  listenable: _fromHost,
-                  child: Row(
-                    spacing: 6,
-                    children: [
-                      Expanded(
-                        // The SSH host listens on its own 127.0.0.1.
-                        child: _isRemote
-                            ? Opacity(
-                                opacity: 0.5,
-                                child: FieldBox(
-                                  child: Text(
-                                    '127.0.0.1',
-                                    style: mono.copyWith(
-                                      color: colors.textSecondary,
-                                    ),
-                                  ),
-                                ),
-                              )
-                            : _input(_fromHost, hint: '127.0.0.1', style: mono),
-                      ),
-                      const _Colon(),
-                      SizedBox(
-                        width: 72,
-                        child: _input(
-                          _fromPort,
-                          hint: switch (_kind) {
-                            TunnelKind.local => '5432',
-                            TunnelKind.socks => '1080',
-                            TunnelKind.remote => '8080',
-                          },
-                          style: mono,
-                        ),
-                      ),
-                    ],
-                  ),
-                  builder: (context, row) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: 4,
-                    children: [
-                      row!,
-                      if (_fromNote case final note? when !_isRemote)
-                        Text(
-                          note,
-                          style: TextStyle(fontSize: 12, color: colors.orange),
-                        ),
-                    ],
+        child: FillOrScroll(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 12,
+              children: [
+                Labelled(
+                  label: 'Group',
+                  child: HostInput(
+                    controller: _group,
+                    hosts: widget.groups,
+                    hint: 'Optional',
+                    style: const TextStyle(),
+                    acceptsNew: true,
+                    onSubmitted: _save,
                   ),
                 ),
-              ),
-              RouteStep(
-                label: 'SSH host',
-                hasNext: _kind != TunnelKind.socks,
-                child: HostInput(
-                  controller: _sshHost,
-                  hosts: widget.hosts,
-                  hint: 'Host from ~/.ssh/config, user@host, or an ssh command',
-                  style: mono,
-                  onSubmitted: _save,
+                Labelled(
+                  label: 'Name',
+                  child: _input(_name, hint: 'Optional', autofocus: true),
                 ),
-              ),
-              if (_kind != TunnelKind.socks)
+                _KindTabs(
+                  kind: _kind,
+                  onPick: (kind) => setState(() => _kind = kind),
+                ),
                 RouteStep(
-                  label: _isRemote ? 'To, on this computer' : 'To',
-                  hasNext: false,
+                  label: _isRemote ? 'From, on the SSH host' : 'From',
+                  hasNext: true,
                   child: ListenableBuilder(
-                    listenable: _toHost,
-                    builder: (context, _) => Row(
+                    listenable: _fromHost,
+                    child: Row(
                       spacing: 6,
                       children: [
                         Expanded(
+                          // The SSH host listens on its own 127.0.0.1.
+                          child: _isRemote
+                              ? Opacity(
+                                  opacity: 0.5,
+                                  child: FieldBox(
+                                    child: Text(
+                                      '127.0.0.1',
+                                      style: mono.copyWith(
+                                        color: colors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : _input(
+                                  _fromHost,
+                                  hint: '127.0.0.1',
+                                  style: mono,
+                                ),
+                        ),
+                        const _Colon(),
+                        SizedBox(
+                          width: 72,
                           child: _input(
-                            _toHost,
-                            hint: _isRemote
-                                ? 'localhost'
-                                : 'localhost or /var/run/docker.sock',
+                            _fromPort,
+                            hint: switch (_kind) {
+                              TunnelKind.local => '5432',
+                              TunnelKind.socks => '1080',
+                              TunnelKind.remote => '8080',
+                            },
                             style: mono,
                           ),
                         ),
-                        if (!_isSocket) ...[
-                          const _Colon(),
-                          SizedBox(
-                            width: 72,
-                            child: _input(
-                              _toPort,
-                              hint: _isRemote ? '3000' : '5432',
-                              style: mono,
+                      ],
+                    ),
+                    builder: (context, row) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      spacing: 4,
+                      children: [
+                        row!,
+                        if (_fromNote case final note? when !_isRemote)
+                          Text(
+                            note,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.orange,
                             ),
                           ),
-                        ],
                       ],
                     ),
                   ),
                 ),
-              ListenableBuilder(
-                listenable: _sshHost,
-                builder: (context, _) => switch (_pasted) {
-                  (:final host, :final leftOut)
-                      when leftOut.isNotEmpty && _sshHost.text.trim() == host =>
-                    Padding(
-                      padding: const EdgeInsets.only(left: RouteStep.indent),
-                      child: Text(
-                        'Not copied: ${leftOut.join(', ')}. '
-                        'Set these for the host in ~/.ssh/config.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colors.textSecondary,
-                        ),
+                RouteStep(
+                  label: 'SSH host',
+                  hasNext: _kind != TunnelKind.socks,
+                  child: HostInput(
+                    controller: _sshHost,
+                    hosts: widget.hosts,
+                    hint:
+                        'Host from ~/.ssh/config, user@host, or an ssh command',
+                    style: mono,
+                    onSubmitted: _save,
+                  ),
+                ),
+                if (_kind != TunnelKind.socks)
+                  RouteStep(
+                    label: _isRemote ? 'To, on this computer' : 'To',
+                    hasNext: false,
+                    child: ListenableBuilder(
+                      listenable: _toHost,
+                      builder: (context, _) => Row(
+                        spacing: 6,
+                        children: [
+                          Expanded(
+                            child: _input(
+                              _toHost,
+                              hint: _isRemote
+                                  ? 'localhost'
+                                  : 'localhost or /var/run/docker.sock',
+                              style: mono,
+                            ),
+                          ),
+                          if (!_isSocket) ...[
+                            const _Colon(),
+                            SizedBox(
+                              width: 72,
+                              child: _input(
+                                _toPort,
+                                hint: _isRemote ? '3000' : '5432',
+                                style: mono,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  _ => const SizedBox.shrink(),
-                },
-              ),
-              ListenableBuilder(
-                listenable: _group,
-                builder: (context, _) => _groupColour == null
-                    ? Labelled(
-                        label: 'Colour',
-                        child: ColourPicker(
-                          selected: _colour,
-                          onPick: (colour) => setState(() => _colour = colour),
+                  ),
+                ListenableBuilder(
+                  listenable: _sshHost,
+                  builder: (context, _) => switch (_pasted) {
+                    (:final host, :final leftOut)
+                        when leftOut.isNotEmpty &&
+                            _sshHost.text.trim() == host =>
+                      Padding(
+                        padding: const EdgeInsets.only(left: RouteStep.indent),
+                        child: Text(
+                          'Not copied: ${leftOut.join(', ')}. '
+                          'Set these for the host in ~/.ssh/config.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.textSecondary,
+                          ),
                         ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-              const Spacer(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                spacing: 8,
-                children: [
-                  TextButton(
-                    onPressed: widget.onCancel,
-                    child: const Text('Cancel'),
-                  ),
-                  ListenableBuilder(
-                    listenable: Listenable.merge(_fields),
-                    builder: (context, _) => FilledButton(
-                      onPressed: _isValid ? _save : null,
-                      child: Text(widget.initial == null ? 'Add' : 'Save'),
+                      ),
+                    _ => const SizedBox.shrink(),
+                  },
+                ),
+                ListenableBuilder(
+                  listenable: _group,
+                  builder: (context, _) => _groupColour == null
+                      ? Labelled(
+                          label: 'Colour',
+                          child: ColourPicker(
+                            selected: _colour,
+                            onPick: (colour) =>
+                                setState(() => _colour = colour),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                const Spacer(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  spacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: widget.onCancel,
+                      child: const Text('Cancel'),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    ListenableBuilder(
+                      listenable: Listenable.merge(_fields),
+                      builder: (context, _) => FilledButton(
+                        onPressed: _isValid ? _save : null,
+                        child: Text(widget.initial == null ? 'Add' : 'Save'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
