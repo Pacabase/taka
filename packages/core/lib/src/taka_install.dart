@@ -30,9 +30,10 @@ sealed class const TakaInstall._() with _$TakaInstall {
           )
         : ('${window.parent.path}/agent/bin/taka_agent', executable);
 
+    final variables = environment ?? Platform.environment;
     return _around(
-      (environment ?? Platform.environment)['TAKA_AGENT'] ?? agent,
-      app: app,
+      variables['TAKA_AGENT'] ?? agent,
+      app: variables['TAKA_APP'] ?? app,
     );
   }
 

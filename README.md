@@ -9,13 +9,14 @@ Get the latest build from [Releases](https://github.com/Pacabase/taka/releases):
 - **macOS:** `Taka-<version>-macos-apple-silicon.dmg` or `Taka-<version>-macos-intel.dmg`. Open it and drag Taka to Applications. The builds aren't notarized yet, so the first time macOS says it can't check Taka: click **Done**, then **Open Anyway** in System Settings → Privacy & Security.
 - **Debian, Ubuntu:** `sudo apt install ./Taka-<version>-linux-x64.deb` (or `-linux-arm64.deb`), which brings the libraries Taka needs. Then open Taka from your applications, or run `taka`.
 - **Fedora:** `sudo dnf install ./Taka-<version>-linux-x64.rpm` (or `-linux-arm64.rpm`).
+- **Any Linux, without installing:** `Taka-<version>-linux-x64.AppImage` (or `-linux-arm64.AppImage`). Make it executable with `chmod +x` and run it. It uses your system's GTK 3 and FUSE, which desktops have; without FUSE, run it with `--appimage-extract-and-run`. The background helper runs from a copy in `~/.local/share/com.pacabase.taka/appimage`, so it keeps running after the window closes.
 - **Other Linux:** `Taka-<version>-linux-x64.tar.gz` or `Taka-<version>-linux-arm64.tar.gz`. Extract it and run `taka/taka`.
 
 Each release lists the files' checksums in `SHA256SUMS`.
 
 ### If Taka doesn't start on Linux
 
-The `.deb` and `.rpm` install the libraries Taka needs. With the tarball, most desktops already have them; if yours doesn't, Taka fails to open with no message, or its window says *Taka's background helper didn't start*. To see why, run it from a terminal:
+The `.deb` and `.rpm` install the libraries Taka needs. With the AppImage or the tarball, most desktops already have them; if yours doesn't, Taka fails to open with no message, or its window says *Taka's background helper didn't start*. To see why, run it from a terminal:
 
 ```sh
 taka/taka                  # the window
@@ -67,7 +68,7 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Activity log** per tunnel.
 - [ ] **Tags**, several per tunnel, to filter the list by.
 - [ ] **Import** hosts from `~/.ssh/config`.
-- [ ] **More Linux packages** — AppImage and the AUR.
+- [ ] **More Linux packages** — the AUR.
 
 ### Windows (0.3)
 

@@ -146,5 +146,23 @@ void main() {
         development,
       );
     });
+
+    test('starts the agent with TAKA_APP, as the AppImage does', () {
+      const appImage = TakaInstall(
+        app: '/home/user/.local/share/com.pacabase.taka/appimage/1.0.0/taka',
+        agent: '/home/user/.local/share/com.pacabase.taka/appimage/1.0.0/agent/bin/taka_agent',
+        agentAssets:
+            '/home/user/.local/share/com.pacabase.taka/appimage/1.0.0/agent',
+      );
+      expect(
+        TakaInstall.fromWindow(
+          '/tmp/.mount_TakaAbc123/taka',
+          environment: {'TAKA_AGENT': appImage.agent, 'TAKA_APP': appImage.app},
+          operatingSystem: 'linux',
+        ),
+        appImage,
+      );
+      expect(TakaInstall.fromAgent(appImage.agent, environment: {}), appImage);
+    });
   });
 }

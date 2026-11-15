@@ -135,6 +135,32 @@ jobs:
             "$RUNNER_TEMP/nfpm" package --config linux/packaging/nfpm.yaml --packager "$packager" \
               --target "dist/Taka-$VERSION-$TARGET.$packager"
           done
+      # It runs the system's GTK 3, like the .deb and .rpm, rather than bundling it.
+      - name: Make the AppImage
+        env:
+          TARGET: ${{ matrix.target }}
+          VERSION: ${{ needs.version.outputs.version }}
+          APPIMAGETOOL: 1.9.1
+          RUNTIME: '20251108'
+        run: |
+          case "$TARGET" in
+            linux-x64) ARCH=x86_64 tool=ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0 runtime=2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d ;;
+            linux-arm64) ARCH=aarch64 tool=f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158 runtime=00cbdfcf917cc6c0ff6d3347d59e0ca1f7f45a6df1a428a0d6d8a78664d87444 ;;
+            *) echo "No AppImage architecture for $TARGET" >&2; exit 1 ;;
+          esac
+          curl -fsSLo "$RUNNER_TEMP/appimagetool" "https://github.com/AppImage/appimagetool/releases/download/$APPIMAGETOOL/appimagetool-$ARCH.AppImage"
+          curl -fsSLo "$RUNNER_TEMP/runtime" "https://github.com/AppImage/type2-runtime/releases/download/$RUNTIME/runtime-$ARCH"
+          printf '%s  %s\n' "$tool" "$RUNNER_TEMP/appimagetool" "$runtime" "$RUNNER_TEMP/runtime" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/appimagetool"
+          appdir="$RUNNER_TEMP/Taka.AppDir"
+          cp -R "build/linux/${TARGET#linux-}/release/bundle" "$appdir"
+          cp linux/packaging/AppRun linux/packaging/com.pacabase.taka.desktop "$appdir/"
+          cp assets/icon/icon.png "$appdir/com.pacabase.taka.png"
+          echo "$VERSION" > "$appdir/version"
+          export ARCH
+          # Without --runtime-file, appimagetool downloads the latest runtime.
+          "$RUNNER_TEMP/appimagetool" --appimage-extract-and-run --no-appstream \
+            --runtime-file "$RUNNER_TEMP/runtime" "$appdir" "dist/Taka-$VERSION-$TARGET.AppImage"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Taka-${{ matrix.target }}
@@ -142,7 +168,8 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  # A clean system gets every library from the packages' dependencies.
+  # A clean system gets every library from the packages' dependencies, and the
+  # AppImage starts on it.
   linux-packages:
     name: ${{ matrix.target }} on ${{ matrix.image }}
     needs: linux
@@ -169,3 +196,4 @@ jobs:
           name: Taka-${{ matrix.target }}
           path: dist
       - run: sh linux/packaging/check_install.sh dist
+      - run: sh linux/packaging/check_appimage.sh dist

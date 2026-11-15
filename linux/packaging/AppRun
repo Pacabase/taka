@@ -1,0 +1,23 @@
+#!/bin/sh
+# Starts Taka from its AppImage. The AppImage is mounted only while the window
+# runs, so the background helper, which keeps running, runs from a copy beside
+# a link back to the AppImage, laid out like the bundle.
+set -eu
+here=$(dirname "$(readlink -f "$0")")
+copies="${XDG_DATA_HOME:-$HOME/.local/share}/com.pacabase.taka/appimage"
+copy="$copies/$(cat "$here/version")"
+
+if [ ! -x "$copy/agent/bin/taka_agent" ]; then
+  mkdir -p "$copies"
+  staging=$(mktemp -d "$copies/.copy.XXXXXX")
+  cp -R "$here/agent" "$staging/"
+  # Another start may have made the copy meanwhile.
+  mv -T "$staging" "$copy" 2>/dev/null || rm -rf "$staging"
+fi
+for old in "$copies"/*; do
+  [ "$old" = "$copy" ] || rm -rf "$old"
+done
+ln -sfn "${APPIMAGE:-$here/taka}" "$copy/taka"
+
+export TAKA_AGENT="$copy/agent/bin/taka_agent" TAKA_APP="$copy/taka"
+exec "$here/taka" "$@"
