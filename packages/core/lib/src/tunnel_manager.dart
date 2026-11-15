@@ -14,7 +14,9 @@ final _log = FimberLog('Tunnels');
 class TunnelManager({
   required final TunnelStore store,
   required final SshClient client,
-  final Future<void> Function()? beforeConnect,
+
+  /// Runs as ssh connects for a tunnel that hasn't been up yet.
+  final Future<HandBack> Function()? comeForward,
   final Future<bool> Function()? isLocked,
   final Future<void> Function(String address, int localPort)? checkDestination,
   final Duration warningLifetime = const Duration(seconds: 30),
@@ -272,7 +274,7 @@ class TunnelManager({
       tunnel: tunnel,
       client: client,
       onChange: _emit,
-      beforeConnect: beforeConnect,
+      comeForward: comeForward,
       isLocked: isLocked,
       checkDestination: checkDestination,
       warningLifetime: warningLifetime,

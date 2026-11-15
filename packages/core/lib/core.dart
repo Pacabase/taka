@@ -14,6 +14,7 @@ export 'src/taka_install.dart';
 export 'src/tunnel.dart';
 export 'src/tunnel_colour.dart';
 export 'src/tunnel_manager.dart';
+export 'src/tunnel_session.dart' show HandBack;
 export 'src/tunnel_store.dart';
 export 'src/tunnels_file.dart';
 export 'src/tunnels_snapshot.dart';

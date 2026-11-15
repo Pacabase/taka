@@ -1,0 +1,51 @@
+# Bindings for the AppKit calls that hand focus back; regenerate with
+# `fvm dart run ffigen --config ffigen.yaml` after changing what's included.
+name: AppKit
+description: The AppKit classes the agent uses to find and activate apps.
+language: objc
+output: lib/src/appkit_bindings.g.dart
+headers:
+  entry-points:
+    - $MACOS_SDK/System/Library/Frameworks/AppKit.framework/Headers/NSRunningApplication.h
+    - $MACOS_SDK/System/Library/Frameworks/AppKit.framework/Headers/NSWorkspace.h
+objc-interfaces:
+  include:
+    - NSWorkspace
+    - NSRunningApplication
+  member-filter:
+    NSWorkspace:
+      include:
+        - sharedWorkspace
+        - frontmostApplication
+    NSRunningApplication:
+      include:
+        - 'runningApplicationWithProcessIdentifier:'
+        - processIdentifier
+        - bundleIdentifier
+        - 'activateWithOptions:'
+preamble: |
+  // ignore_for_file: type=lint
+# Nothing else from the headers: they reach most of Foundation and libc.
+functions:
+  include: []
+structs:
+  include: []
+unions:
+  include: []
+enums:
+  # activateWithOptions: takes it, so ffigen brings it either way.
+  include:
+    - NSApplicationActivationOptions
+unnamed-enums:
+  include: []
+macros:
+  include: []
+globals:
+  include: []
+typedefs:
+  include: []
+objc-protocols:
+  include: []
+objc-categories:
+  include: []
+include-transitive-objc-categories: false
