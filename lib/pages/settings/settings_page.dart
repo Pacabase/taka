@@ -5,14 +5,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/pages/about/about_page.dart';
 import 'package:taka/pages/settings/settings_bloc.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
 
 class const SettingsPage({super.key, required final String version})
     extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
     void send(AgentCommand command) =>
         context.read<SettingsBloc>().add(SettingsEvent.send(command));
 
@@ -175,7 +175,7 @@ class const _SettingRow({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
 
     return Container(
       constraints: const BoxConstraints(minHeight: 48),
