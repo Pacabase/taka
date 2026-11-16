@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:taka/theme/app_theme.dart';
 
 class AppThemes {
-  static const List<Base16Palette> all = [light, dark];
-
   // Light: near-neutral greys with a hint of purple. Text is 10:1 on the
-  // background; comments 3:1 and every other colour 4.5:1 on the surface.
+  // background; base03 is 3:1 and base08 to base0F 4.5:1 on the surface.
   static const light = Base16Palette(
     base00: Color(0xfff9f6fa),
     base01: Color(0xffefecf0),

@@ -103,22 +103,14 @@ class const Base16Palette({
   Color get purple => base0E;
   Color get brown => base0F;
 
-  bool get isDark =>
-      background.computeLuminance() < textBrilliant.computeLuminance();
-
   Color get textSecondary => text.withValues(alpha: 0.75);
 
   Color onFill(Color fill) {
+    final fillLuminance = fill.computeLuminance();
     double contrast(Color color) {
-      final lighter = math.max(
-        color.computeLuminance(),
-        fill.computeLuminance(),
-      );
-      final darker = math.min(
-        color.computeLuminance(),
-        fill.computeLuminance(),
-      );
-      return (lighter + 0.05) / (darker + 0.05);
+      final luminance = color.computeLuminance();
+      return (math.max(luminance, fillLuminance) + 0.05) /
+          (math.min(luminance, fillLuminance) + 0.05);
     }
 
     return contrast(background) >= contrast(textBrilliant)
