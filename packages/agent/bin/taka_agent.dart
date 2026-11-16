@@ -33,11 +33,7 @@ Future<void> _start() async {
 
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
-    client: SystemSshClient(
-      executable: sshExecutable(),
-      loginShell: true,
-      shareConnections: true,
-    ),
+    client: const SystemSshClient(loginShell: true, shareConnections: true),
     comeForward: agentBundle == null || !Platform.isMacOS
         ? null
         : Foreground(

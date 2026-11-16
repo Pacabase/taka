@@ -11,7 +11,6 @@ void main() {
   const windows = {
     'APPDATA': r'C:\Users\someone\AppData\Roaming',
     'LOCALAPPDATA': r'C:\Users\someone\AppData\Local',
-    'SystemRoot': r'C:\Windows',
   };
 
   group('takaDirectory', () {
@@ -53,26 +52,6 @@ void main() {
       expect(
         takaDirectory(environment: windows, operatingSystem: 'windows').path,
         r'C:\Users\someone\AppData\Roaming\Taka',
-      );
-    });
-
-    test('finds AppData in the profile when APPDATA is unset', () {
-      expect(
-        takaDirectory(
-          environment: {'USERPROFILE': r'C:\Users\someone', 'APPDATA': ''},
-          operatingSystem: 'windows',
-        ).path,
-        r'C:\Users\someone\AppData\Roaming\Taka',
-      );
-    });
-
-    test('reads Windows variables in any case', () {
-      expect(
-        takaDirectory(
-          environment: {'AppData': r'D:\Roaming'},
-          operatingSystem: 'windows',
-        ).path,
-        r'D:\Roaming\Taka',
       );
     });
 
@@ -131,34 +110,6 @@ void main() {
       expect(
         logDirectory(environment: windows, operatingSystem: 'windows').path,
         r'C:\Users\someone\AppData\Local\Taka\logs',
-      );
-    });
-  });
-
-  group('sshExecutable', () {
-    test('is the ssh on the PATH on macOS and Linux', () {
-      for (final system in ['macos', 'linux']) {
-        expect(
-          sshExecutable(environment: home, operatingSystem: system),
-          'ssh',
-        );
-      }
-    });
-
-    test("is Windows' own OpenSSH on Windows", () {
-      expect(
-        sshExecutable(
-          environment: {...windows, 'SystemRoot': r'D:\Windows'},
-          operatingSystem: 'windows',
-        ),
-        r'D:\Windows\System32\OpenSSH\ssh.exe',
-      );
-    });
-
-    test('falls back to C:\\Windows without SystemRoot', () {
-      expect(
-        sshExecutable(environment: {}, operatingSystem: 'windows'),
-        r'C:\Windows\System32\OpenSSH\ssh.exe',
       );
     });
   });

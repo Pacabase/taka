@@ -42,7 +42,7 @@ An error such as `libgtk-3.so.0: cannot open shared object file` means GTK 3 is 
 
 - **macOS** 14 (Sonoma) or later, on Apple Silicon or Intel.
 - **Linux** on x64 or arm64 with glibc 2.35 or later (Ubuntu 22.04, Debian 12, Fedora 36 or newer) and GTK 3. The tray icon needs StatusNotifierItem support, which KDE, Xfce, Cinnamon and Ubuntu have; on other GNOME desktops, install the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/).
-- **Windows** 10 or 11 on x64, with the OpenSSH Client that Windows includes (Settings → System → Optional features). Taka always runs `%SystemRoot%\System32\OpenSSH\ssh.exe`, whatever else is on the `PATH`. Click the tray icon to open Taka and right-click it for the menu.
+- **Windows** 10 or 11 on x64, with the OpenSSH Client that Windows includes (Settings → System → Optional features). Taka runs the `ssh` a terminal would. Click the tray icon to open Taka and right-click it for the menu.
 
 ## Mac App Store
 

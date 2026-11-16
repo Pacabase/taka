@@ -21,14 +21,6 @@ if (-not (Test-Path "$bundle\bin\taka_agent.exe")) {
   Write-Error "The app is built for $Platform, but Dart builds the agent only for this machine"
 }
 
-# A console program opens a console window when Windows starts it at login, so
-# mark it a GUI one (subsystem 2).
-$executable = "$bundle\bin\taka_agent.exe"
-$bytes = [IO.File]::ReadAllBytes($executable)
-$subsystem = [BitConverter]::ToInt32($bytes, 0x3C) + 0x5C
-$bytes[$subsystem] = 2
-[IO.File]::WriteAllBytes($executable, $bytes)
-
 Remove-Item -Recurse -Force $Destination -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $Destination | Out-Null
 Copy-Item -Recurse "$bundle\bin", "$bundle\lib" $Destination

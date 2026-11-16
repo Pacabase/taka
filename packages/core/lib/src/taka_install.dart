@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:path/path.dart' as p;
 
 part 'taka_install.freezed.dart';
 
@@ -20,20 +21,27 @@ sealed class const TakaInstall._() with _$TakaInstall {
     String? operatingSystem,
   }) {
     final system = operatingSystem ?? Platform.operatingSystem;
-    final folder = _parent(executable, system);
+    final path = _style(system);
+    final folder = path.dirname(executable);
     final (agent, app) = switch (system) {
       'macos' => (
-        '${_parent(folder, system)}/Library/LoginItems/Taka.app/Contents/MacOS/Taka',
-        _parent(_parent(folder, system), system),
+        path.join(
+          path.dirname(folder),
+          'Library/LoginItems/Taka.app/Contents/MacOS/Taka',
+        ),
+        path.dirname(path.dirname(folder)),
       ),
-      'windows' => ('$folder\\agent\\bin\\taka_agent.exe', executable),
-      _ => ('$folder/agent/bin/taka_agent', executable),
+      'windows' => (
+        path.join(folder, 'agent', 'bin', 'taka_agent.exe'),
+        executable,
+      ),
+      _ => (path.join(folder, 'agent', 'bin', 'taka_agent'), executable),
     };
 
     return _around(
       (environment ?? Platform.environment)['TAKA_AGENT'] ?? agent,
       app: app,
-      system: system,
+      path: path,
     );
   }
 
@@ -43,9 +51,10 @@ sealed class const TakaInstall._() with _$TakaInstall {
     String? operatingSystem,
   }) {
     final system = operatingSystem ?? Platform.operatingSystem;
-    final folder = _parent(executable, system);
+    final path = _style(system);
+    final folder = path.dirname(executable);
     final loginItems = folder.indexOf('/Contents/Library/LoginItems/');
-    final root = _parent(_parent(folder, system), system);
+    final root = path.dirname(path.dirname(folder));
 
     return _around(
       executable,
@@ -53,20 +62,20 @@ sealed class const TakaInstall._() with _$TakaInstall {
           (environment ?? Platform.environment)['TAKA_APP'] ??
           switch (system) {
             _ when loginItems != -1 => folder.substring(0, loginItems),
-            'windows' => '$root\\taka.exe',
-            _ => '$root/taka',
+            'windows' => path.join(root, 'taka.exe'),
+            _ => path.join(root, 'taka'),
           },
-      system: system,
+      path: path,
     );
   }
 
   static TakaInstall _around(
     String agent, {
     required String app,
-    required String system,
+    required p.Context path,
   }) {
-    final folder = _parent(agent, system);
-    final bundle = _parent(_parent(folder, system), system);
+    final folder = path.dirname(agent);
+    final bundle = path.dirname(path.dirname(folder));
     final isBundle = bundle.endsWith('.app');
 
     return TakaInstall(
@@ -74,16 +83,12 @@ sealed class const TakaInstall._() with _$TakaInstall {
       agent: agent,
       agentBundle: isBundle ? bundle : null,
       agentAssets: isBundle
-          ? '${_parent(folder, system)}/Resources'
-          : _parent(folder, system),
+          ? path.join(path.dirname(folder), 'Resources')
+          : path.dirname(folder),
     );
   }
 
-  // Not File.parent, so a Windows install can be worked out on any system.
-  static String _parent(String path, String system) {
-    final separator = path.lastIndexOf(
-      system == 'windows' ? RegExp(r'[\\/]') : RegExp('/'),
-    );
-    return separator == -1 ? '.' : path.substring(0, separator);
-  }
+  // Not the host's style, so a Windows install can be worked out on any system.
+  static p.Context _style(String system) =>
+      system == 'windows' ? p.windows : p.posix;
 }

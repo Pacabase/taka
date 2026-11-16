@@ -108,6 +108,7 @@ function(read_flutter_root)
   set(FLUTTER_ROOT "${FLUTTER_ROOT}" PARENT_SCOPE)
 endfunction()
 read_flutter_root()
+get_filename_component(MSVC_TOOLS "${CMAKE_LINKER}" DIRECTORY)
 if(NOT DEFINED FLUTTER_TARGET_PLATFORM)
   set(FLUTTER_TARGET_PLATFORM "windows-x64")
 endif()
@@ -120,6 +121,14 @@ install(CODE "
     RESULT_VARIABLE result)
   if(NOT result EQUAL 0)
     message(FATAL_ERROR \"Could not build the agent\")
+  endif()
+  # A console program opens a console window when Windows starts it at login.
+  execute_process(
+    COMMAND \"${MSVC_TOOLS}/editbin.exe\" /NOLOGO /SUBSYSTEM:WINDOWS
+      \"${CMAKE_INSTALL_PREFIX}/agent/bin/taka_agent.exe\"
+    RESULT_VARIABLE result)
+  if(NOT result EQUAL 0)
+    message(FATAL_ERROR \"Could not mark the agent a GUI program\")
   endif()
   " COMPONENT Runtime)
 
