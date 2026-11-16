@@ -174,7 +174,7 @@ jobs:
           ZIP: Taka-${{ needs.version.outputs.version }}-${{ matrix.target }}.zip
         run: |
           release=build/windows/x64/runner/Release
-          test -f "$release/taka.exe" && test -f "$release/agent/bin/taka_agent.exe"
+          test -f "$release/taka.exe" && test -f "$release/agent/bin/Taka.exe"
           mkdir -p build/package dist
           cp -R "$release" build/package/Taka
           # Flutter and the agent's native library need the Visual C++ runtime.
@@ -205,7 +205,7 @@ jobs:
         run: |
           $app = "$env:RUNNER_TEMP\installed"
           Start-Process "dist\$env:SETUP" -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$app"
-          if (-not (Test-Path "$app\taka.exe") -or -not (Test-Path "$app\agent\bin\taka_agent.exe")) {
+          if (-not (Test-Path "$app\taka.exe") -or -not (Test-Path "$app\agent\bin\Taka.exe")) {
             throw "The installer didn't install Taka"
           }
           Start-Process "$app\unins000.exe" -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'

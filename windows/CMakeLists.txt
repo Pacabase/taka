@@ -125,7 +125,7 @@ install(CODE "
   # A console program opens a console window when Windows starts it at login.
   execute_process(
     COMMAND \"${MSVC_TOOLS}/editbin.exe\" /NOLOGO /SUBSYSTEM:WINDOWS
-      \"${CMAKE_INSTALL_PREFIX}/agent/bin/taka_agent.exe\"
+      \"${CMAKE_INSTALL_PREFIX}/agent/bin/Taka.exe\"
     RESULT_VARIABLE result)
   if(NOT result EQUAL 0)
     message(FATAL_ERROR \"Could not mark the agent a GUI program\")

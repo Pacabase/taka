@@ -31,10 +31,7 @@ sealed class const TakaInstall._() with _$TakaInstall {
         ),
         path.dirname(path.dirname(folder)),
       ),
-      'windows' => (
-        path.join(folder, 'agent', 'bin', 'taka_agent.exe'),
-        executable,
-      ),
+      'windows' => (path.join(folder, 'agent', 'bin', 'Taka.exe'), executable),
       _ => (path.join(folder, 'agent', 'bin', 'taka_agent'), executable),
     };
 

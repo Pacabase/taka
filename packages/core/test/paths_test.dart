@@ -170,7 +170,7 @@ void main() {
     );
     const onWindows = TakaInstall(
       app: r'C:\Users\someone\AppData\Local\Programs\Taka\taka.exe',
-      agent: r'C:\Users\someone\AppData\Local\Programs\Taka\agent\bin\taka_agent.exe',
+      agent: r'C:\Users\someone\AppData\Local\Programs\Taka\agent\bin\Taka.exe',
       agentAssets: r'C:\Users\someone\AppData\Local\Programs\Taka\agent',
     );
     const development = TakaInstall(
