@@ -42,89 +42,108 @@ class const SettingsPage({super.key, required final String version})
               ],
             ),
           ),
-          BlocBuilder<SettingsBloc, SettingsState>(
-            builder: (context, state) => switch (state) {
-              Loading() => const SizedBox.shrink(),
-              Ready(
-                settings: AgentSettings(
-                  :final launchesAtLogin,
-                  :final isLogging,
-                ),
-              ) =>
-                Column(
-                  children: [
-                    if (launchesAtLogin != null)
-                      _SettingRow(
-                        title: 'Launch at Login',
-                        detail: 'Start Taka in the menu bar when you log in.',
-                        trailing: NativeSwitch(
-                          value: launchesAtLogin,
-                          color: colors.green,
-                          label: 'Launch at Login',
-                          onToggle: () => send(
-                            AgentCommand.setLaunchAtLogin(on: !launchesAtLogin),
-                          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  BlocBuilder<SettingsBloc, SettingsState>(
+                    builder: (context, state) => switch (state) {
+                      Loading() => const SizedBox.shrink(),
+                      Ready(
+                        settings: AgentSettings(
+                          :final launchesAtLogin,
+                          :final isLogging,
                         ),
-                      ),
-                    _SettingRow(
-                      title: 'Debug Logging',
-                      detail: 'Keep a detailed log, to report a problem.',
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: 8,
-                        children: [
-                          if (isLogging)
-                            TextButton(
-                              onPressed: () =>
-                                  send(const AgentCommand.showLogs()),
-                              child: const Text('Show Logs'),
+                      ) =>
+                        Column(
+                          children: [
+                            if (launchesAtLogin != null)
+                              _SettingRow(
+                                title: 'Launch at Login',
+                                detail: 'Start Taka in the menu bar when you log in.',
+                                trailing: NativeSwitch(
+                                  value: launchesAtLogin,
+                                  color: colors.green,
+                                  label: 'Launch at Login',
+                                  onToggle: () => send(
+                                    AgentCommand.setLaunchAtLogin(
+                                      on: !launchesAtLogin,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            _SettingRow(
+                              title: 'Debug Logging',
+                              detail:
+                                  'Keep a detailed log, to report a problem.',
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                spacing: 8,
+                                children: [
+                                  if (isLogging)
+                                    TextButton(
+                                      onPressed: () =>
+                                          send(const AgentCommand.showLogs()),
+                                      child: const Text('Show Logs'),
+                                    ),
+                                  NativeSwitch(
+                                    value: isLogging,
+                                    color: colors.green,
+                                    label: 'Debug Logging',
+                                    onToggle: () => send(
+                                      AgentCommand.setDebugLogging(
+                                        on: !isLogging,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          NativeSwitch(
-                            value: isLogging,
-                            color: colors.green,
-                            label: 'Debug Logging',
-                            onToggle: () => send(
-                              AgentCommand.setDebugLogging(on: !isLogging),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
+                    },
+                  ),
+                  _SettingRow(
+                    title: 'Tunnels',
+                    detail: 'Move them to another computer.',
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 8,
+                      children: [
+                        TextButton(
+                          onPressed: () => _import(context, send),
+                          child: const Text('Import…'),
+                        ),
+                        TextButton(
+                          onPressed: () => _export(send),
+                          child: const Text('Export…'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(
+                    height: 1,
+                    indent: 6,
+                    endIndent: 6,
+                    color: colors.background,
+                  ),
+                  InkWell(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => AboutPage(version: version),
                       ),
                     ),
-                  ],
-                ),
-            },
-          ),
-          _SettingRow(
-            title: 'Tunnels',
-            detail: 'Move them to another computer.',
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 8,
-              children: [
-                TextButton(
-                  onPressed: () => _import(context, send),
-                  child: const Text('Import…'),
-                ),
-                TextButton(
-                  onPressed: () => _export(send),
-                  child: const Text('Export…'),
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 1, indent: 6, endIndent: 6, color: colors.background),
-          InkWell(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => AboutPage(version: version),
-              ),
-            ),
-            child: _SettingRow(
-              title: 'About Taka',
-              trailing: AppIcon(
-                AppIcons.chevronRight,
-                color: colors.textSecondary,
+                    child: _SettingRow(
+                      title: 'About Taka',
+                      trailing: AppIcon(
+                        AppIcons.chevronRight,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

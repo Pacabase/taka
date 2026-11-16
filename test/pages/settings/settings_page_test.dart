@@ -145,6 +145,23 @@ void main() {
 
     expect(find.byType(AboutPage), findsOneWidget);
   });
+
+  testWidgets('A short window scrolls to About Taka, and About scrolls too', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 120));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpPage(tester, const AgentSettings(launchesAtLogin: false));
+
+    await tester.ensureVisible(find.text('About Taka'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('About Taka'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.textContaining('Icons by Lucide'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Icons by Lucide'), findsOneWidget);
+  });
 }
 
 class _MockSettingsBloc extends MockBloc<SettingsEvent, SettingsState>
