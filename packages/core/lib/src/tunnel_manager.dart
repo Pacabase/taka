@@ -260,7 +260,15 @@ class TunnelManager({
   Future<void> close() async {
     if (!_changes.isClosed) {
       final changesClosed = _changes.close();
-      await Future.wait(_sessions.values.map((session) => session.stop()));
+      await Future.wait(
+        _sessions.values.map(
+          (session) => session.stop().catchError(
+            (Object exception) => _log.w(
+              '${session.tunnel.title}: could not close ssh ($exception)',
+            ),
+          ),
+        ),
+      );
       await changesClosed;
       _closed.complete();
     }
