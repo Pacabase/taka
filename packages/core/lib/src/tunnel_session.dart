@@ -35,109 +35,106 @@ class TunnelSession({
   final bool isRestored = false,
 }) {
   final _abort = Completer<void>();
-  TunnelStatus _status = const Connecting();
-  _Opened? _opened;
-  Timer? _clearWarning;
-  Timer? _retry;
-  Timer? _stable;
-  late bool _retries = isRestored;
+  late _Phase _phase = _Opening(tunnel.title);
   int _attempts = 0;
-  bool _waitsForUnlock = false;
-  bool _hasChecked = false;
-  bool _isChecking = false;
-  bool _wasConnected = false;
-  bool _isOpening = false;
-  final List<Future<HandBack?>> _cameForward = [];
+  bool _hasConnected = false;
+  // No connect or retry yet since the start or a trusted key: someone is there.
+  bool _isWatched = true;
 
-  TunnelStatus get status => _status;
+  TunnelStatus get status => _phase.status;
 
-  bool get isStopped => _abort.isCompleted;
+  bool get isStopped => _phase is _Stopped;
+
+  void _enter(_Phase next, {bool quietly = false}) {
+    if (_phase is _Stopped) return next.dispose();
+
+    _phase.dispose();
+    _phase = next;
+    if (!quietly) onChange();
+  }
 
   Future<void> connect() async {
+    final reason = switch (_phase) {
+      _Waiting(:final reason) => reason,
+      _ => null,
+    };
+    _enter(_Opening(tunnel.title, reason: reason), quietly: true);
     final _Opened opened;
-    _isOpening = true;
     try {
-      opened = _opened = await _open();
+      opened = await _open();
     } on Object catch (exception) {
       return _drop(exception);
-    } finally {
-      _isOpening = false;
-      _handBack();
     }
     if (isStopped) return opened.close();
 
-    _status = const Connected();
-    _retries = true;
-    _wasConnected = true;
-    _stable = Timer(stableAfter, () => _attempts = 0);
-    onChange();
+    // Not on reconnects or at login: each check hits the service for real.
+    final checks =
+        tunnel.kind == TunnelKind.local &&
+        !isRestored &&
+        !_hasConnected &&
+        checkDestination != null;
+    _hasConnected = true;
+    _isWatched = false;
+    final up = _Up(
+      opened,
+      Timer(stableAfter, () => _attempts = 0),
+      isVerifying: checks,
+    );
+    _enter(up);
     _log.i('Connected ${tunnel.title}');
     unawaited(opened.done.then((_) => _drop(null), onError: _drop));
-    // Not on reconnects or at login: each check hits the service for real.
-    if (tunnel.kind == TunnelKind.local && !isRestored && !_hasChecked) {
-      _hasChecked = true;
-      unawaited(_checkDestination());
-    }
+    if (checks) unawaited(_checkDestination(up));
   }
 
-  Future<void> _checkDestination() async {
-    final check = checkDestination;
-    if (check == null) return;
-
-    _isChecking = true;
+  Future<void> _checkDestination(_Up up) async {
     try {
-      await check(tunnel.reachableAt, tunnel.localPort);
+      await checkDestination!(tunnel.reachableAt, tunnel.localPort);
     } on Object catch (exception) {
       _log.w('${tunnel.title}: could not check where it leads ($exception)');
     }
     // ssh logs the refusal only after the check's connection has closed.
     await Future<void>.delayed(checkWindow);
-    _isChecking = false;
+    up.isVerifying = false;
   }
 
   Future<void> stop() async {
-    _clearWarning?.cancel();
-    _retry?.cancel();
-    _stable?.cancel();
-    if (!isStopped) _abort.complete();
-    await _opened?.close();
+    final opened = switch (_phase) {
+      _Up(:final opened) => opened,
+      _ => null,
+    };
+    _enter(_Stopped(_phase.status), quietly: true);
+    if (!_abort.isCompleted) _abort.complete();
+    await opened?.close();
   }
 
   /// Whether the key it stopped at is in `known_hosts` now, for [connect].
   Future<bool> trust() async {
-    final asking = _status;
-    if (asking is! UnknownHostKey || isStopped) return false;
-
-    _log.i('${tunnel.title}: trusting ${asking.type} ${asking.fingerprint}');
-    _status = const Connecting();
-    // The user is at the screen to trust it.
-    _wasConnected = false;
-    _attempts = 0;
-    onChange();
-    try {
-      await client.trustHostKey(
-        tunnel.target,
-        SshHostKey(
-          host: asking.host,
-          type: asking.type,
-          fingerprint: asking.fingerprint,
-        ),
-        abortTrigger: _abort.future,
-      );
-    } on Object catch (exception) {
-      _drop(exception);
-      return false;
+    if (_phase case _AwaitingTrust(:final key)) {
+      _log.i('${tunnel.title}: trusting ${key.type} ${key.fingerprint}');
+      _isWatched = true;
+      _attempts = 0;
+      _enter(_Trusting());
+      try {
+        await client.trustHostKey(
+          tunnel.target,
+          key,
+          abortTrigger: _abort.future,
+        );
+      } on Object catch (exception) {
+        _drop(exception);
+        return false;
+      }
+      return !isStopped;
     }
-    return !isStopped;
+    return false;
   }
 
   // 1Password prompts only for the app in front; a retry may find nobody there.
-  void _comeForward() {
+  void _comeForward(_Opening opening) {
     final come = comeForward;
-    // A line after the attempt would hold the front with nothing to hand back.
-    if (come == null || _wasConnected || _attempts > 0 || !_isOpening) return;
+    if (come == null || !_isWatched) return;
 
-    _cameForward.add(
+    opening.cameForward.add(
       Future.sync(come).then<HandBack?>(
         (handBack) => handBack,
         onError: (Object exception) {
@@ -148,31 +145,20 @@ class TunnelSession({
     );
   }
 
-  void _handBack() {
-    for (final cameForward in _cameForward) {
-      unawaited(
-        cameForward
-            .then((handBack) => handBack?.call())
-            .catchError(
-              (Object exception) => _log.w(
-                '${tunnel.title}: could not hand focus back ($exception)',
-              ),
-            ),
-      );
-    }
-    _cameForward.clear();
-  }
-
   Future<_Opened> _open() async {
     final abortTrigger = _abort.future;
     // ssh's lines, named since tunnels connect at once.
     void onLog(SshLog log) {
       _sshLog.d('${tunnel.title}: ${log.line}');
-      if (log is SshProgress && _newLogin.hasMatch(log.line)) {
-        _comeForward();
-      }
-      if (log case SshForwardFailed(:final reason)) {
-        _isChecking ? _refuse(log.line) : _warn(reason);
+      switch ((log, _phase)) {
+        case (SshProgress(:final line), final _Opening opening)
+            when _newLogin.hasMatch(line):
+          _comeForward(opening);
+        case (SshForwardFailed(:final line), final _Up up) when up.isVerifying:
+          _refuse(up, line);
+        case (SshForwardFailed(:final reason), final _Up up):
+          _warn(up, reason);
+        case _:
       }
     }
 
@@ -228,18 +214,9 @@ class TunnelSession({
   void _drop(Object? exception) {
     if (isStopped) return;
 
-    // A reconnect isn't checked, so a refusal on it comes from a client.
-    _isChecking = false;
-
-    _stable?.cancel();
     if (exception case SshUnknownHostKeyException(:final hostKey)) {
       _log.w('${tunnel.title}: waiting for the user to check $hostKey');
-      _status = UnknownHostKey(
-        host: hostKey.host,
-        type: hostKey.type,
-        fingerprint: hostKey.fingerprint,
-      );
-      return onChange();
+      return _enter(_AwaitingTrust(hostKey));
     }
     final message = exception == null ? 'Disconnected' : _messageOf(exception);
     final isPermanent = switch (exception) {
@@ -247,36 +224,38 @@ class TunnelSession({
       null => false,
       _ => true,
     };
-    if (!_retries || isPermanent) return _fail(message);
+    if (!(isRestored || _hasConnected) || isPermanent) return _fail(message);
     if (_attempts == retryDelays.length) {
       _log.w('${tunnel.title}: giving up after $_attempts tries');
       return _fail(message);
     }
 
     final delay = retryDelays[_attempts++];
+    _isWatched = false;
     _log.w(
       '${tunnel.title} dropped: $message; reconnecting in ${delay.inSeconds}s',
     );
-    _status = Reconnecting(message);
-    _retry = Timer(delay, () => unawaited(_reconnect()));
-    onChange();
+    _enter(_Waiting(message, Timer(delay, () => unawaited(_reconnect()))));
   }
 
   // A login prompt, such as a browser sign-in, needs someone at the screen.
   Future<void> _reconnect() async {
     final locked = await _isLocked();
-    if (isStopped) return;
-    if (locked) {
-      if (!_waitsForUnlock) {
+    if (_phase case final _Waiting waiting) {
+      if (!locked) return connect();
+
+      if (!waiting.forUnlock) {
         _log.i('${tunnel.title}: waiting for the screen to unlock');
       }
-      _waitsForUnlock = true;
-      _retry = Timer(lockedRecheck, () => unawaited(_reconnect()));
-      return;
+      _enter(
+        _Waiting(
+          waiting.reason,
+          Timer(lockedRecheck, () => unawaited(_reconnect())),
+          forUnlock: true,
+        ),
+        quietly: true,
+      );
     }
-
-    _waitsForUnlock = false;
-    await connect();
   }
 
   Future<bool> _isLocked() async {
@@ -296,37 +275,108 @@ class TunnelSession({
 
   void _fail(String message, {bool isForward = false}) {
     _log.w('${tunnel.title} failed: $message');
-    _status = Failed(message, isForward: isForward);
-    onChange();
+    _enter(_Failed(Failed(message, isForward: isForward)));
   }
 
-  void _refuse(String line) {
-    if (isStopped || _status is! Connected) return;
-
+  void _refuse(_Up up, String line) {
+    _fail(line, isForward: true);
+    unawaited(stop());
     unawaited(
-      stop().catchError(
+      up.opened.close().catchError(
         (Object exception) =>
             _log.w('${tunnel.title}: could not close ssh ($exception)'),
       ),
     );
-    _fail(line, isForward: true);
   }
 
-  // A stopping session has left the manager's sessions but is still Connected.
-  void _warn(String reason) {
-    if (isStopped || _status is! Connected) return;
-
-    _clearWarning?.cancel();
-    _clearWarning = Timer(warningLifetime, () {
-      if (_status is Connected) {
-        _status = const Connected();
-        onChange();
-      }
+  void _warn(_Up up, String reason) {
+    up.clearWarning?.cancel();
+    up.clearWarning = Timer(warningLifetime, () {
+      up.warning = '';
+      onChange();
     });
-    if (_status == Connected(warning: reason)) return;
+    if (up.warning == reason) return;
 
     _log.w('${tunnel.title}: ${forwardWarning(tunnel)} ($reason)');
-    _status = Connected(warning: reason);
+    up.warning = reason;
     onChange();
   }
 }
+
+sealed class _Phase {
+  TunnelStatus get status;
+
+  void dispose() {}
+}
+
+class _Opening(final String title, {final String? reason}) extends _Phase {
+  final List<Future<HandBack?>> cameForward = [];
+
+  @override
+  TunnelStatus get status => switch (reason) {
+    final reason? => Reconnecting(reason),
+    null => const Connecting(),
+  };
+
+  @override
+  void dispose() {
+    for (final handBack in cameForward) {
+      unawaited(
+        handBack
+            .then((handBack) => handBack?.call())
+            .catchError(
+              (Object exception) =>
+                  _log.w('$title: could not hand focus back ($exception)'),
+            ),
+      );
+    }
+  }
+}
+
+class _Up(
+  final _Opened opened,
+  final Timer stable, {
+  required var bool isVerifying,
+}) extends _Phase {
+  String warning = '';
+  Timer? clearWarning;
+
+  @override
+  TunnelStatus get status => Connected(warning: warning);
+
+  @override
+  void dispose() {
+    stable.cancel();
+    clearWarning?.cancel();
+  }
+}
+
+class _Waiting(
+  final String reason,
+  final Timer retry, {
+  final bool forUnlock = false,
+}) extends _Phase {
+  @override
+  TunnelStatus get status => Reconnecting(reason);
+
+  @override
+  void dispose() => retry.cancel();
+}
+
+class _AwaitingTrust(final SshHostKey key) extends _Phase {
+  @override
+  TunnelStatus get status => UnknownHostKey(
+    host: key.host,
+    type: key.type,
+    fingerprint: key.fingerprint,
+  );
+}
+
+class _Trusting() extends _Phase {
+  @override
+  TunnelStatus get status => const Connecting();
+}
+
+class _Failed(@override final Failed status) extends _Phase;
+
+class _Stopped(@override final TunnelStatus status) extends _Phase;
