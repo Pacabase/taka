@@ -154,7 +154,7 @@ void main() {
       ..send(const AgentCommand.importTunnels([database, proxy]));
 
     expect((await snapshots.next).tunnels, [database, proxy]);
-    expect(decodeTunnels(await file.readAsString()).tunnels, [database]);
+    expect(decodeTunnels(await file.readAsString()).book.tunnels, [database]);
   });
 
   test(

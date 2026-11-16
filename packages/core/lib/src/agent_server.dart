@@ -133,12 +133,9 @@ class AgentServer(
       tunnels,
       groupColours: groupColours,
     ),
-    ExportTunnels(:final path) => await File(path).writeAsString(
-      encodeTunnels(
-        _manager.snapshot.tunnels,
-        groupColours: _manager.snapshot.groupColours,
-      ),
-    ),
+    ExportTunnels(:final path) => await File(
+      path,
+    ).writeAsString(encodeTunnels(_manager.book)),
     QuitAgent() => await _manager.close(),
     SetLaunchAtLogin(:final on) => _preferences.setLaunchAtLogin(on: on),
     SetDebugLogging(:final on) => _preferences.setDebugLogging(on: on),
