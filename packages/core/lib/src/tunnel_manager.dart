@@ -69,14 +69,14 @@ class TunnelManager({
     _wasOn = const {};
 
     return Future.wait([
-      for (final tunnel in _tunnels)
+      for (final tunnel in _book.tunnels)
         if (wasOn.contains(tunnel.id) && !_isOn(tunnel.id))
           _start(tunnel, isRestored: true),
     ]);
   }
 
   Future<void> save(Tunnel tunnel) async {
-    final previous = _tunnels.firstWhereOrNull(
+    final previous = _book.tunnels.firstWhereOrNull(
       (saved) => saved.id == tunnel.id,
     );
     _book = _book.saved(tunnel);
@@ -148,7 +148,7 @@ class TunnelManager({
       return running.stop();
     }
 
-    if (_tunnels.firstWhereOrNull((tunnel) => tunnel.id == id)
+    if (_book.tunnels.firstWhereOrNull((tunnel) => tunnel.id == id)
         case final tunnel?) {
       return _start(tunnel);
     }
@@ -180,7 +180,7 @@ class TunnelManager({
       Future.wait(_idsIn(group).where(_isOn).map(toggle));
 
   List<String> _idsIn(String? group) => [
-    for (final tunnel in _tunnels)
+    for (final tunnel in _book.tunnels)
       if (group == null || tunnel.group == group) tunnel.id,
   ];
 
@@ -216,8 +216,6 @@ class TunnelManager({
     _log.i('Connecting ${tunnel.title}: ${tunnel.summary}');
     return session.connect();
   }
-
-  List<Tunnel> get _tunnels => _book.tunnels;
 
   bool _isOn(String id) => _sessions[id]?.status.isOn ?? false;
 
