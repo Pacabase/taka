@@ -1715,6 +1715,28 @@ void main() {
       expect(tunnel.closeCount, 1);
     });
 
+    test('removing a refused tunnel waits for ssh to close', () async {
+      final closed = Completer<void>();
+      late void Function(SshLog log) sshSays;
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        sshSays =
+            invocation.namedArguments[#onLog]! as void Function(SshLog log);
+        return _SlowTunnel(closed.future);
+      });
+      final manager = await checking(check: (_, _) async => sshSays(refused));
+      await manager.toggle('a1');
+      await pumpEventQueue();
+      var isRemoved = false;
+
+      unawaited(manager.remove('a1').then((_) => isRemoved = true));
+      await pumpEventQueue();
+      expect(isRemoved, isFalse);
+
+      closed.complete();
+      await pumpEventQueue();
+      expect(isRemoved, isTrue);
+    });
+
     group('within the check window', () {
       const window = Duration(seconds: 3);
       late void Function(SshLog log) sshSays;

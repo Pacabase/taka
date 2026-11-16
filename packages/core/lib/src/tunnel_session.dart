@@ -97,14 +97,18 @@ class TunnelSession({
     up.isVerifying = false;
   }
 
-  Future<void> stop() async {
-    final opened = switch (_phase) {
-      _Up(:final opened) => opened,
-      _ => null,
+  Future<void> stop() => _stop(_phase.status);
+
+  Future<void> _stop(TunnelStatus status) {
+    if (_phase case _Stopped(:final closed)) return closed;
+
+    final closed = switch (_phase) {
+      _Up(:final opened) => opened.close(),
+      _ => Future<void>.value(),
     };
-    _enter(_Stopped(_phase.status), quietly: true);
-    if (!_abort.isCompleted) _abort.complete();
-    await opened?.close();
+    _enter(_Stopped(status, closed), quietly: true);
+    _abort.complete();
+    return closed;
   }
 
   /// Whether the key it stopped at is in `known_hosts` now, for [connect].
@@ -155,7 +159,7 @@ class TunnelSession({
             when _newLogin.hasMatch(line):
           _comeForward(opening);
         case (SshForwardFailed(:final line), final _Up up) when up.isVerifying:
-          _refuse(up, line);
+          _refuse(line);
         case (SshForwardFailed(:final reason), final _Up up):
           _warn(up, reason);
         case _:
@@ -278,15 +282,15 @@ class TunnelSession({
     _enter(_Failed(Failed(message, isForward: isForward)));
   }
 
-  void _refuse(_Up up, String line) {
-    _fail(line, isForward: true);
-    unawaited(stop());
+  void _refuse(String line) {
+    _log.w('${tunnel.title} failed: $line');
     unawaited(
-      up.opened.close().catchError(
+      _stop(Failed(line, isForward: true)).catchError(
         (Object exception) =>
             _log.w('${tunnel.title}: could not close ssh ($exception)'),
       ),
     );
+    onChange();
   }
 
   void _warn(_Up up, String reason) {
@@ -379,4 +383,5 @@ class _Trusting() extends _Phase {
 
 class _Failed(@override final Failed status) extends _Phase;
 
-class _Stopped(@override final TunnelStatus status) extends _Phase;
+class _Stopped(@override final TunnelStatus status, final Future<void> closed)
+    extends _Phase;
