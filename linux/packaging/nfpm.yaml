@@ -1,4 +1,4 @@
-# The .deb and .rpm, built by nfpm in build.yml from the release bundle copied
+# The .deb and .rpm, built by nfpm in package.sh from the release bundle copied
 # to build/package/taka. VERSION and ARCH (amd64 or arm64) come from the
 # environment; nfpm doesn't expand variables in contents.
 name: taka

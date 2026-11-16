@@ -7,7 +7,10 @@ Install [FVM](https://fvm.app), which fetches the SDK version pinned in `.fvmrc`
 ```bash
 fvm flutter run -d macos              # the app from source
 fvm flutter build macos --release     # build/macos/Build/Products/Release/Taka.app
+macos/packaging/make_dmg.sh 0.1.0 macos-apple-silicon   # dist/Taka-0.1.0-macos-apple-silicon.dmg
 ```
+
+Each packaging script takes the version and the target, packages the release build as `build.yml` does, and writes into `dist/`.
 
 ### Linux
 
@@ -20,7 +23,10 @@ sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-1
 ```bash
 fvm flutter run -d linux              # the app from source
 fvm flutter build linux --release     # build/linux/<x64 or arm64>/release/bundle/taka
+linux/packaging/package.sh 0.1.0 linux-x64   # or linux-arm64: the .tar.gz, .deb and .rpm
 ```
+
+The script uses [nfpm](https://nfpm.goreleaser.com) from `PATH`, or downloads the version `build.yml` uses.
 
 ### Windows
 
@@ -31,11 +37,13 @@ fvm flutter run -d windows            # the app from source
 fvm flutter build windows --release   # build/windows/x64/runner/Release/taka.exe
 ```
 
-The installer is made with [Inno Setup](https://jrsoftware.org/isinfo.php) 6 from the release folder, as `build.yml` does:
+The zip and the installer, made with 7-Zip and [Inno Setup](https://jrsoftware.org/isinfo.php) 6, come from PowerShell:
 
-```bash
-iscc /DVersion=0.1.0 /DSource=<the release folder> /DOutput=dist windows/packaging/taka.iss
+```powershell
+windows\packaging\package.ps1 0.1.0 windows-x64
 ```
+
+The script uses an installed Inno Setup 6, or downloads the version `build.yml` uses.
 
 ## Tests
 

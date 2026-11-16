@@ -64,21 +64,11 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/flutter
       - run: fvm flutter build macos --release
-      - run: test -x build/macos/Build/Products/Release/Taka.app/Contents/Library/LoginItems/Taka.app/Contents/MacOS/Taka
-      - run: codesign --verify --deep --strict build/macos/Build/Products/Release/Taka.app
       - name: Make the disk image
         env:
-          DMG: Taka-${{ needs.version.outputs.version }}-${{ matrix.target }}.dmg
-        run: |
-          mkdir -p dmg dist
-          cp -R build/macos/Build/Products/Release/Taka.app dmg/
-          ln -s /Applications dmg/Applications
-          # hdiutil on GitHub's runners sometimes fails with "Resource busy".
-          for attempt in 1 2 3 4 5; do
-            hdiutil create -volname Taka -srcfolder dmg -format ULMO -ov "dist/$DMG" && break
-            [ "$attempt" = 5 ] && exit 1
-            sleep $((attempt * 5))
-          done
+          VERSION: ${{ needs.version.outputs.version }}
+          TARGET: ${{ matrix.target }}
+        run: macos/packaging/make_dmg.sh "$VERSION" "$TARGET"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Taka-${{ matrix.target }}
@@ -109,36 +99,11 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev libx11-dev libxi-dev
       - uses: ./.github/actions/flutter
       - run: fvm flutter build linux --release
-      - name: Make the archive
+      - name: Make the archive, .deb and .rpm
         env:
-          TARGET: ${{ matrix.target }}
-          TARBALL: Taka-${{ needs.version.outputs.version }}-${{ matrix.target }}.tar.gz
-        run: |
-          release=build/linux/${TARGET#linux-}/release
-          test -x "$release/bundle/taka" && test -x "$release/bundle/agent/bin/taka_agent"
-          mkdir -p dist
-          tar -czf "dist/$TARBALL" -C "$release" --transform 's,^bundle,taka,' bundle
-      - name: Make the .deb and .rpm
-        env:
-          TARGET: ${{ matrix.target }}
           VERSION: ${{ needs.version.outputs.version }}
-          NFPM: 2.48.0
-        run: |
-          case "$TARGET" in
-            linux-x64) ARCH=amd64 nfpm=x86_64 sum=6d7f9a28b2f397934403950fcbba83f598b08d02edbe79a0815b3b4897341750 ;;
-            linux-arm64) ARCH=arm64 nfpm=arm64 sum=a9a75213763783b7669719e505474c748c5ad7dc66591a195619deb50f85c2f4 ;;
-            *) echo "No package architecture for $TARGET" >&2; exit 1 ;;
-          esac
-          curl -fsSLo "$RUNNER_TEMP/nfpm.tar.gz" "https://github.com/goreleaser/nfpm/releases/download/v$NFPM/nfpm_${NFPM}_Linux_$nfpm.tar.gz"
-          echo "$sum  $RUNNER_TEMP/nfpm.tar.gz" | sha256sum -c -
-          tar -xzf "$RUNNER_TEMP/nfpm.tar.gz" -C "$RUNNER_TEMP" nfpm
-          export ARCH
-          mkdir -p build/package
-          cp -R "build/linux/${TARGET#linux-}/release/bundle" build/package/taka
-          for packager in deb rpm; do
-            "$RUNNER_TEMP/nfpm" package --config linux/packaging/nfpm.yaml --packager "$packager" \
-              --target "dist/Taka-$VERSION-$TARGET.$packager"
-          done
+          TARGET: ${{ matrix.target }}
+        run: linux/packaging/package.sh "$VERSION" "$TARGET"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Taka-${{ matrix.target }}
@@ -169,31 +134,12 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/flutter
       - run: fvm flutter build windows --release
-      - name: Make the archive
-        env:
-          ZIP: Taka-${{ needs.version.outputs.version }}-${{ matrix.target }}.zip
-        run: |
-          release=build/windows/x64/runner/Release
-          test -f "$release/taka.exe" && test -f "$release/agent/bin/taka_agent.exe"
-          test -f "$release/vcruntime140.dll" && test -f "$release/agent/bin/vcruntime140.dll"
-          mkdir -p build/package dist
-          cp -R "$release" build/package/Taka
-          (cd build/package && 7z a -tzip "../../dist/$ZIP" Taka)
-      - name: Make the installer
+      - name: Make the archive and installer
         shell: pwsh
         env:
           VERSION: ${{ needs.version.outputs.version }}
-          INNO_SETUP: 6.7.4
-        run: |
-          $installer = "$env:RUNNER_TEMP\innosetup.exe"
-          Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/is-$($env:INNO_SETUP -replace '\.', '_')/innosetup-$env:INNO_SETUP.exe" -OutFile $installer
-          if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne 'a549929319f9120716677c685535ca4671e4b937b5fdc87e2585f32d8eb30e8c') {
-            throw "innosetup-$env:INNO_SETUP.exe doesn't match its checksum"
-          }
-          $inno = "$env:RUNNER_TEMP\inno"
-          Start-Process $installer -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=$inno"
-          & "$inno\ISCC.exe" "/DVersion=$env:VERSION" "/DSource=$PWD\build\package\Taka" "/DOutput=$PWD\dist" windows\packaging\taka.iss
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          TARGET: ${{ matrix.target }}
+        run: ./windows/packaging/package.ps1 $env:VERSION $env:TARGET
       - name: Check the installer
         shell: pwsh
         env:
