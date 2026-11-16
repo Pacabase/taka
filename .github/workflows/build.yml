@@ -175,13 +175,9 @@ jobs:
         run: |
           release=build/windows/x64/runner/Release
           test -f "$release/taka.exe" && test -f "$release/agent/bin/taka_agent.exe"
+          test -f "$release/vcruntime140.dll" && test -f "$release/agent/bin/vcruntime140.dll"
           mkdir -p build/package dist
           cp -R "$release" build/package/Taka
-          # Flutter and the agent's native library need the Visual C++ runtime.
-          for dll in msvcp140.dll vcruntime140.dll vcruntime140_1.dll; do
-            cp "/c/Windows/System32/$dll" build/package/Taka/
-            cp "/c/Windows/System32/$dll" build/package/Taka/agent/bin/
-          done
           (cd build/package && 7z a -tzip "../../dist/$ZIP" Taka)
       - name: Make the installer
         shell: pwsh
