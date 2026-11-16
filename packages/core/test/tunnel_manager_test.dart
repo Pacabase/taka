@@ -2559,6 +2559,30 @@ void main() {
     await expectLater(changesDone, completes);
   });
 
+  test('close stops the other tunnels when one fails to close', () async {
+    final lines = <String>[];
+    Fimber.plantTree(_RecordingTree(lines));
+    addTearDown(Fimber.clearAll);
+    tunnel.closeError = const SocketException('kill failed');
+    final socks = FakeTunnel(1080);
+    when(openAnySocksProxy).thenAnswer((_) async => socks);
+    final manager = await loaded();
+    await manager.toggle('a1');
+    await manager.toggle('b2');
+
+    await manager.close();
+    await manager.close();
+
+    expect(socks.closeCount, 1);
+    expect(
+      lines,
+      contains(
+        'W/Tunnels: Production database: could not close ssh '
+        '(SocketException: kill failed)',
+      ),
+    );
+  });
+
   test('toggle after close opens nothing', () async {
     final manager = await loaded();
     await manager.close();
