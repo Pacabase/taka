@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:taka/pages/tunnels/widgets/form_fields.dart';
 import 'package:taka/pages/tunnels/widgets/route_step.dart';
 import 'package:taka/widgets/colour_picker.dart';
+import 'package:taka/widgets/fill_or_scroll.dart';
 
 class const GroupForm({
   super.key,
@@ -44,48 +45,50 @@ class _GroupFormState extends State<GroupForm> {
             onInvoke: (_) => widget.onCancel(),
           ),
         },
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 12,
-            children: [
-              Labelled(
-                label: 'Name',
-                child: Input(
-                  controller: _name,
-                  hint: 'Such as Production',
-                  style: const TextStyle(),
-                  autofocus: true,
-                  onSubmitted: _save,
-                ),
-              ),
-              Labelled(
-                label: 'Colour',
-                child: ColourPicker(
-                  selected: _colour,
-                  onPick: (colour) => setState(() => _colour = colour),
-                ),
-              ),
-              const Spacer(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                spacing: 8,
-                children: [
-                  TextButton(
-                    onPressed: widget.onCancel,
-                    child: const Text('Cancel'),
+        child: FillOrScroll(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 12,
+              children: [
+                Labelled(
+                  label: 'Name',
+                  child: Input(
+                    controller: _name,
+                    hint: 'Such as Production',
+                    style: const TextStyle(),
+                    autofocus: true,
+                    onSubmitted: _save,
                   ),
-                  ListenableBuilder(
-                    listenable: _name,
-                    builder: (context, _) => FilledButton(
-                      onPressed: _isValid ? _save : null,
-                      child: const Text('Save'),
+                ),
+                Labelled(
+                  label: 'Colour',
+                  child: ColourPicker(
+                    selected: _colour,
+                    onPick: (colour) => setState(() => _colour = colour),
+                  ),
+                ),
+                const Spacer(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  spacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: widget.onCancel,
+                      child: const Text('Cancel'),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    ListenableBuilder(
+                      listenable: _name,
+                      builder: (context, _) => FilledButton(
+                        onPressed: _isValid ? _save : null,
+                        child: const Text('Save'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
