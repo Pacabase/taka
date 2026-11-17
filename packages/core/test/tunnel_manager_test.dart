@@ -52,13 +52,18 @@ void main() {
   const connectingLine = 'debug1: Connecting to bastion [192.0.2.1] port 22.';
   const authenticatingLine = "debug1: Authenticating to bastion:22 as 'deploy'";
 
-  // Answers an open with ssh's lines for a new connection, then [opened].
+  const newLogin = [
+    SshLoginStarted(connectingLine),
+    SshLoginStarted(authenticatingLine),
+  ];
+
+  // Answers an open with ssh's [logs] for a new connection, then [opened].
   Future<SshTunnel> Function(Invocation) logsLogin(
     Future<SshTunnel> Function() opened, {
-    List<String> lines = const [connectingLine, authenticatingLine],
+    List<SshLog> logs = newLogin,
   }) => (invocation) {
     final onLog = invocation.namedArguments[#onLog]! as void Function(SshLog);
-    lines.map(SshProgress.new).forEach(onLog);
+    logs.forEach(onLog);
     return opened();
   };
 
@@ -68,14 +73,14 @@ void main() {
     return () async => calls.add('back');
   };
 
-  // A manager whose tunnel logs ssh's [lines] as it opens, recording in [calls].
+  // A manager whose tunnel logs ssh's [logs] as it opens, recording in [calls].
   Future<TunnelManager> loggingIn(
     List<String> calls, {
     Future<SshTunnel> Function()? opened,
-    List<String> lines = const [connectingLine, authenticatingLine],
+    List<SshLog> logs = newLogin,
   }) async {
     when(openAnyTunnel)
-        .thenAnswer(logsLogin(opened ?? () async => tunnel, lines: lines));
+        .thenAnswer(logsLogin(opened ?? () async => tunnel, logs: logs));
     final manager = TunnelManager(
       store: store,
       client: client,
@@ -369,11 +374,13 @@ void main() {
       final calls = <String>[];
       final manager = await loggingIn(
         calls,
-        lines: [
-          'debug1: Executing proxy command: exec my-proxy myserver',
-          'debug1: Remote protocol version 2.0',
-          authenticatingLine,
-          'debug1: Server accepts key: user@host ED25519 agent',
+        logs: const [
+          SshLoginStarted(
+            'debug1: Executing proxy command: exec my-proxy myserver',
+          ),
+          SshProgress('debug1: Remote protocol version 2.0'),
+          SshLoginStarted(authenticatingLine),
+          SshProgress('debug1: Server accepts key: user@host ED25519 agent'),
         ],
       );
 
@@ -387,9 +394,11 @@ void main() {
       final calls = <String>[];
       final manager = await loggingIn(
         calls,
-        lines: [
-          'debug1: auto-mux: Trying existing master at /tmp/cm',
-          'debug1: mux_client_request_session: master session id: 2',
+        logs: const [
+          SshProgress('debug1: auto-mux: Trying existing master at /tmp/cm'),
+          SshProgress(
+            'debug1: mux_client_request_session: master session id: 2',
+          ),
         ],
       );
 
@@ -429,7 +438,7 @@ void main() {
       await manager.load();
       await manager.toggle('a1');
 
-      sshSays(const SshProgress(connectingLine));
+      sshSays(const SshLoginStarted(connectingLine));
       await pumpEventQueue();
 
       expect(calls, isEmpty);
@@ -2358,8 +2367,12 @@ void main() {
     });
 
     test('why it could not come forward, before connecting anyway', () async {
-      when(openAnyTunnel)
-          .thenAnswer(logsLogin(() async => tunnel, lines: [connectingLine]));
+      when(openAnyTunnel).thenAnswer(
+        logsLogin(
+          () async => tunnel,
+          logs: const [SshLoginStarted(connectingLine)],
+        ),
+      );
       final manager = TunnelManager(
         store: store,
         client: client,
@@ -2382,8 +2395,12 @@ void main() {
     });
 
     test('why it could not hand focus back', () async {
-      when(openAnyTunnel)
-          .thenAnswer(logsLogin(() async => tunnel, lines: [connectingLine]));
+      when(openAnyTunnel).thenAnswer(
+        logsLogin(
+          () async => tunnel,
+          logs: const [SshLoginStarted(connectingLine)],
+        ),
+      );
       final manager = TunnelManager(
         store: store,
         client: client,
