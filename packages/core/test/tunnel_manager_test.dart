@@ -735,13 +735,19 @@ void main() {
       test('says why the server would not open its port', () async {
         const message =
             'Error: remote port forwarding failed for listen port 8080';
-        when(openAnyRemoteTunnel)
-            .thenAnswer((_) => Future.error(const SshFailedException(message)));
+        when(openAnyRemoteTunnel).thenAnswer(
+          (_) => Future.error(
+            const SshRemotePortRefusedException(message, port: 8080),
+          ),
+        );
         final manager = await loaded();
 
         await manager.toggle('r5');
 
-        expect(manager.snapshot.statusOf('r5'), const Failed(message));
+        expect(
+          manager.snapshot.statusOf('r5'),
+          const Failed(message, failure: TunnelFailure.remotePortRefused),
+        );
       });
 
       test('fails without a port on the SSH host', () async {
@@ -811,16 +817,77 @@ void main() {
       expect(manager.snapshot.statusOf('a1'), const Connected());
     });
 
-    for (final (error, message) in [
-      (const SshPortInUseException(15432), '127.0.0.1:15432 is already in use'),
+    for (final (error, message, failure) in [
       (
-        const SshFailedException(
-          "172.17.0.1 isn't an address of this computer",
-        ),
-        "172.17.0.1 isn't an address of this computer",
+        const SshPortInUseException(15432),
+        '127.0.0.1:15432 is already in use',
+        TunnelFailure.portInUse,
       ),
-      (ArgumentError.value('-x', 'server', 'bad host'), 'bad host'),
-      (StateError('boom'), 'Bad state: boom'),
+      (
+        const SshAddressUnavailableException('172.17.0.1'),
+        "172.17.0.1 isn't an address of this computer",
+        TunnelFailure.addressUnavailable,
+      ),
+      (
+        ArgumentError.value('-x', 'server', 'bad host'),
+        'bad host',
+        TunnelFailure.other,
+      ),
+      (StateError('boom'), 'Bad state: boom', TunnelFailure.other),
+      (
+        SshNotFoundException(),
+        SshNotFoundException().message,
+        TunnelFailure.sshNotFound,
+      ),
+      (
+        const SshConfigException('Bad owner or permissions on config'),
+        'Bad owner or permissions on config',
+        TunnelFailure.config,
+      ),
+      (
+        const SshDuplicateForwardException('127.0.0.1:8080:localhost:3000'),
+        'another tunnel on this connection already forwards '
+            '127.0.0.1:8080:localhost:3000',
+        TunnelFailure.duplicateForward,
+      ),
+      (
+        const SshLoginRefusedException('Permission denied (publickey).'),
+        'Permission denied (publickey).',
+        TunnelFailure.loginRefused,
+      ),
+      (
+        const SshHostKeyRefusedException('Host key verification failed.'),
+        'Host key verification failed.',
+        TunnelFailure.hostKey,
+      ),
+      (
+        const SshHostNotFoundException('Could not resolve hostname bastion'),
+        'Could not resolve hostname bastion',
+        TunnelFailure.hostNotFound,
+      ),
+      (
+        const SshUnreachableException('Connection refused'),
+        'Connection refused',
+        TunnelFailure.unreachable,
+      ),
+      (
+        const SshDroppedException('Connection reset by 10.0.0.1 port 22'),
+        'Connection reset by 10.0.0.1 port 22',
+        TunnelFailure.dropped,
+      ),
+      (
+        const SshRemotePortRefusedException(
+          'Error: remote port forwarding failed for listen port 8080',
+          port: 8080,
+        ),
+        'Error: remote port forwarding failed for listen port 8080',
+        TunnelFailure.remotePortRefused,
+      ),
+      (
+        const SshFailedException('ssh exited'),
+        'ssh exited',
+        TunnelFailure.other,
+      ),
     ]) {
       test('says why ssh failed: $message', () async {
         when(openAnyTunnel).thenAnswer((_) => Future.error(error));
@@ -828,7 +895,10 @@ void main() {
 
         await manager.toggle('a1');
 
-        expect(manager.snapshot.statusOf('a1'), Failed(message));
+        expect(
+          manager.snapshot.statusOf('a1'),
+          Failed(message, failure: failure),
+        );
         expect(manager.snapshot.statusOf('a1').isOn, isFalse);
       });
     }
@@ -1159,7 +1229,10 @@ void main() {
       );
       final manager = await loaded();
       await manager.toggle('a1');
-      expect(manager.snapshot.statusOf('a1'), const Failed('Timed out'));
+      expect(
+        manager.snapshot.statusOf('a1'),
+        const Failed('Timed out', failure: TunnelFailure.unreachable),
+      );
       when(openAnyTunnel).thenAnswer((_) async => tunnel);
 
       await manager.toggle('a1');
@@ -1261,7 +1334,10 @@ void main() {
     test('says why, and connects again after a second', () {
       dropped((manager, time) {
         drop(time, closed);
-        expect(manager.snapshot.statusOf('a1'), Reconnecting(closed.message));
+        expect(
+          manager.snapshot.statusOf('a1'),
+          Reconnecting(closed.message, failure: TunnelFailure.dropped),
+        );
 
         time.elapse(const Duration(seconds: 1));
         expect(opened, hasLength(2));
@@ -1309,7 +1385,7 @@ void main() {
 
         expect(
           manager.snapshot.statusOf('a1'),
-          const Reconnecting('Disconnected'),
+          const Reconnecting('Disconnected', failure: TunnelFailure.dropped),
         );
       });
     });
@@ -1320,7 +1396,10 @@ void main() {
         drop(time, closed);
 
         time.elapse(const Duration(seconds: 1));
-        expect(manager.snapshot.statusOf('a1'), Reconnecting(timedOut.message));
+        expect(
+          manager.snapshot.statusOf('a1'),
+          Reconnecting(timedOut.message, failure: TunnelFailure.unreachable),
+        );
         time.elapse(const Duration(seconds: 2, milliseconds: 3999));
         expect(opened, hasLength(1));
 
@@ -1336,10 +1415,16 @@ void main() {
         drop(time, closed);
 
         time.elapse(const Duration(seconds: 1 + 2 + 4 + 8 + 15 + 30 + 60));
-        expect(manager.snapshot.statusOf('a1'), Reconnecting(timedOut.message));
+        expect(
+          manager.snapshot.statusOf('a1'),
+          Reconnecting(timedOut.message, failure: TunnelFailure.unreachable),
+        );
 
         time.elapse(const Duration(minutes: 2));
-        expect(manager.snapshot.statusOf('a1'), Failed(timedOut.message));
+        expect(
+          manager.snapshot.statusOf('a1'),
+          Failed(timedOut.message, failure: TunnelFailure.unreachable),
+        );
         expect(failures, hasLength(2));
 
         time.elapse(const Duration(hours: 8));
@@ -1353,7 +1438,10 @@ void main() {
         failures = List.filled(8, timedOut, growable: true);
         drop(time, closed);
         time.elapse(const Duration(minutes: 5));
-        expect(manager.snapshot.statusOf('a1'), Failed(timedOut.message));
+        expect(
+          manager.snapshot.statusOf('a1'),
+          Failed(timedOut.message, failure: TunnelFailure.unreachable),
+        );
 
         unawaited(manager.toggle('a1'));
         time.flushMicrotasks();
@@ -1370,7 +1458,10 @@ void main() {
         drop(time, closed);
 
         time.elapse(const Duration(hours: 8));
-        expect(manager.snapshot.statusOf('a1'), Reconnecting(closed.message));
+        expect(
+          manager.snapshot.statusOf('a1'),
+          Reconnecting(closed.message, failure: TunnelFailure.dropped),
+        );
         expect(failures, hasLength(1));
 
         locked = false;
@@ -1447,7 +1538,10 @@ void main() {
 
         time.elapse(const Duration(minutes: 5));
 
-        expect(manager.snapshot.statusOf('a1'), Failed(denied.message));
+        expect(
+          manager.snapshot.statusOf('a1'),
+          Failed(denied.message, failure: TunnelFailure.loginRefused),
+        );
         expect(opened, hasLength(1));
       });
     });
@@ -1458,7 +1552,10 @@ void main() {
 
         time.elapse(const Duration(minutes: 5));
 
-        expect(manager.snapshot.statusOf('a1'), Failed(denied.message));
+        expect(
+          manager.snapshot.statusOf('a1'),
+          Failed(denied.message, failure: TunnelFailure.loginRefused),
+        );
         expect(opened, hasLength(1));
       });
     });
@@ -1713,9 +1810,32 @@ void main() {
 
       expect(
         manager.snapshot.statusOf('a1'),
-        Failed(refused.line, isForward: true),
+        Failed(refused.line, failure: TunnelFailure.forwardRefused),
       );
       expect(tunnel.closeCount, 1);
+    });
+
+    test('says when the server forbids what the check reached', () async {
+      const prohibited = SshForwardProhibited(
+        'channel 3: open failed: administratively prohibited: open failed',
+      );
+      late void Function(SshLog log) sshSays;
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        sshSays =
+            invocation.namedArguments[#onLog]! as void Function(SshLog log);
+        return tunnel;
+      });
+      final manager = await checking(
+        check: (_, _) async => sshSays(prohibited),
+      );
+
+      await manager.toggle('a1');
+      await pumpEventQueue();
+
+      expect(
+        manager.snapshot.statusOf('a1'),
+        Failed(prohibited.line, failure: TunnelFailure.forwardProhibited),
+      );
     });
 
     group('within the check window', () {
@@ -1762,7 +1882,7 @@ void main() {
 
           expect(
             manager.snapshot.statusOf('a1'),
-            Failed(refused.line, isForward: true),
+            Failed(refused.line, failure: TunnelFailure.forwardRefused),
           );
           expect(tunnel.closeCount, 1);
           expect(opens, 1);
@@ -1790,7 +1910,7 @@ void main() {
 
           expect(
             manager.snapshot.statusOf('a1'),
-            Failed(refused.line, isForward: true),
+            Failed(refused.line, failure: TunnelFailure.forwardRefused),
           );
           unawaited(manager.close());
           time.flushMicrotasks();
@@ -1822,7 +1942,7 @@ void main() {
           expect(opens, 2);
           expect(
             manager.snapshot.statusOf('a1'),
-            Failed(refused.line, isForward: true),
+            Failed(refused.line, failure: TunnelFailure.forwardRefused),
           );
         });
       });
@@ -2112,7 +2232,10 @@ void main() {
 
         expect(
           manager.snapshot.statusOf('a1'),
-          const Reconnecting('ssh: Could not resolve hostname bastion'),
+          const Reconnecting(
+            'ssh: Could not resolve hostname bastion',
+            failure: TunnelFailure.hostNotFound,
+          ),
         );
         expect(store.on, {'a1'});
 
@@ -2170,7 +2293,10 @@ void main() {
 
       expect(
         manager.snapshot.statusOf('a1'),
-        const Failed('deploy@bastion: Permission denied (publickey).'),
+        const Failed(
+          'deploy@bastion: Permission denied (publickey).',
+          failure: TunnelFailure.loginRefused,
+        ),
       );
       expect(store.on, isEmpty);
     });
