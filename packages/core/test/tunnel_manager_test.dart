@@ -14,7 +14,7 @@ import 'package:test/test.dart';
 import 'fakes/fakes.dart';
 
 void main() {
-  const refused = SshForwardFailed(
+  const refused = SshForwardUnreachable(
     'channel 2: open failed: connect failed: Connection refused',
     reason: 'Connection refused',
   );
@@ -404,7 +404,7 @@ void main() {
       final calls = <String>[];
       final manager = await loggingIn(
         calls,
-        opened: () async => throw const SshTunnelException('Permission denied'),
+        opened: () async => throw const SshFailedException('Permission denied'),
       );
 
       await manager.toggle('a1');
@@ -418,7 +418,7 @@ void main() {
       late void Function(SshLog log) sshSays;
       when(openAnyTunnel).thenAnswer((invocation) async {
         sshSays = invocation.namedArguments[#onLog]! as void Function(SshLog);
-        throw const SshTunnelException('Permission denied');
+        throw const SshFailedException('Permission denied');
       });
       final manager = TunnelManager(
         store: store,
@@ -736,7 +736,7 @@ void main() {
         const message =
             'Error: remote port forwarding failed for listen port 8080';
         when(openAnyRemoteTunnel)
-            .thenAnswer((_) => Future.error(const SshTunnelException(message)));
+            .thenAnswer((_) => Future.error(const SshFailedException(message)));
         final manager = await loaded();
 
         await manager.toggle('r5');
@@ -814,7 +814,9 @@ void main() {
     for (final (error, message) in [
       (const SshPortInUseException(15432), '127.0.0.1:15432 is already in use'),
       (
-        const SshException("172.17.0.1 isn't an address of this computer"),
+        const SshFailedException(
+          "172.17.0.1 isn't an address of this computer",
+        ),
         "172.17.0.1 isn't an address of this computer",
       ),
       (ArgumentError.value('-x', 'server', 'bad host'), 'bad host'),
@@ -1018,7 +1020,9 @@ void main() {
 
       test('says why the key could not be added', () async {
         when(trustAnyHostKey).thenAnswer(
-          (_) => Future.error(const SshException('known_hosts is read-only')),
+          (_) => Future.error(
+            const SshFailedException('known_hosts is read-only'),
+          ),
         );
         final manager = await loaded();
         await manager.toggle('a1');
@@ -1150,9 +1154,9 @@ void main() {
     });
 
     test('can reconnect after a failure', () async {
-      when(
-        openAnyTunnel,
-      ).thenAnswer((_) => Future.error(const SshTunnelException('Timed out')));
+      when(openAnyTunnel).thenAnswer(
+        (_) => Future.error(const SshUnreachableException('Timed out')),
+      );
       final manager = await loaded();
       await manager.toggle('a1');
       expect(manager.snapshot.statusOf('a1'), const Failed('Timed out'));
@@ -1207,14 +1211,13 @@ void main() {
   });
 
   group('a dropped tunnel', () {
-    const closed = SshTunnelException(
+    const closed = SshDroppedException(
       'Connection to bastion closed by remote host.',
     );
-    const denied = SshTunnelException(
+    const denied = SshLoginRefusedException(
       'deploy@bastion: Permission denied (publickey).',
-      isPermanent: true,
     );
-    const timedOut = SshTunnelException(
+    const timedOut = SshUnreachableException(
       'ssh: connect to host bastion port 22: Operation timed out',
     );
     late List<FakeTunnel> opened;
@@ -1641,7 +1644,7 @@ void main() {
       await manager.toggle('a1');
 
       said.first(
-        const SshForwardFailed(
+        const SshForwardUnreachable(
           'channel 2: open failed: connect failed: Connection refused',
           reason: 'Connection refused',
         ),
@@ -1685,9 +1688,9 @@ void main() {
     });
 
     test('checks nothing when the tunnel fails to connect', () async {
-      when(
-        openAnyTunnel,
-      ).thenAnswer((_) => Future.error(const SshTunnelException('Timed out')));
+      when(openAnyTunnel).thenAnswer(
+        (_) => Future.error(const SshUnreachableException('Timed out')),
+      );
       final manager = await checking();
 
       await manager.toggle('a1');
@@ -1919,9 +1922,8 @@ void main() {
     test('says when the SSH host forbids forwarding', () {
       warned(database, (manager, _) {
         sshSays(
-          const SshForwardFailed(
+          const SshForwardProhibited(
             'channel 3: open failed: administratively prohibited: open failed',
-            reason: 'administratively prohibited',
           ),
         );
 
@@ -2098,7 +2100,7 @@ void main() {
         var tries = 0;
         when(openAnyTunnel).thenAnswer((_) async {
           if (++tries == 1) {
-            throw const SshTunnelException(
+            throw const SshHostNotFoundException(
               'ssh: Could not resolve hostname bastion',
             );
           }
@@ -2130,7 +2132,7 @@ void main() {
         when(openAnyTunnel).thenAnswer(
           logsLogin(() async {
             if (++tries == 1) {
-              throw const SshTunnelException('Network is down');
+              throw const SshUnreachableException('Network is down');
             }
             return tunnel;
           }),
@@ -2158,9 +2160,8 @@ void main() {
     test('a restored tunnel still stops on a permanent failure', () async {
       store = FakeStore([database], {'a1'});
       when(openAnyTunnel).thenThrow(
-        const SshTunnelException(
+        const SshLoginRefusedException(
           'deploy@bastion: Permission denied (publickey).',
-          isPermanent: true,
         ),
       );
       final manager = await loaded();
@@ -2283,7 +2284,7 @@ void main() {
         (invocation.namedArguments[#onLog]! as void Function(SshLog))
           ..call(const SshProgress('debug1: Connecting to bastion port 22.'))
           ..call(const SshMessage(denied));
-        throw const SshTunnelException(denied);
+        throw const SshFailedException(denied);
       });
       final manager = await loaded();
 

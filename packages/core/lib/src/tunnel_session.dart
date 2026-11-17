@@ -243,8 +243,8 @@ class TunnelSession({
     }
     final message = exception == null ? 'Disconnected' : _messageOf(exception);
     final isPermanent = switch (exception) {
-      SshException(:final isPermanent) => isPermanent,
-      null => false,
+      SshPermanentException() => true,
+      SshException() || null => false,
       _ => true,
     };
     if (!_retries || isPermanent) return _fail(message);
