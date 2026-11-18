@@ -29,6 +29,8 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "FLUTTER_VERSION_BUILD=${FLUTT
 
 # Disable Windows macros that collide with C++ standard library functions.
 target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
+# Debug and profile builds are Taka Dev, apart from an installed release.
+target_compile_definitions(${BINARY_NAME} PRIVATE "$<$<NOT:$<CONFIG:Release>>:TAKA_DEVELOPMENT>")
 
 # Add dependency libraries and include directories. Add any application-specific
 # dependencies here.

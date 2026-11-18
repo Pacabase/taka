@@ -5,12 +5,21 @@
 #include "flutter_window.h"
 #include "utils.h"
 
+// Must match TakaBuild.
+#ifdef TAKA_DEVELOPMENT
+constexpr wchar_t kWindowMutex[] = L"Local\\com.pacabase.taka.dev.window";
+constexpr wchar_t kWindowTitle[] = L"Taka Dev";
+#else
+constexpr wchar_t kWindowMutex[] = L"Local\\com.pacabase.taka.window";
+constexpr wchar_t kWindowTitle[] = L"Taka";
+#endif
+
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
   // The agent opens the window again to bring it forward, as on macOS and Linux.
-  ::CreateMutex(nullptr, FALSE, L"Local\\com.pacabase.taka.window");
+  ::CreateMutex(nullptr, FALSE, kWindowMutex);
   if (::GetLastError() == ERROR_ALREADY_EXISTS) {
-    if (HWND open = ::FindWindow(L"FLUTTER_RUNNER_WIN32_WINDOW", L"Taka")) {
+    if (HWND open = ::FindWindow(L"FLUTTER_RUNNER_WIN32_WINDOW", kWindowTitle)) {
       if (::IsIconic(open)) ::ShowWindow(open, SW_RESTORE);
       ::SetForegroundWindow(open);
     }
@@ -37,7 +46,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(400, 480);
-  if (!window.Create(L"Taka", origin, size)) {
+  if (!window.Create(kWindowTitle, origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
