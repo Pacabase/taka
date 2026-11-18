@@ -2691,6 +2691,33 @@ void main() {
   });
 
   test(
+    'a toggle while save restarts a tunnel leaves one ssh running',
+    () async {
+      final stopping = Completer<void>();
+      final opened = <SshTunnel>[];
+      when(openAnyTunnel).thenAnswer((_) async {
+        final next = opened.isEmpty
+            ? _SlowTunnel(stopping.future)
+            : FakeTunnel(15433);
+        opened.add(next);
+        return next;
+      });
+      final manager = await loaded();
+      await manager.toggle('a1');
+
+      final saving = manager.save(database.copyWith(localPort: 15433));
+      await pumpEventQueue();
+      await manager.toggle('a1');
+      stopping.complete();
+      await saving;
+      await pumpEventQueue();
+
+      expect(opened, hasLength(2));
+      expect(manager.state.statusOf('a1'), const Connected());
+    },
+  );
+
+  test(
     'close from a listener of changes waits for the tunnels to stop',
     () async {
       final stopping = Completer<void>();

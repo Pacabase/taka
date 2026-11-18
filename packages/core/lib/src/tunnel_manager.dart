@@ -267,9 +267,19 @@ class TunnelManager({
     );
   }
 
+  // Another call may have started it while this one waited, such as a toggle
+  // while save stopped it: a second session would leave ssh running untracked.
   Future<void> _start(Tunnel tunnel, {bool isRestored = false}) {
-    if (_closing != null) return Future.value();
+    if (_closing != null || _isOn(tunnel.id)) return Future.value();
 
+    if (_sessions[tunnel.id] case final replaced?) {
+      unawaited(
+        replaced.stop().catchError(
+          (Object exception) =>
+              _log.w('${tunnel.title}: could not close ssh ($exception)'),
+        ),
+      );
+    }
     final session = _sessions[tunnel.id] = TunnelSession(
       tunnel: tunnel,
       client: client,
