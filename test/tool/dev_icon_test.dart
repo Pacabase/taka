@@ -7,19 +7,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart';
 
-import '../../tool/app_icons.dart';
+import '../../tool/dev_icon.dart';
 
 void main() {
-  final source = decodePng(File(sourcePath).readAsBytesSync())!;
-  final icon = devIcon(source);
+  final icon = devIcon(decodePng(File(sourcePath).readAsBytesSync())!);
 
   bool samePixels(String path, Image expected) => listEquals(
     decodePng(File(path).readAsBytesSync())!.getBytes(),
     expected.getBytes(),
   );
 
-  test('the red Dev icon, its macOS set and both Windows icons come from '
-      'the current icon; run fvm dart run tool/app_icons.dart', () {
+  test('the red Dev icon and every size of its set come from the current '
+      'icon; run fvm dart run tool/dev_icon.dart', () {
     final files = iconSetFiles();
 
     expect(samePixels(devIconPath, icon), isTrue);
@@ -35,7 +34,9 @@ void main() {
         reason: name,
       ),
     );
-    expect(File(windowsIcon).readAsBytesSync(), windowsIconFor(source));
-    expect(File(windowsDevIcon).readAsBytesSync(), windowsIconFor(icon));
+    expect(
+      File(windowsDevIcon).readAsBytesSync(),
+      encodeIco(iconAt(icon, windowsIconSize)),
+    );
   });
 }

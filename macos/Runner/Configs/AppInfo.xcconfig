@@ -4,7 +4,7 @@
 // future. If not, the values below would default to using the project name when this becomes a
 // 'flutter create' template.
 
-// A red icon in Debug and Profile, from tool/app_icons.dart, tells the Dock's two apart.
+// A red icon in Debug and Profile, from tool/dev_icon.dart, tells the Dock's two apart.
 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
 ASSETCATALOG_COMPILER_APPICON_NAME[config=Debug] = AppIcon-Dev
 ASSETCATALOG_COMPILER_APPICON_NAME[config=Profile] = AppIcon-Dev
