@@ -34,8 +34,11 @@ Iterable<LicenseEntry> agentLicences(String json) => [
       LicenseEntryWithLineBreaks([package], licence),
 ];
 
-class const AboutPage({super.key, required final String version})
-    extends StatelessWidget {
+class const AboutPage({
+  super.key,
+  required final String version,
+  final String name = 'Taka',
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = TakaColors.of(context);
@@ -80,9 +83,9 @@ class const AboutPage({super.key, required final String version})
                         height: 64,
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Taka',
-                        style: TextStyle(fontWeight: FontWeight.w500),
+                      Text(
+                        name,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       Text('Version $version', style: secondary),
                       Text(
@@ -93,7 +96,7 @@ class const AboutPage({super.key, required final String version})
                       TextButton(
                         onPressed: () => showLicensePage(
                           context: context,
-                          applicationName: 'Taka',
+                          applicationName: name,
                           applicationVersion: version,
                           applicationLegalese: _legalese,
                         ),

@@ -34,9 +34,11 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Profile" "Release")
 endif()
 
-# Debug and Profile are Taka Dev, apart from a release; TakaBuild matches.
+# Must match TakaBuild.
+set(APP_NAME "Taka")
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
   set(APPLICATION_ID "${APPLICATION_ID}.dev")
+  set(APP_NAME "Taka Dev")
 endif()
 
 # Compilation settings that should be applied to most targets.

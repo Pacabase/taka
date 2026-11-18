@@ -2,6 +2,7 @@
 library;
 
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:core/core.dart';
 import 'package:test/test.dart';
@@ -78,6 +79,28 @@ void main() {
       expect(agent.build, TakaBuild.release);
     });
 
+    test("inside a debug build's Taka Dev.app", () {
+      final app = '${assets.path}/Taka Dev.app/Contents';
+      writeAppId(
+        'com.pacabase.taka.dev\n',
+        into: '$app/Library/LoginItems/Taka.app/Contents/Resources',
+      );
+
+      final window = TakaInstall.fromWindow(
+        '$app/MacOS/Taka Dev',
+        environment: {},
+        operatingSystem: 'macos',
+      );
+      final agent = TakaInstall.fromAgent(
+        '$app/Library/LoginItems/Taka.app/Contents/MacOS/Taka',
+        environment: {},
+      );
+
+      expect(window.build, TakaBuild.development);
+      expect(agent.build, TakaBuild.development);
+      expect(agent.app, endsWith('Taka Dev.app'));
+    });
+
     test('beside a Linux bundle', () {
       writeAppId('com.pacabase.taka\n', into: '${assets.path}/agent');
 
@@ -109,48 +132,49 @@ void main() {
   });
 
   group('matches the builds', () {
-    String read(String path) => File('../../$path').readAsStringSync();
+    // The package's own path, wherever the tests run from.
+    final root = Directory.fromUri(
+      Isolate.resolvePackageUriSync(Uri.parse('package:core/'))!,
+    ).parent.parent.parent.path;
+    String read(String path) => File('$root/$path').readAsStringSync();
 
-    test('Xcode gives Debug and Profile the development app ID and name', () {
-      final config = read('macos/Runner/Configs/AppInfo.xcconfig');
+    // Each Xcode setting, by key and configuration, as the xcconfig sets it.
+    Map<String, String> settings(String name) => {
+      for (final line in RegExp(
+        '^($name(?:\\[config=\\w+\\])?) = (.*)\$',
+        multiLine: true,
+      ).allMatches(read('macos/Runner/Configs/AppInfo.xcconfig')))
+        line[1]!: line[2]!,
+    };
 
+    Map<String, String> byConfiguration(
+      String name,
+      String Function(TakaBuild) value,
+    ) => {
+      name: value(TakaBuild.release),
+      '$name[config=Debug]': value(TakaBuild.development),
+      '$name[config=Profile]': value(TakaBuild.development),
+    };
+
+    test("Xcode sets each build's ID and names, and nothing else", () {
       expect(
-        config,
-        contains('PRODUCT_BUNDLE_IDENTIFIER = ${TakaBuild.release.appId}\n'),
+        settings('PRODUCT_BUNDLE_IDENTIFIER'),
+        byConfiguration('PRODUCT_BUNDLE_IDENTIFIER', (build) => build.appId),
       );
-      for (final configuration in ['Debug', 'Profile']) {
-        expect(
-          config,
-          contains(
-            'PRODUCT_BUNDLE_IDENTIFIER[config=$configuration] = '
-            '${TakaBuild.development.appId}\n',
-          ),
-        );
-        expect(
-          config,
-          contains(
-            'PRODUCT_NAME[config=$configuration] = '
-            '${TakaBuild.development.name}\n',
-          ),
-        );
-      }
-      expect(config, contains('PRODUCT_NAME = ${TakaBuild.release.name}\n'));
       expect(
-        config,
-        contains('WINDOW_NAME = ${TakaBuild.release.name} Settings\n'),
+        settings('PRODUCT_NAME'),
+        byConfiguration('PRODUCT_NAME', (build) => build.name),
       );
-      for (final configuration in ['Debug', 'Profile']) {
-        expect(
-          config,
-          contains(
-            'WINDOW_NAME[config=$configuration] = '
-            '${TakaBuild.release.name} Settings Dev\n',
-          ),
-        );
-      }
+      expect(
+        settings('WINDOW_NAME'),
+        byConfiguration('WINDOW_NAME', (build) => build.windowName),
+      );
+    });
+
+    test("the window's bundle name is WINDOW_NAME", () {
       expect(
         read('macos/Runner/Info.plist'),
-        contains('<string>\$(WINDOW_NAME)</string>'),
+        contains('<key>CFBundleName</key>\n\t<string>\$(WINDOW_NAME)</string>'),
       );
     });
 
@@ -181,25 +205,37 @@ void main() {
       );
     });
 
-    test('CMake gives every build but Release the development app ID', () {
+    test('CMake gives every build but Release the development ID and name', () {
       final cmake = read('linux/CMakeLists.txt');
+      final release = cmake.indexOf(
+        'set(APPLICATION_ID "${TakaBuild.release.appId}")',
+      );
+      final dev = cmake.indexOf(
+        'if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")\n'
+        r'  set(APPLICATION_ID "${APPLICATION_ID}.dev")'
+        '\n  set(APP_NAME "${TakaBuild.development.name}")',
+      );
 
-      expect(
-        cmake,
-        contains('set(APPLICATION_ID "${TakaBuild.release.appId}")'),
-      );
-      expect(
-        cmake,
-        contains(
-          'if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")\n'
-          r'  set(APPLICATION_ID "${APPLICATION_ID}.dev")',
-        ),
-      );
+      expect(release, isNot(-1));
+      expect(dev, greaterThan(release));
+      expect(cmake, contains('set(APP_NAME "${TakaBuild.release.name}")'));
       expect(TakaBuild.development.appId, '${TakaBuild.release.appId}.dev');
       expect(
         cmake,
         contains(r'\"${CMAKE_INSTALL_PREFIX}/agent\" \"${APPLICATION_ID}\"'),
       );
+      expect(
+        read('linux/runner/CMakeLists.txt'),
+        contains(r'add_definitions(-DAPP_NAME="${APP_NAME}")'),
+      );
+    });
+
+    test("Linux names the window's process within its 15 characters", () {
+      expect(
+        read('linux/runner/main.cc'),
+        contains('prctl(PR_SET_NAME, "${TakaBuild.release.windowName}");'),
+      );
+      expect(TakaBuild.release.windowName.length, lessThanOrEqualTo(15));
     });
 
     test('the Linux embed script writes the app ID it is given', () {

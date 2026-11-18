@@ -343,6 +343,33 @@ void main() {
     );
   });
 
+  test("a dev build's menu names it, to quit and to check a key", () {
+    final empty = trayEntries(const TunnelsSnapshot(), name: 'Taka Dev');
+    final asking = [
+      for (final entry in trayEntries(
+        TunnelsSnapshot(
+          tunnels: [web],
+          statuses: {
+            'c3': const UnknownHostKey(
+              host: 'web',
+              type: 'ED25519',
+              fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY',
+            ),
+          },
+        ),
+        name: 'Taka Dev',
+      ))
+        '$entry',
+    ];
+
+    expect('${empty.last}', 'Quit Taka Dev ⌘q');
+    expect(asking.last, 'Quit Taka Dev ⌘q');
+    expect(
+      asking.firstWhere((line) => line.startsWith('Tunnel Actions')),
+      contains("Open Taka Dev to check web's key."),
+    );
+  });
+
   test('the tooltip counts connected tunnels', () {
     expect(trayTooltip(const TunnelsSnapshot()), 'Taka');
     expect(
@@ -354,6 +381,7 @@ void main() {
       ),
       'Taka · 1 connected',
     );
+    expect(trayTooltip(const TunnelsSnapshot(), name: 'Taka Dev'), 'Taka Dev');
   });
 
   test('each tunnel line toggles its own tunnel', () {

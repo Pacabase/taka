@@ -5,7 +5,7 @@
 // 'flutter create' template.
 
 // The bundle's file name, which Finder and the Dock show, and the executable's.
-// Debug and Profile are Taka Dev, apart from a release; TakaBuild matches.
+// Must match TakaBuild.
 PRODUCT_NAME = Taka
 PRODUCT_NAME[config=Debug] = Taka Dev
 PRODUCT_NAME[config=Profile] = Taka Dev
@@ -16,7 +16,7 @@ PRODUCT_BUNDLE_IDENTIFIER = com.pacabase.taka
 PRODUCT_BUNDLE_IDENTIFIER[config=Debug] = com.pacabase.taka.dev
 PRODUCT_BUNDLE_IDENTIFIER[config=Profile] = com.pacabase.taka.dev
 
-// The window's name in the menu bar and Activity Monitor; the agent is $(PRODUCT_NAME).
+// The window's name in the menu bar and Activity Monitor.
 WINDOW_NAME = Taka Settings
 WINDOW_NAME[config=Debug] = Taka Settings Dev
 WINDOW_NAME[config=Profile] = Taka Settings Dev

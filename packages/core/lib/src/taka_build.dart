@@ -3,21 +3,33 @@ import 'dart:io';
 /// A release, or a debug or profile build, which keeps its tunnels, socket,
 /// logs and login item apart from an installed release's.
 enum TakaBuild {
-  release(appId: 'com.pacabase.taka', name: 'Taka', folderName: 'taka'),
+  release(
+    appId: 'com.pacabase.taka',
+    name: 'Taka',
+    windowName: 'Taka Settings',
+    folderName: 'taka',
+  ),
   development(
     appId: 'com.pacabase.taka.dev',
     name: 'Taka Dev',
+    windowName: 'Taka Settings Dev',
     folderName: 'taka-dev',
   );
 
   const TakaBuild({
     required this.appId,
     required this.name,
+    required this.windowName,
     required this.folderName,
   });
 
   final String appId;
+
+  /// The background agent's name, and the app's.
   final String name;
+
+  /// The window's, which macOS shows in the menu bar and Activity Monitor.
+  final String windowName;
 
   /// Linux's lower-case log folder.
   final String folderName;

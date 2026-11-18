@@ -54,7 +54,7 @@ class AgentTray({
 
   void _rebuild(TunnelsSnapshot snapshot) {
     final icon = _icon;
-    final menu = _menu(trayEntries(snapshot));
+    final menu = _menu(trayEntries(snapshot, name: takaBuild.name));
     if (icon == null || menu == null) return;
 
     final count = snapshot.connectedCount;
@@ -62,7 +62,7 @@ class AgentTray({
     if (image != null) icon.icon = image;
     icon
       ..setContextMenu(menu)
-      ..setTooltip(trayTooltip(snapshot));
+      ..setTooltip(trayTooltip(snapshot, name: takaBuild.name));
     // GNOME's AppIndicator draws it as macOS does; other Linux trays ignore it.
     if (!Platform.isWindows) icon.setTitle(count == 0 ? null : '$count');
   }
