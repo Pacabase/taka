@@ -705,8 +705,9 @@ void main() {
         unawaited(manager.toggle('r5'));
         await pumpEventQueue();
 
-        await manager.toggle('r5');
+        final stopping = manager.toggle('r5');
         opened.complete(remote);
+        await stopping;
         await pumpEventQueue();
 
         expect(manager.state.statusOf('r5'), const Stopped());
@@ -773,10 +774,12 @@ void main() {
     });
 
     test('says Connecting while ssh connects', () async {
-      final manager = await connecting(Completer<SshTunnel>().future);
+      final opened = Completer<SshTunnel>();
+      final manager = await connecting(opened.future);
 
       expect(manager.state.statusOf('a1'), const Connecting());
       expect(manager.state.statusOf('a1').isOn, isTrue);
+      opened.completeError(const SshTunnelAbortedException());
     });
 
     test('again closes an open tunnel', () async {
@@ -804,9 +807,10 @@ void main() {
     test('closes a tunnel that opens after it was aborted', () async {
       final opened = Completer<SshTunnel>();
       final manager = await connecting(opened.future);
-      await manager.toggle('a1');
+      final stopping = manager.toggle('a1');
 
       opened.complete(tunnel);
+      await stopping;
       await pumpEventQueue();
 
       expect(manager.state.statusOf('a1'), const Stopped());
@@ -816,11 +820,12 @@ void main() {
     test('again after an abort ssh has not finished connects', () async {
       final first = Completer<SshTunnel>();
       final manager = await connecting(first.future);
-      await manager.toggle('a1');
+      final stopping = manager.toggle('a1');
       when(openAnyTunnel).thenAnswer((_) async => tunnel);
 
       await manager.toggle('a1');
       first.completeError(const SshTunnelAbortedException());
+      await stopping;
       await pumpEventQueue();
 
       expect(manager.state.statusOf('a1'), const Connected());
@@ -2498,8 +2503,9 @@ void main() {
     final opened = Completer<SshTunnel>();
     final manager = await connecting(opened.future);
 
-    await manager.remove('a1');
+    final removing = manager.remove('a1');
     opened.completeError(const SshTunnelAbortedException());
+    await removing;
     await pumpEventQueue();
 
     expect(manager.state.statuses.containsKey('a1'), isFalse);

@@ -135,10 +135,10 @@ return ended(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Reconnecting? retrying)?  opening,TResult Function( _Opened tunnel,  String warning,  bool isVerifying)?  up,TResult Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult Function( SshHostKey key)?  awaitingTrust,TResult Function()?  trusting,TResult Function( Failed failed)?  gaveUp,TResult Function( TunnelStatus last,  Future<void> closed)?  ended,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Reconnecting? retrying,  Future<void>? attempt)?  opening,TResult Function( _Opened tunnel,  String warning,  bool isVerifying)?  up,TResult Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult Function( SshHostKey key)?  awaitingTrust,TResult Function()?  trusting,TResult Function( Failed failed)?  gaveUp,TResult Function( TunnelStatus last,  Future<void> closed)?  ended,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Opening() when opening != null:
-return opening(_that.retrying);case Up() when up != null:
+return opening(_that.retrying,_that.attempt);case Up() when up != null:
 return up(_that.tunnel,_that.warning,_that.isVerifying);case Waiting() when waiting != null:
 return waiting(_that.reconnecting,_that.forUnlock);case AwaitingTrust() when awaitingTrust != null:
 return awaitingTrust(_that.key);case Trusting() when trusting != null:
@@ -162,10 +162,10 @@ return ended(_that.last,_that.closed);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Reconnecting? retrying)  opening,required TResult Function( _Opened tunnel,  String warning,  bool isVerifying)  up,required TResult Function( Reconnecting reconnecting,  bool forUnlock)  waiting,required TResult Function( SshHostKey key)  awaitingTrust,required TResult Function()  trusting,required TResult Function( Failed failed)  gaveUp,required TResult Function( TunnelStatus last,  Future<void> closed)  ended,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Reconnecting? retrying,  Future<void>? attempt)  opening,required TResult Function( _Opened tunnel,  String warning,  bool isVerifying)  up,required TResult Function( Reconnecting reconnecting,  bool forUnlock)  waiting,required TResult Function( SshHostKey key)  awaitingTrust,required TResult Function()  trusting,required TResult Function( Failed failed)  gaveUp,required TResult Function( TunnelStatus last,  Future<void> closed)  ended,}) {final _that = this;
 switch (_that) {
 case Opening():
-return opening(_that.retrying);case Up():
+return opening(_that.retrying,_that.attempt);case Up():
 return up(_that.tunnel,_that.warning,_that.isVerifying);case Waiting():
 return waiting(_that.reconnecting,_that.forUnlock);case AwaitingTrust():
 return awaitingTrust(_that.key);case Trusting():
@@ -185,10 +185,10 @@ return ended(_that.last,_that.closed);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Reconnecting? retrying)?  opening,TResult? Function( _Opened tunnel,  String warning,  bool isVerifying)?  up,TResult? Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult? Function( SshHostKey key)?  awaitingTrust,TResult? Function()?  trusting,TResult? Function( Failed failed)?  gaveUp,TResult? Function( TunnelStatus last,  Future<void> closed)?  ended,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Reconnecting? retrying,  Future<void>? attempt)?  opening,TResult? Function( _Opened tunnel,  String warning,  bool isVerifying)?  up,TResult? Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult? Function( SshHostKey key)?  awaitingTrust,TResult? Function()?  trusting,TResult? Function( Failed failed)?  gaveUp,TResult? Function( TunnelStatus last,  Future<void> closed)?  ended,}) {final _that = this;
 switch (_that) {
 case Opening() when opening != null:
-return opening(_that.retrying);case Up() when up != null:
+return opening(_that.retrying,_that.attempt);case Up() when up != null:
 return up(_that.tunnel,_that.warning,_that.isVerifying);case Waiting() when waiting != null:
 return waiting(_that.reconnecting,_that.forUnlock);case AwaitingTrust() when awaitingTrust != null:
 return awaitingTrust(_that.key);case Trusting() when trusting != null:
@@ -206,10 +206,11 @@ return ended(_that.last,_that.closed);case _:
 
 
 class Opening extends Phase {
-  const Opening({this.retrying}): super._();
+  const Opening({this.retrying, this.attempt}): super._();
   
 
  final  Reconnecting? retrying;
+ final  Future<void>? attempt;
 
 /// Create a copy of Phase
 /// with the given fields replaced by the non-null parameter values.
@@ -221,18 +222,18 @@ $OpeningCopyWith<Opening> get copyWith => _$OpeningCopyWithImpl<Opening>(this, _
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Opening&&const DeepCollectionEquality().equals(other.retrying, retrying));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Opening&&const DeepCollectionEquality().equals(other.retrying, retrying)&&(identical(other.attempt, attempt) || other.attempt == attempt));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(retrying));
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(retrying),attempt);
 }
 
 @override
 String toString() {
-    return 'Phase.opening(retrying: $retrying)';
+    return 'Phase.opening(retrying: $retrying, attempt: $attempt)';
 }
 
 
@@ -243,7 +244,7 @@ abstract mixin class $OpeningCopyWith<$Res> implements $PhaseCopyWith<$Res> {
   factory $OpeningCopyWith(Opening value, $Res Function(Opening) _then) = _$OpeningCopyWithImpl;
 @useResult
 $Res call({
- Reconnecting? retrying
+ Reconnecting? retrying, Future<void>? attempt
 });
 
 
@@ -260,10 +261,11 @@ class _$OpeningCopyWithImpl<$Res>
 
 /// Create a copy of Phase
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? retrying = freezed,}) {
+@pragma('vm:prefer-inline') $Res call({Object? retrying = freezed,Object? attempt = freezed,}) {
   return _then(Opening(
 retrying: freezed == retrying ? _self.retrying : retrying // ignore: cast_nullable_to_non_nullable
-as Reconnecting?,
+as Reconnecting?,attempt: freezed == attempt ? _self.attempt : attempt // ignore: cast_nullable_to_non_nullable
+as Future<void>?,
   ));
 }
 

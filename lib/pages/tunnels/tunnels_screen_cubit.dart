@@ -68,13 +68,11 @@ class TunnelsScreenCubit({
 
   void closeForm() => emit(state.copyWith(screen: const ListScreen()));
 
-  void _requested(OpenTunnel request) {
-    if (tunnels.state case Ready(:final snapshot)) {
-      _open(snapshot, request);
-    } else {
-      _early = request;
-    }
-  }
+  void _requested(OpenTunnel request) => switch (tunnels.state) {
+    Ready(:final snapshot) => _open(snapshot, request),
+    Loading() => _early = request,
+    Closed() => null,
+  };
 
   void _changed(TunnelsState tunnels) {
     if (tunnels case Ready(:final snapshot)) {

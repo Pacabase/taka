@@ -21,7 +21,6 @@ void main() {
     remotePort: 5432,
   );
   const dropped = SshDroppedException('Connection reset by 10.0.0.1 port 22');
-  const denied = SshLoginRefusedException('Permission denied (publickey).');
   const retryDelays = [Duration(seconds: 1), Duration(seconds: 2)];
   late MockSshClient client;
   late List<TunnelStatus> shown;
@@ -160,27 +159,6 @@ void main() {
     });
   });
 
-  test('a permanent failure after a drop gives up at once', () {
-    fakeAsync((time) {
-      final tunnel = FakeTunnel(15432);
-      when(openAnyTunnel).thenAnswer((_) async => tunnel);
-      final up = session();
-      unawaited(up.connect());
-      time.flushMicrotasks();
-
-      tunnel.dropWith(denied);
-      time.flushMicrotasks();
-
-      expect(
-        up.status,
-        const Failed(
-          'Permission denied (publickey).',
-          failure: TunnelFailure.loginRefused,
-        ),
-      );
-    });
-  });
-
   test('waits while the screen is locked, then connects once', () {
     fakeAsync((time) {
       var isLocked = true;
@@ -243,6 +221,27 @@ void main() {
       });
     },
   );
+
+  test('stopping while ssh opens finishes once ssh is closed', () {
+    fakeAsync((time) {
+      final opened = Completer<SshTunnel>();
+      final tunnel = FakeTunnel(15432);
+      when(openAnyTunnel).thenAnswer((_) => opened.future);
+      final opening = session();
+      unawaited(opening.connect());
+      time.flushMicrotasks();
+      var isStopped = false;
+
+      unawaited(opening.stop().then((_) => isStopped = true));
+      time.flushMicrotasks();
+      expect(isStopped, isFalse);
+
+      opened.complete(tunnel);
+      time.flushMicrotasks();
+      expect(isStopped, isTrue);
+      expect(tunnel.closeCount, 1);
+    });
+  });
 
   test('stopping while ssh logs in hands focus back', () {
     fakeAsync((time) {

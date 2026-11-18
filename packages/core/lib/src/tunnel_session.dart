@@ -20,7 +20,9 @@ typedef HandBack = Future<void> Function();
 
 @freezed
 sealed class const Phase._() with _$Phase {
-  const factory opening({Reconnecting? retrying}) = Opening;
+  /// [attempt] settles once ssh opened, failed, or was closed for a stop.
+  const factory opening({Reconnecting? retrying, Future<void>? attempt}) =
+      Opening;
 
   const factory up(
     _Opened tunnel, {
@@ -146,7 +148,11 @@ class TunnelSession({
         Waiting(:final reconnecting) => reconnecting,
         _ => null,
       };
-      emit(state.copyWith(phase: Opening(retrying: retrying)));
+      emit(
+        state.copyWith(
+          phase: Opening(retrying: retrying, attempt: event.settled.future),
+        ),
+      );
       final _Opened opened;
       try {
         opened = await _open();
@@ -271,6 +277,7 @@ class TunnelSession({
 
       final closed = switch (state.phase) {
         Up(:final tunnel) => _close(tunnel),
+        Opening(:final attempt?) => attempt,
         _ => Future<void>.value(),
       };
       _end(state.status, closed, emit);

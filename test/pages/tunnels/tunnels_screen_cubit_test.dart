@@ -111,6 +111,17 @@ void main() {
     expect(cubit.state.screen, const EditTunnelScreen(database));
   });
 
+  test('a request once the helper has gone is dropped', () async {
+    await snapshot([database]);
+    await agent.controller.close();
+    await pumpEventQueue();
+
+    requests.add(const OpenTunnel('a1'));
+    await pumpEventQueue();
+
+    expect(cubit.state, const TunnelsScreenState());
+  });
+
   test('a request for a tunnel that is gone changes nothing', () async {
     await snapshot([database]);
 
