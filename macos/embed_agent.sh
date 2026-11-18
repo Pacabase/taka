@@ -17,8 +17,12 @@ lipo "$bundle/bin/taka_agent" -verify_arch $ARCHS || {
 rm -rf "$helper"
 mkdir -p "$helper/Contents/MacOS" "$helper/Contents/Resources"
 cp "$agent/macos/Info.plist" "$helper/Contents/"
+plutil -replace CFBundleIdentifier -string "$PRODUCT_BUNDLE_IDENTIFIER.agent" "$helper/Contents/Info.plist"
+plutil -replace CFBundleName -string "$APP_BUNDLE_NAME" "$helper/Contents/Info.plist"
+plutil -replace CFBundleDisplayName -string "$APP_BUNDLE_NAME" "$helper/Contents/Info.plist"
 cp "$bundle/bin/taka_agent" "$helper/Contents/MacOS/Taka"
 cp -R "$bundle/lib" "$helper/Contents/lib"
 cp "$agent"/assets/*.png "$app/Contents/Resources/AppIcon.icns" "$helper/Contents/Resources/"
+echo "$PRODUCT_BUNDLE_IDENTIFIER" > "$helper/Contents/Resources/app_id"
 
 codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY:--}" "$helper"/Contents/lib/*.dylib "$helper"

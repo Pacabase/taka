@@ -14,6 +14,7 @@ import 'package:taka/taka_app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  takaBuild = TakaInstall.fromWindow(Platform.resolvedExecutable).build;
   if (kDebugMode) Fimber.plantTree(DebugTree());
   DebugLogging('window').start();
   FlutterError.onError = (details) {

@@ -25,7 +25,7 @@ class AgentTray({
   void show() {
     // Otherwise Linux trays know the icon by nativeapi's own application ID.
     final icon = _icon = Platform.isLinux
-        ? TrayIcon.createWithIdentifier('com.pacabase.taka')
+        ? TrayIcon.createWithIdentifier(takaBuild.appId)
         : TrayIcon.create();
     if (icon == null) return;
 

@@ -10,5 +10,16 @@ PRODUCT_NAME = Taka
 // The application's bundle identifier
 PRODUCT_BUNDLE_IDENTIFIER = com.pacabase.taka
 
+// Debug and Profile run as a separate Taka, so `flutter run` never touches an
+// installed release's tunnels, socket, logs or login item. TakaBuild in
+// packages/core matches these, and embed_agent.sh gives them to the agent.
+PRODUCT_BUNDLE_IDENTIFIER[config=Debug] = com.pacabase.taka.dev
+PRODUCT_BUNDLE_IDENTIFIER[config=Profile] = com.pacabase.taka.dev
+
+// The name in the menu bar, the Dock and Login Items.
+APP_BUNDLE_NAME = $(PRODUCT_NAME)
+APP_BUNDLE_NAME[config=Debug] = Taka Dev
+APP_BUNDLE_NAME[config=Profile] = Taka Dev
+
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 the Taka project authors.

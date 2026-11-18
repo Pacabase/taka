@@ -21,9 +21,9 @@ void _run() => runZonedGuarded(() => unawaited(_start()), (error, stack) {
 Future<void> _start() async {
   Application.instance.setDockIconVisible(false);
 
-  final TakaInstall(:app, :agentBundle, :agentAssets) = TakaInstall.fromAgent(
-    Platform.resolvedExecutable,
-  );
+  final install = TakaInstall.fromAgent(Platform.resolvedExecutable);
+  final TakaInstall(:app, :agentBundle, :agentAssets) = install;
+  takaBuild = install.build;
 
   if (agentBundle == null) Fimber.plantTree(DebugTree());
   final debugLogging = DebugLogging('agent')..start();
@@ -71,8 +71,8 @@ Future<void> _start() async {
         : Platform.isMacOS
         ? (agentBundle == null ? null : LaunchAtLogin.create())
         : LaunchAtLogin.createWithIdAndDisplayName(
-            'com.pacabase.taka.agent',
-            'Taka',
+            takaBuild.agentId,
+            takaBuild.name,
           ),
   );
   final AgentServer server;

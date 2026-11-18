@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:core/src/taka_build.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'taka_install.freezed.dart';
@@ -13,6 +14,9 @@ sealed class const TakaInstall._() with _$TakaInstall {
     String? agentBundle,
     required String agentAssets,
   }) = _TakaInstall;
+
+  /// Whether this install is a release or a development build.
+  TakaBuild get build => TakaBuild.inAgentAssets(agentAssets);
 
   static TakaInstall fromWindow(
     String executable, {

@@ -8,7 +8,10 @@ import 'package:test/test.dart';
 
 void main() {
   test('the folder lives in the home directory', () {
-    final directory = takaDirectory(environment: {'HOME': '/home/someone'});
+    final directory = takaDirectory(
+      environment: {'HOME': '/home/someone'},
+      build: TakaBuild.release,
+    );
 
     expect(
       directory.path,
@@ -20,8 +23,10 @@ void main() {
 
   test('an empty XDG_DATA_HOME counts as unset', () {
     expect(
-      takaDirectory(environment: {'HOME': '/home/someone', 'XDG_DATA_HOME': ''})
-          .path,
+      takaDirectory(
+        environment: {'HOME': '/home/someone', 'XDG_DATA_HOME': ''},
+        build: TakaBuild.release,
+      ).path,
       '/home/someone/.local/share/com.pacabase.taka',
     );
   }, testOn: 'linux');
@@ -30,6 +35,7 @@ void main() {
     expect(
       takaDirectory(
         environment: {'HOME': '/home/someone', 'XDG_DATA_HOME': '/data'},
+        build: TakaBuild.release,
       ).path,
       '/data/com.pacabase.taka',
     );
@@ -37,8 +43,24 @@ void main() {
 
   test('the agent socket is in the folder', () {
     expect(
-      agentSocketPath(environment: {'HOME': '/home/someone'}),
+      agentSocketPath(
+        environment: {'HOME': '/home/someone'},
+        build: TakaBuild.release,
+      ),
       endsWith('com.pacabase.taka/agent.sock'),
+    );
+  });
+
+  test('a development build has its own folder and socket', () {
+    const home = {'HOME': '/home/someone'};
+
+    expect(
+      takaDirectory(environment: home, build: TakaBuild.development).path,
+      endsWith('/com.pacabase.taka.dev'),
+    );
+    expect(
+      agentSocketPath(environment: home, build: TakaBuild.development),
+      endsWith('com.pacabase.taka.dev/agent.sock'),
     );
   });
 

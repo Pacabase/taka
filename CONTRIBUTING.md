@@ -22,6 +22,10 @@ fvm flutter run -d linux              # the app from source
 fvm flutter build linux --release     # build/linux/<x64 or arm64>/release/bundle/taka
 ```
 
+### Debug and release side by side
+
+Debug and profile builds run as Taka Dev (`com.pacabase.taka.dev`), with their own tunnels, background helper, socket, logs and login item. So `flutter run` never reads, rewrites or replaces an installed release's. A first debug run starts with no tunnels. To try it with your own, export them from the release and import them into Taka Dev.
+
 ## Tests
 
 The unit tests run per package:

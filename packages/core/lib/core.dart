@@ -10,6 +10,7 @@ export 'src/pasted_command.dart';
 export 'src/paths.dart';
 export 'src/port_probe.dart';
 export 'src/ssh_hosts.dart';
+export 'src/taka_build.dart';
 export 'src/taka_install.dart';
 export 'src/tunnel.dart';
 export 'src/tunnel_colour.dart';
