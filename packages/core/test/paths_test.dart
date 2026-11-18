@@ -16,14 +16,22 @@ void main() {
   group('takaDirectory', () {
     test('is in Application Support on macOS', () {
       expect(
-        takaDirectory(environment: home, operatingSystem: 'macos').path,
+        takaDirectory(
+          environment: home,
+          build: TakaBuild.release,
+          operatingSystem: 'macos',
+        ).path,
         '/home/someone/Library/Application Support/com.pacabase.taka',
       );
     });
 
     test('is in the XDG data folder on Linux', () {
       expect(
-        takaDirectory(environment: home, operatingSystem: 'linux').path,
+        takaDirectory(
+          environment: home,
+          build: TakaBuild.release,
+          operatingSystem: 'linux',
+        ).path,
         '/home/someone/.local/share/com.pacabase.taka',
       );
     });
@@ -32,6 +40,7 @@ void main() {
       expect(
         takaDirectory(
           environment: {...home, 'XDG_DATA_HOME': ''},
+          build: TakaBuild.release,
           operatingSystem: 'linux',
         ).path,
         '/home/someone/.local/share/com.pacabase.taka',
@@ -42,6 +51,7 @@ void main() {
       expect(
         takaDirectory(
           environment: {...home, 'XDG_DATA_HOME': '/data'},
+          build: TakaBuild.release,
           operatingSystem: 'linux',
         ).path,
         '/data/com.pacabase.taka',
@@ -50,14 +60,22 @@ void main() {
 
     test('is in the roaming AppData on Windows', () {
       expect(
-        takaDirectory(environment: windows, operatingSystem: 'windows').path,
+        takaDirectory(
+          environment: windows,
+          build: TakaBuild.release,
+          operatingSystem: 'windows',
+        ).path,
         r'C:\Users\someone\AppData\Roaming\Taka',
       );
     });
 
     test('is unsupported elsewhere', () {
       expect(
-        () => takaDirectory(environment: home, operatingSystem: 'fuchsia'),
+        () => takaDirectory(
+          environment: home,
+          build: TakaBuild.release,
+          operatingSystem: 'fuchsia',
+        ),
         throwsUnsupportedError,
       );
     });
@@ -67,7 +85,11 @@ void main() {
     test('is in the folder on macOS and Linux', () {
       for (final system in ['macos', 'linux']) {
         expect(
-          agentSocketPath(environment: home, operatingSystem: system),
+          agentSocketPath(
+            environment: home,
+            build: TakaBuild.release,
+            operatingSystem: system,
+          ),
           endsWith('com.pacabase.taka/agent.sock'),
         );
       }
@@ -75,7 +97,11 @@ void main() {
 
     test('is a ticket in the local AppData on Windows', () {
       expect(
-        agentSocketPath(environment: windows, operatingSystem: 'windows'),
+        agentSocketPath(
+          environment: windows,
+          build: TakaBuild.release,
+          operatingSystem: 'windows',
+        ),
         r'C:\Users\someone\AppData\Local\Taka\agent.port',
       );
     });
@@ -84,14 +110,22 @@ void main() {
   group('logDirectory', () {
     test('is in ~/Library/Logs on macOS', () {
       expect(
-        logDirectory(environment: home, operatingSystem: 'macos').path,
+        logDirectory(
+          environment: home,
+          build: TakaBuild.release,
+          operatingSystem: 'macos',
+        ).path,
         '/home/someone/Library/Logs/Taka',
       );
     });
 
     test('is in the XDG state folder on Linux', () {
       expect(
-        logDirectory(environment: home, operatingSystem: 'linux').path,
+        logDirectory(
+          environment: home,
+          build: TakaBuild.release,
+          operatingSystem: 'linux',
+        ).path,
         '/home/someone/.local/state/taka/logs',
       );
     });
@@ -100,6 +134,7 @@ void main() {
       expect(
         logDirectory(
           environment: {...home, 'XDG_STATE_HOME': '/state'},
+          build: TakaBuild.release,
           operatingSystem: 'linux',
         ).path,
         '/state/taka/logs',
@@ -108,10 +143,58 @@ void main() {
 
     test('is in the local AppData on Windows', () {
       expect(
-        logDirectory(environment: windows, operatingSystem: 'windows').path,
+        logDirectory(
+          environment: windows,
+          build: TakaBuild.release,
+          operatingSystem: 'windows',
+        ).path,
         r'C:\Users\someone\AppData\Local\Taka\logs',
       );
     });
+  });
+
+  test('a development build keeps its own folder, socket and logs', () {
+    String folder(String system, Map<String, String> environment) =>
+        takaDirectory(
+          environment: environment,
+          build: TakaBuild.development,
+          operatingSystem: system,
+        ).path;
+    String socket(String system, Map<String, String> environment) =>
+        agentSocketPath(
+          environment: environment,
+          build: TakaBuild.development,
+          operatingSystem: system,
+        );
+    String logs(String system, Map<String, String> environment) => logDirectory(
+      environment: environment,
+      build: TakaBuild.development,
+      operatingSystem: system,
+    ).path;
+
+    expect(
+      folder('macos', home),
+      '/home/someone/Library/Application Support/com.pacabase.taka.dev',
+    );
+    expect(
+      folder('linux', home),
+      '/home/someone/.local/share/com.pacabase.taka.dev',
+    );
+    expect(
+      folder('windows', windows),
+      r'C:\Users\someone\AppData\Roaming\Taka Dev',
+    );
+    expect(socket('linux', home), endsWith('com.pacabase.taka.dev/agent.sock'));
+    expect(
+      socket('windows', windows),
+      r'C:\Users\someone\AppData\Local\Taka Dev\agent.port',
+    );
+    expect(logs('macos', home), '/home/someone/Library/Logs/Taka Dev');
+    expect(logs('linux', home), '/home/someone/.local/state/taka-dev/logs');
+    expect(
+      logs('windows', windows),
+      r'C:\Users\someone\AppData\Local\Taka Dev\logs',
+    );
   });
 
   group('agentIdentity', () {
@@ -170,7 +253,7 @@ void main() {
     );
     const onWindows = TakaInstall(
       app: r'C:\Users\someone\AppData\Local\Programs\Taka\taka.exe',
-      agent: r'C:\Users\someone\AppData\Local\Programs\Taka\agent\bin\taka_agent.exe',
+      agent: r'C:\Users\someone\AppData\Local\Programs\Taka\agent\bin\Taka.exe',
       agentAssets: r'C:\Users\someone\AppData\Local\Programs\Taka\agent',
     );
     const development = TakaInstall(

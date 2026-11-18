@@ -21,13 +21,13 @@ void _run() => runZonedGuarded(() => unawaited(_start()), (error, stack) {
 Future<void> _start() async {
   Application.instance.setDockIconVisible(false);
 
-  final TakaInstall(:app, :agentBundle, :agentAssets) = TakaInstall.fromAgent(
-    Platform.resolvedExecutable,
-  );
+  final TakaInstall(:app, :agentBundle, :agentAssets, :build) =
+      TakaInstall.fromAgent(Platform.resolvedExecutable);
+  takaBuild = build;
 
   if (agentBundle == null) Fimber.plantTree(DebugTree());
   final debugLogging = DebugLogging('agent')..start();
-  restoreProcessName('Taka');
+  restoreProcessName(takaBuild.name);
   final identity = agentIdentity(Platform.resolvedExecutable);
   Fimber.i('Agent $identity on ${Platform.operatingSystemVersion}');
 
@@ -71,8 +71,8 @@ Future<void> _start() async {
         : Platform.isMacOS
         ? (agentBundle == null ? null : LaunchAtLogin.create())
         : LaunchAtLogin.createWithIdAndDisplayName(
-            'com.pacabase.taka.agent',
-            'Taka',
+            takaBuild.agentId,
+            takaBuild.name,
           ),
   );
   final AgentServer server;
@@ -98,7 +98,7 @@ Future<void> _start() async {
   unawaited(manager.restore());
 
   // Closing the manager, from the tray or a window's quit command, quits.
-  manager.changes.listen(
+  manager.stream.listen(
     null,
     onDone: () async {
       Fimber.i('Quitting');

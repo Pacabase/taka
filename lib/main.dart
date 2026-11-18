@@ -14,6 +14,8 @@ import 'package:taka/taka_app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final install = TakaInstall.fromWindow(Platform.resolvedExecutable);
+  takaBuild = install.build;
   if (kDebugMode) Fimber.plantTree(DebugTree());
   DebugLogging('window').start();
   FlutterError.onError = (details) {
@@ -35,7 +37,8 @@ Future<void> main() async {
   runApp(
     TakaApp(
       version: version,
-      connect: connectToAgent,
+      name: takaBuild.name,
+      connect: () => connectToAgent(install: install),
       home: (agent) => BlocProvider(
         create: (_) =>
             TunnelsBloc(agent: agent)..add(const TunnelsEvent.started()),

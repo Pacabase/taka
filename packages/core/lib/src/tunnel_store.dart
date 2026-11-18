@@ -1,19 +1,10 @@
-import 'package:core/src/tunnel.dart';
-import 'package:core/src/tunnel_colour.dart';
+import 'package:core/src/tunnel_book.dart';
 
-/// The saved tunnels, the ids of those that were on, and each group's colour.
-typedef SavedTunnels = ({
-  List<Tunnel> tunnels,
-  Set<String> on,
-  Map<String, TunnelColour> groupColours,
-});
+/// The saved tunnels and the ids of those that were on.
+typedef SavedTunnels = ({TunnelBook book, Set<String> on});
 
 abstract interface class TunnelStore {
   Future<SavedTunnels> load();
 
-  Future<void> save(
-    List<Tunnel> tunnels, {
-    required Set<String> on,
-    required Map<String, TunnelColour> groupColours,
-  });
+  Future<void> save(TunnelBook book, {required Set<String> on});
 }

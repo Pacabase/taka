@@ -44,6 +44,18 @@ An error such as `libgtk-3.so.0: cannot open shared object file` means GTK 3 is 
 - **Linux** on x64 or arm64 with glibc 2.35 or later (Ubuntu 22.04, Debian 12, Fedora 36 or newer) and GTK 3. The tray icon needs StatusNotifierItem support, which KDE, Xfce, Cinnamon and Ubuntu have; on other GNOME desktops, install the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/).
 - **Windows** 10 or 11 on x64, with the OpenSSH Client that Windows includes (Settings → System → Optional features). Taka runs the `ssh` a terminal would. Click the tray icon to open Taka and right-click it for the menu.
 
+## Memory
+
+Taka is two programs. A small background helper owns the tray icon and runs your tunnels all day. The window starts when you open it and quits when you close it, so it uses no memory the rest of the time.
+
+|             | Background helper | Window, while open |
+| ----------- | ----------------- | ------------------ |
+| **macOS**   | about 20–30 MB    | about 50 MB        |
+| **Windows** | about 20 MB       | about 80 MB        |
+| **Linux**   | about 25 MB       | depends on the graphics driver; about 150 MB without a GPU |
+
+Each tunnel's `ssh` adds 1–3 MB. On macOS and Linux, tunnels to the same server share one `ssh`. The figures are each system's own measure of memory the program holds for itself (macOS: memory in Activity Monitor; Windows: committed memory; Linux: private memory), with four tunnels open.
+
 ## Mac App Store
 
 Taka isn't on the Mac App Store. The store only allows sandboxed apps, and a sandboxed app can't use your own `ssh` setup, which is what Taka is built on. If you'd use a store version with its own SSH built in, give [issue #10](https://github.com/Pacabase/taka/issues/10) a 👍.

@@ -140,7 +140,12 @@ class _TunnelFormState extends State<TunnelForm> {
                 ),
                 Labelled(
                   label: 'Name',
-                  child: _input(_name, hint: 'Optional', autofocus: true),
+                  child: Input(
+                    controller: _name,
+                    hint: 'Optional',
+                    autofocus: true,
+                    onSubmitted: _save,
+                  ),
                 ),
                 _KindTabs(
                   kind: _kind,
@@ -168,23 +173,25 @@ class _TunnelFormState extends State<TunnelForm> {
                                     ),
                                   ),
                                 )
-                              : _input(
-                                  _fromHost,
+                              : Input(
+                                  controller: _fromHost,
                                   hint: '127.0.0.1',
                                   style: mono,
+                                  onSubmitted: _save,
                                 ),
                         ),
                         const _Colon(),
                         SizedBox(
                           width: 72,
-                          child: _input(
-                            _fromPort,
+                          child: Input(
+                            controller: _fromPort,
                             hint: switch (_kind) {
                               TunnelKind.local => '5432',
                               TunnelKind.socks => '1080',
                               TunnelKind.remote => '8080',
                             },
                             style: mono,
+                            onSubmitted: _save,
                           ),
                         ),
                       ],
@@ -228,22 +235,24 @@ class _TunnelFormState extends State<TunnelForm> {
                         spacing: 6,
                         children: [
                           Expanded(
-                            child: _input(
-                              _toHost,
+                            child: Input(
+                              controller: _toHost,
                               hint: _isRemote
                                   ? 'localhost'
                                   : 'localhost or /var/run/docker.sock',
                               style: mono,
+                              onSubmitted: _save,
                             ),
                           ),
                           if (!_isSocket) ...[
                             const _Colon(),
                             SizedBox(
                               width: 72,
-                              child: _input(
-                                _toPort,
+                              child: Input(
+                                controller: _toPort,
                                 hint: _isRemote ? '3000' : '5432',
                                 style: mono,
+                                onSubmitted: _save,
                               ),
                             ),
                           ],
@@ -309,19 +318,6 @@ class _TunnelFormState extends State<TunnelForm> {
       ),
     );
   }
-
-  Widget _input(
-    TextEditingController controller, {
-    required String hint,
-    TextStyle style = const TextStyle(),
-    bool autofocus = false,
-  }) => Input(
-    controller: controller,
-    hint: hint,
-    style: style,
-    autofocus: autofocus,
-    onSubmitted: _save,
-  );
 
   bool _fill(String text) {
     if (!mounted) return false;

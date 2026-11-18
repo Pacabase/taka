@@ -1,5 +1,5 @@
-# Usage: embed_agent.ps1 <flutter root> <target platform> <destination>
-param([string]$FlutterRoot, [string]$Platform, [string]$Destination)
+# Usage: embed_agent.ps1 <flutter root> <target platform> <destination> <build configuration>
+param([string]$FlutterRoot, [string]$Platform, [string]$Destination, [string]$Configuration)
 $ErrorActionPreference = 'Stop'
 
 $dart = "$FlutterRoot\bin\cache\dart-sdk\bin\dart.exe"
@@ -24,4 +24,9 @@ if (-not (Test-Path "$bundle\bin\taka_agent.exe")) {
 Remove-Item -Recurse -Force $Destination -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $Destination | Out-Null
 Copy-Item -Recurse "$bundle\bin", "$bundle\lib" $Destination
+# Task Manager shows a program without a description by its file name.
+Rename-Item "$Destination\bin\taka_agent.exe" Taka.exe
 Copy-Item "$agent\assets\*.png" $Destination
+# Must match TakaBuild.
+$appId = if ($Configuration -eq 'Release') { 'com.pacabase.taka' } else { 'com.pacabase.taka.dev' }
+Set-Content -NoNewline "$Destination\app_id" $appId

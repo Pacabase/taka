@@ -254,7 +254,10 @@ void main() {
     tester,
   ) async {
     const message = 'user@db: Permission denied (publickey).';
-    await pumpTile(tester, status: const Failed(message));
+    await pumpTile(
+      tester,
+      status: const Failed(message, failure: TunnelFailure.loginRefused),
+    );
 
     expect(find.text('The server refused the login.'), findsOneWidget);
     expect(find.byTooltip(message), findsOneWidget);
@@ -264,7 +267,10 @@ void main() {
     tester,
   ) async {
     const line = 'channel 2: open failed: connect failed: Connection refused';
-    await pumpTile(tester, status: const Failed(line, isForward: true));
+    await pumpTile(
+      tester,
+      status: const Failed(line, failure: TunnelFailure.forwardRefused),
+    );
 
     expect(
       find.text("Can't reach localhost:5432 through the server."),
@@ -319,7 +325,10 @@ void main() {
     tester,
   ) async {
     const reason = 'Connection to bastion closed by remote host.';
-    await pumpTile(tester, status: const Reconnecting(reason));
+    await pumpTile(
+      tester,
+      status: const Reconnecting(reason, failure: TunnelFailure.dropped),
+    );
 
     expect(find.text('Reconnecting — The connection dropped.'), findsOneWidget);
     expect(find.byTooltip(reason), findsOneWidget);

@@ -39,5 +39,5 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: 
 Filename: "{app}\taka.exe"; Description: "Open Taka"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "{sys}\taskkill.exe"; Parameters: "/f /im taka_agent.exe"; Flags: runhidden; RunOnceId: "StopAgent"
-Filename: "{sys}\taskkill.exe"; Parameters: "/f /im taka.exe"; Flags: runhidden; RunOnceId: "StopWindow"
+; Windows matches names in any case, so this stops the window (taka.exe) and the agent (Taka.exe).
+Filename: "{sys}\taskkill.exe"; Parameters: "/f /im taka.exe"; Flags: runhidden; RunOnceId: "StopTaka"

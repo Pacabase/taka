@@ -56,27 +56,20 @@ class _TunnelTileState extends State<TunnelTile> {
     final colors = TakaColors.of(context);
     final TunnelTile(:tunnel, :status) = widget;
     final isHovered = _hovered || ReorderableRows.isLifted(context);
-    Widget captioned(String text, Color color, {String details = ''}) {
-      final label = Text(text, style: TextStyle(fontSize: 12, color: color));
-      return details.trim().isEmpty
-          ? label
-          : Tooltip(message: details.trim(), child: label);
-    }
-
     final caption = switch (status) {
-      final Failed failure => captioned(
+      Failed(:final failure, :final message) => _Caption(
         failureSentence(tunnel, failure),
         colors.red,
-        details: failure.message,
+        details: message,
       ),
-      Connecting() => captioned('Connecting…', colors.orange),
+      Connecting() => _Caption('Connecting…', colors.orange),
       UnknownHostKey() => null,
-      Reconnecting(:final reason) => captioned(
-        'Reconnecting — ${plainReason(reason)}',
+      Reconnecting(:final failure, :final message) => _Caption(
+        'Reconnecting — ${failureSentence(tunnel, failure)}',
         colors.orange,
-        details: reason,
+        details: message,
       ),
-      Connected(:final warning) when warning.isNotEmpty => captioned(
+      Connected(:final warning) when warning.isNotEmpty => _Caption(
         forwardWarning(tunnel),
         colors.orange,
         details: warning,
@@ -100,7 +93,7 @@ class _TunnelTileState extends State<TunnelTile> {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 2,
         children: [
-          captioned(
+          _Caption(
             'First connection to $host. '
             'Trust it only if its owner gave you this $type key:',
             colors.orange,
@@ -282,5 +275,20 @@ class const GuideLine({
         ),
       ),
     );
+  }
+}
+
+/// A short line under the tunnel, with ssh's own words in a tooltip when any.
+class const _Caption(
+  final String text,
+  final Color color, {
+  final String details = '',
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final label = Text(text, style: TextStyle(fontSize: 12, color: color));
+    return details.trim().isEmpty
+        ? label
+        : Tooltip(message: details.trim(), child: label);
   }
 }

@@ -27,7 +27,7 @@ class AgentServer(
   late final StreamSubscription<AgentSettings> _settingsChanges;
 
   this {
-    _changes = _manager.changes.listen(
+    _changes = _manager.stream.listen(
       (snapshot) => _sendAll(AgentMessage.snapshot(snapshot)),
     );
     _settingsChanges = _preferences.changes.listen(
@@ -161,7 +161,7 @@ class AgentServer(
   void _admit(Socket client) {
     _clients.add(client);
     _send(client, AgentMessage.identity(_identity));
-    _send(client, AgentMessage.snapshot(_manager.snapshot));
+    _send(client, AgentMessage.snapshot(_manager.state));
     _send(client, AgentMessage.settings(_preferences.settings));
     if (_pending case final request?) {
       _pending = null;
@@ -200,12 +200,9 @@ class AgentServer(
       tunnels,
       groupColours: groupColours,
     ),
-    ExportTunnels(:final path) => await File(path).writeAsString(
-      encodeTunnels(
-        _manager.snapshot.tunnels,
-        groupColours: _manager.snapshot.groupColours,
-      ),
-    ),
+    ExportTunnels(:final path) => await File(
+      path,
+    ).writeAsString(encodeTunnels(_manager.book)),
     QuitAgent() => await _manager.close(),
     SetLaunchAtLogin(:final on) => _preferences.setLaunchAtLogin(on: on),
     SetDebugLogging(:final on) => _preferences.setDebugLogging(on: on),

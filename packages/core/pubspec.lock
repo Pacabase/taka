@@ -41,6 +41,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.13.1"
+  bloc:
+    dependency: "direct main"
+    description:
+      name: bloc
+      sha256: e03b235924e4f509c27b5d6b2f949200e0a91149a9818b4f65eeb56662b75413
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.2.1"
   boolean_selector:
     dependency: transitive
     description:
@@ -477,10 +485,10 @@ packages:
     dependency: "direct main"
     description:
       name: system_ssh
-      sha256: "8171793d045042f0df15064a0d33b93468bd3e56d4a16b26a0f956238a34fd1f"
+      sha256: "886b0ddd8a052cf8ffec3447d0159c4450b3f76828eaeac0d1e782f678341843"
       url: "https://pub.dev"
     source: hosted
-    version: "0.9.2"
+    version: "0.11.0"
   term_glyph:
     dependency: transitive
     description:

@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:core/src/taka_build.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:path/path.dart' as p;
 
@@ -14,6 +15,8 @@ sealed class const TakaInstall._() with _$TakaInstall {
     String? agentBundle,
     required String agentAssets,
   }) = _TakaInstall;
+
+  TakaBuild get build => TakaBuild.inAgentAssets(agentAssets);
 
   static TakaInstall fromWindow(
     String executable, {
@@ -31,10 +34,7 @@ sealed class const TakaInstall._() with _$TakaInstall {
         ),
         path.dirname(path.dirname(folder)),
       ),
-      'windows' => (
-        path.join(folder, 'agent', 'bin', 'taka_agent.exe'),
-        executable,
-      ),
+      'windows' => (path.join(folder, 'agent', 'bin', 'Taka.exe'), executable),
       _ => (path.join(folder, 'agent', 'bin', 'taka_agent'), executable),
     };
 
