@@ -1,88 +1,53 @@
 import 'package:core/src/tunnel.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 
-final _portInUse = RegExp(r':(\d+) is already in use');
-final _remotePortRefused = RegExp(
-  r'remote port forwarding failed for listen port (\d+)',
-);
+/// [failed] in a few words for narrow places; an unknown failure stays as ssh
+/// wrote it.
+String failureShort(Tunnel tunnel, Failed failed) => switch (failed.failure) {
+  TunnelFailure.sshNotFound => 'ssh not found',
+  TunnelFailure.config => "SSH settings don't work",
+  TunnelFailure.portInUse => 'port ${tunnel.localPort} in use',
+  TunnelFailure.duplicateForward => 'port ${tunnel.remotePort} already open',
+  TunnelFailure.addressUnavailable => 'address not on this computer',
+  TunnelFailure.hostNotFound => 'server not found',
+  TunnelFailure.unreachable => "can't reach the server",
+  TunnelFailure.loginRefused => 'login refused',
+  TunnelFailure.hostKey => 'host key changed',
+  TunnelFailure.dropped => 'disconnected',
+  TunnelFailure.remotePortRefused =>
+    "server won't open port ${tunnel.remotePort}",
+  TunnelFailure.forwardProhibited => "server won't forward",
+  TunnelFailure.forwardRefused => switch (tunnel.remoteSocket) {
+    final socket? => "can't open $socket",
+    null => "can't reach ${tunnel.remoteHost}:${tunnel.remotePort}",
+  },
+  TunnelFailure.other => failed.message.trim(),
+};
 
-const _reasons = [
-  (
-    patterns: ["isn't an address of this computer"],
-    short: 'address not on this computer',
-    sentence: "This computer doesn't have the From address.",
-  ),
-  (
-    patterns: ['Could not resolve hostname'],
-    short: 'server not found',
-    sentence: "Can't find the server.",
-  ),
-  (
-    patterns: ['Permission denied ('],
-    short: 'login refused',
-    sentence: 'The server refused the login.',
-  ),
-  (
-    patterns: [
-      'Host key verification failed',
-      'REMOTE HOST IDENTIFICATION HAS CHANGED',
-      'has changed; it now offers',
-    ],
-    short: 'host key changed',
-    sentence: "The server's host key changed.",
-  ),
-  (
-    patterns: ['not responding'],
-    short: 'server stopped answering',
-    sentence: 'The server stopped answering.',
-  ),
-  (
-    patterns: ['Connection refused', 'timed out', 'No route to host'],
-    short: "can't reach the server",
-    sentence: "Can't reach the server.",
-  ),
-  (
-    patterns: [
-      'closed by remote host',
-      'Connection reset',
-      'Broken pipe',
-      'Disconnected',
-    ],
-    short: 'disconnected',
-    sentence: 'The connection dropped.',
-  ),
-];
-
-({String short, String sentence})? _reasonOf(String message) {
-  if (_portInUse.firstMatch(message)?[1] case final port?) {
-    return (
-      short: 'port $port in use',
-      sentence: 'Port $port is already in use.',
-    );
-  }
-
-  if (_remotePortRefused.firstMatch(message)?[1] case final port?) {
-    return (
-      short: "server won't open port $port",
-      sentence:
-          "The server won't open port $port: it's taken there, "
-          "or forwarding isn't allowed.",
-    );
-  }
-
-  return _reasons
-      .where((reason) => reason.patterns.any(message.contains))
-      .map((reason) => (short: reason.short, sentence: reason.sentence))
-      .firstOrNull;
-}
-
-/// ssh's [message] in a few words for narrow places; unknown ones stay as is.
-String shortReason(String message) =>
-    _reasonOf(message)?.short ?? message.trim();
-
-/// ssh's [message] as a plain sentence, with none of ssh's own words.
-String plainReason(String message) =>
-    _reasonOf(message)?.sentence ?? "It couldn't connect.";
+/// [failure] as a plain sentence, with none of ssh's own words.
+String failureSentence(Tunnel tunnel, TunnelFailure failure) =>
+    switch (failure) {
+      TunnelFailure.sshNotFound => "Can't find ssh on this computer.",
+      TunnelFailure.config => "The SSH settings for this server don't work.",
+      TunnelFailure.portInUse => 'Port ${tunnel.localPort} is already in use.',
+      TunnelFailure.duplicateForward =>
+        'Another tunnel already opens port ${tunnel.remotePort} '
+            'on the server.',
+      TunnelFailure.addressUnavailable =>
+        "This computer doesn't have the From address.",
+      TunnelFailure.hostNotFound => "Can't find the server.",
+      TunnelFailure.unreachable => "Can't reach the server.",
+      TunnelFailure.loginRefused => 'The server refused the login.',
+      TunnelFailure.hostKey => "The server's host key changed.",
+      TunnelFailure.dropped => 'The connection dropped.',
+      TunnelFailure.remotePortRefused =>
+        "The server won't open port ${tunnel.remotePort}: it's taken there, "
+            "or forwarding isn't allowed.",
+      TunnelFailure.forwardProhibited =>
+        "The server doesn't allow this tunnel.",
+      TunnelFailure.forwardRefused => forwardWarning(tunnel),
+      TunnelFailure.other => "It couldn't connect.",
+    };
 
 String forwardWarning(Tunnel tunnel) => switch (tunnel) {
   Tunnel(kind: TunnelKind.socks) =>
@@ -93,25 +58,3 @@ String forwardWarning(Tunnel tunnel) => switch (tunnel) {
   Tunnel(:final remoteHost, :final remotePort) =>
     "Can't reach $remoteHost:$remotePort through the server.",
 };
-
-/// [failure] in a few words for narrow places.
-String failureShort(Tunnel tunnel, Failed failure) => switch (failure) {
-  Failed(isForward: false, :final message) => shortReason(message),
-  Failed(:final message) when message.contains(_prohibited) =>
-    "server won't forward",
-  _ => switch (tunnel.remoteSocket) {
-    final socket? => "can't open $socket",
-    null => "can't reach ${tunnel.remoteHost}:${tunnel.remotePort}",
-  },
-};
-
-/// [failure] as a plain sentence, naming what the tunnel couldn't reach.
-String failureSentence(Tunnel tunnel, Failed failure) => switch (failure) {
-  Failed(isForward: false, :final message) => plainReason(message),
-  Failed(:final message) when message.contains(_prohibited) =>
-    "The server doesn't allow this tunnel.",
-  _ => forwardWarning(tunnel),
-};
-
-// ssh's reason when the server's config forbids the forward.
-const _prohibited = 'administratively prohibited';

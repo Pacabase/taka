@@ -4,6 +4,32 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'tunnels_snapshot.freezed.dart';
 
+/// Why a tunnel failed or dropped, for Taka to put in its own words.
+enum TunnelFailure {
+  sshNotFound,
+  config,
+  portInUse,
+  duplicateForward,
+  addressUnavailable,
+  hostNotFound,
+  unreachable,
+  loginRefused,
+  hostKey,
+  dropped,
+  remotePortRefused,
+
+  /// ssh connected, but the server couldn't make the connection the tunnel
+  /// forwards to.
+  forwardRefused,
+
+  /// ssh connected, but the server's config forbids the forward.
+  forwardProhibited,
+  other,
+}
+
+TunnelFailure _failureOf(Object? json) =>
+    TunnelFailure.values.asNameMap()[json] ?? TunnelFailure.other;
+
 @freezed
 sealed class const TunnelStatus._() with _$TunnelStatus {
   const factory stopped() = Stopped;
@@ -13,12 +39,16 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
   /// [warning] is ssh's reason, such as `Connection refused`; the tunnel stays up.
   const factory connected({@Default('') String warning}) = Connected;
 
-  /// [message] is ssh's. [isForward] when ssh connected, but the server
-  /// couldn't make the connection the tunnel forwards to.
-  const factory failed(String message, {@Default(false) bool isForward}) =
-      Failed;
+  /// [message] is ssh's, for the details.
+  const factory failed(
+    String message, {
+    @Default(TunnelFailure.other) TunnelFailure failure,
+  }) = Failed;
 
-  const factory reconnecting(String reason) = Reconnecting;
+  const factory reconnecting(
+    String message, {
+    @Default(TunnelFailure.other) TunnelFailure failure,
+  }) = Reconnecting;
 
   /// The server's key isn't in `known_hosts` yet; the user decides.
   const factory unknownHostKey({
@@ -35,11 +65,12 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
     {'status': 'connected'} => const Connected(),
     {'status': 'failed', 'message': final String message} => Failed(
       message,
-      isForward: json['forward'] == true,
+      failure: _failureOf(json['failure']),
     ),
     {'status': 'failed'} => const Failed(''),
-    {'status': 'reconnecting', 'reason': final String reason} => Reconnecting(
-      reason,
+    {'status': 'reconnecting', 'message': final String message} => Reconnecting(
+      message,
+      failure: _failureOf(json['failure']),
     ),
     {'status': 'reconnecting'} => const Reconnecting(''),
     {
@@ -59,12 +90,16 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
       'status': 'connected',
       if (warning.isNotEmpty) 'warning': warning,
     },
-    Failed(:final message, :final isForward) => {
+    Failed(:final message, :final failure) => {
       'status': 'failed',
       'message': message,
-      if (isForward) 'forward': true,
+      'failure': failure.name,
     },
-    Reconnecting(:final reason) => {'status': 'reconnecting', 'reason': reason},
+    Reconnecting(:final message, :final failure) => {
+      'status': 'reconnecting',
+      'message': message,
+      'failure': failure.name,
+    },
     UnknownHostKey(:final host, :final type, :final fingerprint) => {
       'status': 'unknownHostKey',
       'host': host,
