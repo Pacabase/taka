@@ -59,7 +59,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/flutter
-      - run: fvm flutter build macos --release
+      - run: flutter build macos --release
       - run: test -x build/macos/Build/Products/Release/Taka.app/Contents/Library/LoginItems/Taka.app/Contents/MacOS/Taka
       - run: codesign --verify --deep --strict build/macos/Build/Products/Release/Taka.app
       - name: Make the disk image
@@ -104,7 +104,7 @@ jobs:
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev libx11-dev libxi-dev
       - uses: ./.github/actions/flutter
-      - run: fvm flutter build linux --release
+      - run: flutter build linux --release
       - name: Make the archive
         env:
           TARGET: ${{ matrix.target }}

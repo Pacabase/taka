@@ -29,10 +29,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
-        with:
-          # The Dart that ships with the Flutter in .fvmrc.
-          sdk: 3.13.7
+      - uses: ./.github/actions/flutter
       - run: dart pub get --enforce-lockfile
       - run: dart format --output=none --set-exit-if-changed .
       - run: dart analyze --fatal-infos
@@ -55,11 +52,7 @@ jobs:
           persist-credentials: false
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libx11-dev libxi-dev
-      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
-        with:
-          # The Dart that ships with the Flutter in .fvmrc.
-          sdk: 3.13.7
-      - run: dart pub get --enforce-lockfile
+      - uses: ./.github/actions/flutter
       - run: dart format --output=none --set-exit-if-changed .
       - run: dart analyze --fatal-infos
       - run: dart test --tags unit
@@ -74,10 +67,10 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/flutter
       # The helper's licences in About must match what it ships.
-      - run: fvm dart run tool/agent_licences.dart && git diff --exit-code assets/agent_licences.json
-      - run: fvm dart format --output=none --set-exit-if-changed lib test tool
-      - run: fvm flutter analyze
-      - run: fvm flutter test --tags unit
+      - run: dart run tool/agent_licences.dart && git diff --exit-code assets/agent_licences.json
+      - run: dart format --output=none --set-exit-if-changed lib test tool
+      - run: flutter analyze
+      - run: flutter test --tags unit
 
   build:
     uses: ./.github/workflows/build.yml
