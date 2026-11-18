@@ -53,47 +53,46 @@ class _TakaAppState extends State<TakaApp> {
   @override
   Widget build(BuildContext context) => BlocBuilder<AgentBloc, AgentState>(
     bloc: _agent,
-    builder: (context, link) => _app(link),
-  );
-
-  Widget _app(AgentState link) => MaterialApp(
-    navigatorKey: _navigator,
-    title: 'Taka',
-    theme: takaTheme(Brightness.light),
-    darkTheme: takaTheme(Brightness.dark),
-    debugShowCheckedModeBanner: false,
-    builder: (context, child) => CallbackShortcuts(
-      bindings: {const SingleActivator(LogicalKeyboardKey.escape): _unfocus},
-      child: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: _unfocus,
-        // The agent sends its settings once, so their bloc listens from connect.
-        child: switch (link) {
-          AgentConnected(:final agent) => BlocProvider(
-            lazy: false,
-            create: (_) =>
-                SettingsBloc(agent: agent)..add(const SettingsEvent.started()),
-            child: child,
-          ),
-          _ => child,
-        },
+    builder: (context, link) => MaterialApp(
+      navigatorKey: _navigator,
+      title: 'Taka',
+      theme: takaTheme(Brightness.light),
+      darkTheme: takaTheme(Brightness.dark),
+      debugShowCheckedModeBanner: false,
+      builder: (context, child) => CallbackShortcuts(
+        bindings: {const SingleActivator(LogicalKeyboardKey.escape): _unfocus},
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _unfocus,
+          // The agent sends its settings once, so their bloc listens from connect.
+          child: switch (link) {
+            AgentConnected(:final agent) => BlocProvider(
+              lazy: false,
+              create: (_) =>
+                  SettingsBloc(agent: agent)
+                    ..add(const SettingsEvent.started()),
+              child: child,
+            ),
+            _ => child,
+          },
+        ),
       ),
+      home: switch (link) {
+        AgentConnecting() => const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+        AgentFailed(:final error) => AgentErrorPage(
+          error: error,
+          version: widget.version,
+          onTryAgain: () => _agent.add(const AgentEvent.connect()),
+        ),
+        AgentConnected(:final agent) => widget.home(agent),
+      },
+      routes: {
+        if (link is AgentConnected)
+          TakaApp.settingsRoute: (_) => SettingsPage(version: widget.version),
+      },
     ),
-    home: switch (link) {
-      AgentConnecting() => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      AgentFailed(:final error) => AgentErrorPage(
-        error: error,
-        version: widget.version,
-        onTryAgain: () => _agent.add(const AgentEvent.connect()),
-      ),
-      AgentConnected(:final agent) => widget.home(agent),
-    },
-    routes: {
-      if (link is AgentConnected)
-        TakaApp.settingsRoute: (_) => SettingsPage(version: widget.version),
-    },
   );
 
   // Unfocusing a scope moves focus out of the navigator, where Tab finds nothing.

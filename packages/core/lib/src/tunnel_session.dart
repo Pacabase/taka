@@ -43,6 +43,12 @@ sealed class const Phase._() with _$Phase {
 
   const factory ended(TunnelStatus last) = Ended;
 
+  /// A new session, a wait to redial or a trusted key opens ssh; no other.
+  bool get canConnect => switch (this) {
+    Opening() || Waiting() || Trusting() => true,
+    _ => false,
+  };
+
   TunnelStatus get status => switch (this) {
     Opening() => const Connecting(),
     Redialing(:final reconnecting) => reconnecting,
@@ -112,7 +118,8 @@ class TunnelSession({
   final _abort = Completer<void>();
   final _timers = <Type, Timer>{};
   final List<Future<HandBack?>> _cameForward = [];
-  // Handles the phases stand for, which aren't values a state can hold.
+  // Handles that aren't values a state can hold: the attempt of Opening or
+  // Redialing, the ssh of Up, and ssh's close once Ended.
   Future<void>? _attempt;
   _Opened? _tunnel;
   Future<void>? _closed;
@@ -147,11 +154,7 @@ class TunnelSession({
 
   this : super(const SessionState(phase: Opening())) {
     on<Connect>((event, emit) async {
-      // Only a new session, a redial or a trusted key opens ssh.
-      if (state.phase
-          case Up() || Redialing() || AwaitingTrust() || GaveUp() || Ended()) {
-        return event.settled.complete();
-      }
+      if (!state.phase.canConnect) return event.settled.complete();
 
       emit(
         state.copyWith(
@@ -390,7 +393,7 @@ class TunnelSession({
       _log.w('${tunnel.title}: could not check where it leads ($exception)');
     }
     // ssh logs the refusal only after the check's connection has closed.
-    _after(checkWindow, const SessionEvent.checked());
+    if (state.phase is Up) _after(checkWindow, const SessionEvent.checked());
   }
 
   // 1Password prompts only for the app in front; a retry may find nobody there.

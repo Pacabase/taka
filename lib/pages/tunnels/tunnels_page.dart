@@ -41,36 +41,6 @@ class const _TunnelsView() extends StatelessWidget {
         .state;
     final isOpen = screen is! ListScreen;
 
-    void save(AgentCommand command) {
-      context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
-      screens.closeForm();
-    }
-
-    Widget tunnelForm({
-      required Key key,
-      Tunnel? initial,
-      TunnelKind kind = TunnelKind.local,
-    }) => TunnelForm(
-      key: key,
-      initial: initial,
-      kind: kind,
-      hosts: hosts,
-      groups: context.select(
-        (TunnelsBloc bloc) => switch (bloc.state) {
-          Ready(:final snapshot) => snapshot.tunnels.groups,
-          _ => const <String>[],
-        },
-      ),
-      groupColours: context.select(
-        (TunnelsBloc bloc) => switch (bloc.state) {
-          Ready(:final snapshot) => snapshot.groupColours,
-          _ => const <String, TunnelColour>{},
-        },
-      ),
-      onSave: (tunnel) => save(AgentCommand.save(tunnel)),
-      onCancel: screens.closeForm,
-    );
-
     return MultiBlocListener(
       listeners: [
         BlocListener<TunnelsBloc, TunnelsState>(
@@ -120,21 +90,32 @@ class const _TunnelsView() extends StatelessWidget {
                     onEditGroup: screens.editGroup,
                     onAdd: (kind) => screens.openTunnel(null, kind),
                   ),
-                  NewTunnelScreen(:final kind) => tunnelForm(
+                  NewTunnelScreen(:final kind) => _TunnelFormScreen(
                     key: ValueKey('new ${kind.name}'),
                     kind: kind,
+                    hosts: hosts,
                   ),
-                  EditTunnelScreen(:final tunnel) => tunnelForm(
+                  EditTunnelScreen(:final tunnel) => _TunnelFormScreen(
                     key: ValueKey(tunnel.id),
                     initial: tunnel,
+                    hosts: hosts,
                   ),
                   EditGroupScreen(:final group, :final colour) => GroupForm(
                     key: ValueKey('group $group'),
                     group: group,
                     colour: colour,
-                    onSave: (name, colour) => save(
-                      AgentCommand.editGroup(group, name: name, colour: colour),
-                    ),
+                    onSave: (name, colour) {
+                      context.read<TunnelsBloc>().add(
+                        TunnelsEvent.send(
+                          AgentCommand.editGroup(
+                            group,
+                            name: name,
+                            colour: colour,
+                          ),
+                        ),
+                      );
+                      screens.closeForm();
+                    },
                     onCancel: screens.closeForm,
                   ),
                 },
@@ -143,6 +124,43 @@ class const _TunnelsView() extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class const _TunnelFormScreen({
+  super.key,
+  final Tunnel? initial,
+  final TunnelKind kind = TunnelKind.local,
+  required final List<String> hosts,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final screens = context.read<TunnelsScreenCubit>();
+
+    return TunnelForm(
+      initial: initial,
+      kind: kind,
+      hosts: hosts,
+      groups: context.select(
+        (TunnelsBloc bloc) => switch (bloc.state) {
+          Ready(:final snapshot) => snapshot.tunnels.groups,
+          _ => const <String>[],
+        },
+      ),
+      groupColours: context.select(
+        (TunnelsBloc bloc) => switch (bloc.state) {
+          Ready(:final snapshot) => snapshot.groupColours,
+          _ => const <String, TunnelColour>{},
+        },
+      ),
+      onSave: (tunnel) {
+        context.read<TunnelsBloc>().add(
+          TunnelsEvent.send(AgentCommand.save(tunnel)),
+        );
+        screens.closeForm();
+      },
+      onCancel: screens.closeForm,
     );
   }
 }

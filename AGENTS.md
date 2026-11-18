@@ -28,6 +28,7 @@ Keep it simple. Build only what the current change needs, and prefer the straigh
 
 - **State:** BLoC (`flutter_bloc`) with Freezed. A Cubit fits state changed by methods with no events worth naming, such as `TunnelManager` and `TunnelsScreenCubit`; its state is still `@freezed`. Short state names, inline handlers in the constructor, and every state and event `@freezed`. Every `Bloc` overrides `toString()` to its class name.
 - **Constructors:** declare fields in a primary constructor, like `class const TunnelTile({super.key, required final Tunnel tunnel}) extends StatelessWidget`. Write freezed factories without the class name (`const factory connected() = Connected;`).
+- **Widgets:** a piece of UI is a widget class, not a method or local function returning a widget, so it gets its own element and rebuilds on its own.
 - **Naming:** no abbreviations (`index`, not `idx`; `tunnel`, not `t`). Write `catch (exception)`.
 - **Collections:** prefer `.where()`, `.map()`, collection-`for`/`if` and `package:collection` over loops that build up a result.
 - **Comments:** none by default. Write one only when the code, names and tests can't give the reason (a hidden constraint, an outside quirk, a workaround) and one short line is enough. "Could add X later" goes in the README's Roadmap, not in a comment.
