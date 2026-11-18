@@ -22,6 +22,13 @@ fvm flutter run -d linux              # the app from source
 fvm flutter build linux --release     # build/linux/<x64 or arm64>/release/bundle/taka
 ```
 
+### Debug and release side by side
+
+A debug build has a red icon, so the Dock tells the two apart. After changing `assets/icon/icon.png`, run `fvm dart run flutter_launcher_icons` and then `fvm dart run tool/dev_icon.dart`; a test fails until the red icon matches.
+
+
+Debug and profile builds run as Taka Dev (`com.pacabase.taka.dev`), with their own tunnels, background helper, socket, logs and login item. So `flutter run` never reads, rewrites or replaces an installed release's. A first debug run starts with no tunnels. To try it with your own, export them from the release and import them into Taka Dev. On Linux, a dev build has no `.desktop` file, so the dock shows it with a generic icon.
+
 ## Tests
 
 The unit tests run per package:

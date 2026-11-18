@@ -64,15 +64,16 @@ class const TunnelActionEntry(
   String toString() => label;
 }
 
-List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
+/// [name] is the build's, so a dev build's menu says Quit Taka Dev.
+List<TrayEntry> trayEntries(TunnelsSnapshot snapshot, {String name = 'Taka'}) {
   final tunnels = snapshot.tunnels;
   if (tunnels.isEmpty) {
-    return const [
-      InfoEntry('No tunnels yet'),
-      SeparatorEntry(),
-      ActionEntry(TrayAction.addTunnel, 'Add Tunnel…'),
-      SeparatorEntry(),
-      ActionEntry(TrayAction.quit, 'Quit Taka', shortcut: 'q'),
+    return [
+      const InfoEntry('No tunnels yet'),
+      const SeparatorEntry(),
+      const ActionEntry(TrayAction.addTunnel, 'Add Tunnel…'),
+      const SeparatorEntry(),
+      ActionEntry(TrayAction.quit, 'Quit $name', shortcut: 'q'),
     ];
   }
 
@@ -103,7 +104,7 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
       for (final tunnel in tunnels.shown)
         SubmenuEntry(
           _shortened(tunnel.title),
-          _tunnelActions(tunnel, snapshot.statusOf(tunnel.id)),
+          _tunnelActions(tunnel, snapshot.statusOf(tunnel.id), name),
         ),
     ]),
     if (tunnels.length > 1)
@@ -112,7 +113,7 @@ List<TrayEntry> trayEntries(TunnelsSnapshot snapshot) {
           : const ActionEntry(TrayAction.connectAll, 'Connect All'),
     const SeparatorEntry(),
     const ActionEntry(TrayAction.manageTunnels, 'Manage Tunnels…'),
-    const ActionEntry(TrayAction.quit, 'Quit Taka', shortcut: 'q'),
+    ActionEntry(TrayAction.quit, 'Quit $name', shortcut: 'q'),
   ];
 }
 
@@ -159,14 +160,18 @@ TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
   isChecked: status.isOn,
 );
 
-List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
+List<TrayEntry> _tunnelActions(
+  Tunnel tunnel,
+  TunnelStatus status,
+  String name,
+) {
   final whyDown = [
     if (status case Failed(:final failure) || Reconnecting(:final failure))
       InfoEntry(failureSentence(tunnel, failure)),
     if (status is Failed)
       TunnelActionEntry(tunnel, TunnelAction.tryAgain, 'Try Again'),
     if (status case UnknownHostKey(:final host))
-      InfoEntry("Open Taka to check $host's key."),
+      InfoEntry("Open $name to check $host's key."),
   ];
   return [
     ...whyDown,
@@ -190,8 +195,9 @@ String _shortened(String label, [int width = _width]) => label.length <= width
     ? label
     : '${label.substring(0, width - 1).trimRight()}…';
 
-String trayTooltip(TunnelsSnapshot snapshot) =>
+/// [name] tells a release's tray icon from a dev build's.
+String trayTooltip(TunnelsSnapshot snapshot, {String name = 'Taka'}) =>
     switch (snapshot.connectedCount) {
-      0 => 'Taka',
-      final count => 'Taka · $count connected',
+      0 => name,
+      final count => '$name · $count connected',
     };

@@ -185,7 +185,10 @@ void main() {
 
   group('logDirectory', () {
     test('is in ~/Library/Logs on macOS and the XDG state folder on Linux', () {
-      final logs = logDirectory(environment: {'HOME': '/home/me'}).path;
+      final logs = logDirectory(
+        environment: {'HOME': '/home/me'},
+        build: TakaBuild.release,
+      ).path;
 
       expect(
         logs,
@@ -195,9 +198,24 @@ void main() {
       );
     });
 
+    test('is apart for a development build', () {
+      final logs = logDirectory(
+        environment: {'HOME': '/home/me'},
+        build: TakaBuild.development,
+      ).path;
+
+      expect(
+        logs,
+        Platform.isMacOS
+            ? '/home/me/Library/Logs/Taka Dev'
+            : '/home/me/.local/state/taka-dev/logs',
+      );
+    });
+
     test('follows XDG_STATE_HOME on Linux', () {
       final logs = logDirectory(
         environment: {'HOME': '/home/me', 'XDG_STATE_HOME': '/state'},
+        build: TakaBuild.release,
       ).path;
 
       expect(

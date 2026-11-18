@@ -14,6 +14,7 @@ import 'package:taka/theme/taka_theme.dart';
 class const TakaApp({
   super.key,
   required final String version,
+  final String name = 'Taka',
   required final Future<AgentClient> Function() connect,
   required final Widget Function(AgentClient agent) home,
 }) extends StatefulWidget {
@@ -119,7 +120,7 @@ class _TakaAppState extends State<TakaApp> {
     ..popUntil((route) => route.isFirst)
     ..push(
       MaterialPageRoute<void>(
-        builder: (_) => AboutPage(version: widget.version),
+        builder: (_) => AboutPage(version: widget.version, name: widget.name),
       ),
     );
 }
