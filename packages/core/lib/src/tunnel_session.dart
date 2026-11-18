@@ -14,11 +14,6 @@ typedef _Opened = ({Future<void> done, Future<void> Function() close});
 /// Hands focus back to the app that had it before Taka came forward.
 typedef HandBack = Future<void> Function();
 
-// A ProxyCommand such as a browser sign-in may take focus between these lines.
-final _newLogin = RegExp(
-  '^debug1: (Connecting to |Executing proxy command|Authenticating to )',
-);
-
 class TunnelSession({
   required final Tunnel tunnel,
   required final SshClient client,
@@ -168,9 +163,8 @@ class TunnelSession({
     // ssh's lines, named since tunnels connect at once.
     void onLog(SshLog log) {
       _sshLog.d('${tunnel.title}: ${log.line}');
-      if (log is SshProgress && _newLogin.hasMatch(log.line)) {
-        _comeForward();
-      }
+      // A ProxyCommand such as a browser sign-in may take focus between them.
+      if (log is SshLoginStarted) _comeForward();
       if (log case final SshForwardFailed failed) {
         _isChecking ? _refuse(failed) : _warn(failed.reason);
       }
