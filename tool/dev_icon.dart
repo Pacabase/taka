@@ -6,11 +6,15 @@ const sourcePath = 'assets/icon/icon.png';
 const devIconPath = 'assets/icon/icon-dev.png';
 const releaseIconSet = 'macos/Runner/Assets.xcassets/AppIcon.appiconset';
 const devIconSet = 'macos/Runner/Assets.xcassets/AppIcon-Dev.appiconset';
+const windowsDevIcon = 'windows/runner/resources/app_icon_dev.ico';
+
+/// `flutter_launcher_icons`' `windows.icon_size` in pubspec.yaml.
+const windowsIconSize = 256;
 
 final _red = ColorRgb8(0xC6, 0x28, 0x28);
 
 /// Taka's icon with its darkest colour turned red and the white kept, so a
-/// debug build's Dock icon tells it from a release's.
+/// debug build's Dock and taskbar icon tells it from a release's.
 Image devIcon(Image source) {
   final darkest = source
       .map((pixel) => pixel.luminanceNormalized)
@@ -57,5 +61,7 @@ void main() {
         File('$devIconSet/$name')
             .writeAsBytesSync(encodePng(iconAt(icon, size))),
   );
-  stdout.writeln('Wrote $devIconPath and $devIconSet');
+  File(windowsDevIcon)
+      .writeAsBytesSync(encodeIco(iconAt(icon, windowsIconSize)));
+  stdout.writeln('Wrote $devIconPath, $devIconSet and $windowsDevIcon');
 }

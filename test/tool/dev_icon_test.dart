@@ -34,5 +34,9 @@ void main() {
         reason: name,
       ),
     );
+    expect(
+      File(windowsDevIcon).readAsBytesSync(),
+      encodeIco(iconAt(icon, windowsIconSize)),
+    );
   });
 }
