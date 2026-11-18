@@ -211,12 +211,23 @@ class const _TunnelList({
             ),
           ),
         ),
-        Ready(:final snapshot) => _rows(context, snapshot),
+        Ready(:final snapshot) => _TunnelRows(
+          snapshot: snapshot,
+          onEdit: onEdit,
+          onEditGroup: onEditGroup,
+        ),
       },
     );
   }
+}
 
-  Widget _rows(BuildContext context, TunnelsSnapshot snapshot) {
+class const _TunnelRows({
+  required final TunnelsSnapshot snapshot,
+  required final void Function(Tunnel tunnel) onEdit,
+  required final void Function(String group, TunnelColour? colour) onEditGroup,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     final colors = TakaColors.of(context);
     final rows = snapshot.tunnels.rows;
 
@@ -303,10 +314,10 @@ class const _TunnelList({
       ],
     );
   }
-
-  void _send(BuildContext context, AgentCommand command) =>
-      context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
+
+void _send(BuildContext context, AgentCommand command) =>
+    context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 
 class const _InGroup({required final Color? guide, required final Widget child})
     extends StatelessWidget {
