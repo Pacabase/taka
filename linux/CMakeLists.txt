@@ -34,9 +34,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Profile" "Release")
 endif()
 
-# Debug and Profile run as a separate Taka, so they never touch an installed
-# release's tunnels, socket, logs or login item. TakaBuild in packages/core
-# matches this, and embed_agent.sh gives it to the agent.
+# Debug and Profile are Taka Dev, apart from a release; TakaBuild matches.
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
   set(APPLICATION_ID "${APPLICATION_ID}.dev")
 endif()

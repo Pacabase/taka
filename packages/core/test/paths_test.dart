@@ -56,7 +56,9 @@ void main() {
 
     expect(
       takaDirectory(environment: home, build: TakaBuild.development).path,
-      endsWith('/com.pacabase.taka.dev'),
+      Platform.isMacOS
+          ? '/home/someone/Library/Application Support/com.pacabase.taka.dev'
+          : '/home/someone/.local/share/com.pacabase.taka.dev',
     );
     expect(
       agentSocketPath(environment: home, build: TakaBuild.development),

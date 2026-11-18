@@ -15,7 +15,6 @@ sealed class const TakaInstall._() with _$TakaInstall {
     required String agentAssets,
   }) = _TakaInstall;
 
-  /// Whether this install is a release or a development build.
   TakaBuild get build => TakaBuild.inAgentAssets(agentAssets);
 
   static TakaInstall fromWindow(
