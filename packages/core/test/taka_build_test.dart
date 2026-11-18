@@ -129,14 +129,28 @@ void main() {
         expect(
           config,
           contains(
-            'APP_BUNDLE_NAME[config=$configuration] = '
+            'PRODUCT_NAME[config=$configuration] = '
             '${TakaBuild.development.name}\n',
+          ),
+        );
+      }
+      expect(config, contains('PRODUCT_NAME = ${TakaBuild.release.name}\n'));
+      expect(
+        config,
+        contains('WINDOW_NAME = ${TakaBuild.release.name} Settings\n'),
+      );
+      for (final configuration in ['Debug', 'Profile']) {
+        expect(
+          config,
+          contains(
+            'WINDOW_NAME[config=$configuration] = '
+            '${TakaBuild.release.name} Settings Dev\n',
           ),
         );
       }
       expect(
         read('macos/Runner/Info.plist'),
-        contains('<string>\$(APP_BUNDLE_NAME)</string>'),
+        contains('<string>\$(WINDOW_NAME)</string>'),
       );
     });
 
@@ -154,7 +168,7 @@ void main() {
       for (final key in ['CFBundleName', 'CFBundleDisplayName']) {
         expect(
           script,
-          contains('plutil -replace $key -string "\$APP_BUNDLE_NAME" $plist\n'),
+          contains('plutil -replace $key -string "\$PRODUCT_NAME" $plist\n'),
         );
       }
       expect(
