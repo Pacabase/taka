@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:image/image.dart';
 
@@ -6,6 +7,7 @@ const sourcePath = 'assets/icon/icon.png';
 const devIconPath = 'assets/icon/icon-dev.png';
 const releaseIconSet = 'macos/Runner/Assets.xcassets/AppIcon.appiconset';
 const devIconSet = 'macos/Runner/Assets.xcassets/AppIcon-Dev.appiconset';
+const tileIconPath = 'assets/icon/icon-tile.png';
 const windowsDevIcon = 'windows/runner/resources/app_icon_dev.ico';
 
 /// `flutter_launcher_icons`' `windows.icon_size` in pubspec.yaml.
@@ -40,6 +42,40 @@ Map<int, String> iconSetFiles() => {
       int.parse(match.group(1)!): file.uri.pathSegments.last,
 };
 
+/// [icon] on a rounded tile with a margin, for Linux and Windows, which show an
+/// icon as it is drawn, where macOS gives it its own shape.
+Image tileIcon(Image icon) {
+  final size = icon.width;
+  final margin = (size * 0.06).round();
+  final side = size - 2 * margin;
+  final radius = side * 0.2;
+  double inside(double x, double y) {
+    final dx = max(max(radius - x, x - (side - radius)), 0.0);
+    final dy = max(max(radius - y, y - (side - radius)), 0.0);
+    return (radius + 0.5 - sqrt(dx * dx + dy * dy)).clamp(0.0, 1.0);
+  }
+
+  final tile = Image(width: size, height: size, numChannels: 4);
+  for (final pixel in iconAt(icon, side)) {
+    final coverage = inside(pixel.x + 0.5, pixel.y + 0.5);
+    if (coverage == 0) continue;
+    tile.setPixelRgba(
+      pixel.x + margin,
+      pixel.y + margin,
+      pixel.r,
+      pixel.g,
+      pixel.b,
+      pixel.a * coverage,
+    );
+  }
+  return tile;
+}
+
+/// The red tile, as `flutter_launcher_icons` makes the release `.ico` from
+/// [tileIconPath].
+List<int> windowsDevIco(Image source) =>
+    encodeIco(iconAt(devIcon(tileIcon(source)), windowsIconSize));
+
 /// Resized the way `flutter_launcher_icons` resizes the release set.
 Image iconAt(Image icon, int size) => copyResize(
   icon,
@@ -51,7 +87,9 @@ Image iconAt(Image icon, int size) => copyResize(
 );
 
 void main() {
-  final icon = devIcon(decodePng(File(sourcePath).readAsBytesSync())!);
+  final source = decodePng(File(sourcePath).readAsBytesSync())!;
+  File(tileIconPath).writeAsBytesSync(encodePng(tileIcon(source)));
+  final icon = devIcon(source);
   File(devIconPath).writeAsBytesSync(encodePng(icon));
 
   Directory(devIconSet).createSync();
@@ -61,7 +99,8 @@ void main() {
         File('$devIconSet/$name')
             .writeAsBytesSync(encodePng(iconAt(icon, size))),
   );
-  File(windowsDevIcon)
-      .writeAsBytesSync(encodeIco(iconAt(icon, windowsIconSize)));
-  stdout.writeln('Wrote $devIconPath, $devIconSet and $windowsDevIcon');
+  File(windowsDevIcon).writeAsBytesSync(windowsDevIco(source));
+  stdout.writeln(
+    'Wrote $tileIconPath, $devIconPath, $devIconSet and $windowsDevIcon',
+  );
 }

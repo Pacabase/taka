@@ -63,4 +63,5 @@ flutter_launcher_icons:
     generate: true
   windows:
     generate: true
+    image_path: assets/icon/icon-tile.png
     icon_size: 256
