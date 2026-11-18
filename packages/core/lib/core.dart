@@ -13,6 +13,7 @@ export 'src/ssh_hosts.dart';
 export 'src/taka_build.dart';
 export 'src/taka_install.dart';
 export 'src/tunnel.dart';
+export 'src/tunnel_book.dart';
 export 'src/tunnel_colour.dart';
 export 'src/tunnel_manager.dart';
 export 'src/tunnel_session.dart' show HandBack;

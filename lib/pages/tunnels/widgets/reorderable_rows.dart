@@ -120,7 +120,7 @@ class _ReorderableRowsState extends State<ReorderableRows> {
                         child: _Landing(
                           from: drag.from,
                           to: drag.to,
-                          child: _lifted(
+                          child: _Raised(
                             Column(
                               children: widget.children
                                   .skip(drag.from)
@@ -139,16 +139,6 @@ class _ReorderableRowsState extends State<ReorderableRows> {
       ),
     );
   }
-
-  Widget _lifted(Widget child) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: TakaColors.of(context).surface,
-      boxShadow: [
-        BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 8),
-      ],
-    ),
-    child: child,
-  );
 
   void _start(int index) {
     final span = widget.spanOf?.call(index) ?? 1;
@@ -255,4 +245,17 @@ class const _Lifted({required final bool isLifted, required super.child})
     extends InheritedWidget {
   @override
   bool updateShouldNotify(_Lifted oldWidget) => isLifted != oldWidget.isLifted;
+}
+
+class const _Raised(final Widget child) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: TakaColors.of(context).surface,
+      boxShadow: [
+        BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 8),
+      ],
+    ),
+    child: child,
+  );
 }

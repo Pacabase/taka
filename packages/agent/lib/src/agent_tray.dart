@@ -48,8 +48,8 @@ class AgentTray({
       ..setVisible(true);
 
     // Nothing else holds the tray: this subscription keeps its icon on screen.
-    manager.changes.listen(_rebuild);
-    _rebuild(manager.snapshot);
+    manager.stream.listen(_rebuild);
+    _rebuild(manager.state);
   }
 
   void _rebuild(TunnelsSnapshot snapshot) {
@@ -136,20 +136,20 @@ class AgentTray({
 
   // The menu can be stale: don't stop a tunnel that has come back since.
   void _tryAgain(String id) {
-    if (!manager.snapshot.statusOf(id).isOn) _guard(_toggle(id));
+    if (!manager.state.statusOf(id).isOn) _guard(_toggle(id));
   }
 
   // A new server's key is trusted in the window, so connecting brings it up.
   Future<void> _toggle(String id) async {
-    if (manager.snapshot.statusOf(id) is! UnknownHostKey) {
+    if (manager.state.statusOf(id) is! UnknownHostKey) {
       await manager.toggle(id);
     }
-    if (manager.snapshot.statusOf(id) is UnknownHostKey) onManageTunnels();
+    if (manager.state.statusOf(id) is UnknownHostKey) onManageTunnels();
   }
 
   Future<void> _connectAll({String? group}) async {
     await manager.connectAll(group: group);
-    final snapshot = manager.snapshot;
+    final snapshot = manager.state;
     if (snapshot.tunnels.any(
       (tunnel) =>
           (group == null || tunnel.group == group) &&

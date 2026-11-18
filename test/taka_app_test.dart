@@ -127,6 +127,43 @@ void main() {
     expect(find.text('Tunnels'), findsOneWidget);
   });
 
+  testWidgets(
+    "Settings' bloc listens from connect and closes with the window",
+    (tester) async {
+      final agent = FakeAgent();
+      await _pumpApp(tester, const Text('Tunnels'), agent: agent);
+
+      expect(agent.settingsController.hasListener, isTrue);
+
+      await tester.pumpWidget(const SizedBox());
+
+      expect(agent.settingsController.hasListener, isFalse);
+    },
+  );
+
+  testWidgets('About opened while it connects stays open once it connects', (
+    tester,
+  ) async {
+    final connecting = Completer<AgentClient>();
+    await tester.pumpWidget(
+      TakaApp(
+        version: '1.2.3',
+        connect: () => connecting.future,
+        home: (_) => const Text('Tunnels'),
+      ),
+    );
+    await _menuCall(tester, 'about');
+    await tester.pumpAndSettle();
+
+    connecting.complete(FakeAgent());
+    await tester.pumpAndSettle();
+    expect(find.byType(AboutPage), findsOneWidget);
+
+    await _menuCall(tester, 'settings');
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPage), findsOneWidget);
+  });
+
   testWidgets('a click on empty space takes focus away', (tester) async {
     var toggles = 0;
     await _pumpApp(

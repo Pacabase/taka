@@ -98,7 +98,7 @@ Future<void> _start() async {
   unawaited(manager.restore());
 
   // Closing the manager, from the tray or a window's quit command, quits.
-  manager.changes.listen(
+  manager.stream.listen(
     null,
     onDone: () async {
       Fimber.i('Quitting');
