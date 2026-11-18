@@ -42,30 +42,26 @@ Map<int, String> iconSetFiles() => {
       int.parse(match.group(1)!): file.uri.pathSegments.last,
 };
 
-/// [icon] on a rounded tile with a margin, for Linux and Windows, which show an
-/// icon as it is drawn, where macOS gives it its own shape.
+/// [icon] with rounded corners, for Linux and Windows, which show an icon as
+/// it is drawn, where macOS gives it its own shape.
 Image tileIcon(Image icon) {
   final size = icon.width;
-  final margin = (size * 0.06).round();
-  final side = size - 2 * margin;
-  final radius = side * 0.2;
+  final radius = size * 0.2;
   double inside(double x, double y) {
-    final dx = max(max(radius - x, x - (side - radius)), 0.0);
-    final dy = max(max(radius - y, y - (side - radius)), 0.0);
+    final dx = max(max(radius - x, x - (size - radius)), 0.0);
+    final dy = max(max(radius - y, y - (size - radius)), 0.0);
     return (radius + 0.5 - sqrt(dx * dx + dy * dy)).clamp(0.0, 1.0);
   }
 
   final tile = Image(width: size, height: size, numChannels: 4);
-  for (final pixel in iconAt(icon, side)) {
-    final coverage = inside(pixel.x + 0.5, pixel.y + 0.5);
-    if (coverage == 0) continue;
+  for (final pixel in icon) {
     tile.setPixelRgba(
-      pixel.x + margin,
-      pixel.y + margin,
+      pixel.x,
+      pixel.y,
       pixel.r,
       pixel.g,
       pixel.b,
-      pixel.a * coverage,
+      pixel.a * inside(pixel.x + 0.5, pixel.y + 0.5),
     );
   }
   return tile;
