@@ -57,7 +57,6 @@ class _GroupFormState extends State<GroupForm> {
                   child: Input(
                     controller: _name,
                     hint: 'Such as Production',
-                    style: const TextStyle(),
                     autofocus: true,
                     onSubmitted: _save,
                   ),

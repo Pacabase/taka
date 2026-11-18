@@ -32,6 +32,7 @@ class FakeStore([
 class FakeTunnel(@override final int localPort) implements SshTunnel {
   final _done = Completer<void>();
   int closeCount = 0;
+  Exception? closeError;
 
   void drop() => _done.complete();
 
@@ -44,6 +45,7 @@ class FakeTunnel(@override final int localPort) implements SshTunnel {
   Future<void> close() async {
     closeCount++;
     if (!_done.isCompleted) _done.complete();
+    if (closeError case final error?) throw error;
   }
 }
 

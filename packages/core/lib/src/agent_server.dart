@@ -24,7 +24,7 @@ class AgentServer(
   late final StreamSubscription<AgentSettings> _settingsChanges;
 
   this {
-    _changes = _manager.changes.listen(
+    _changes = _manager.stream.listen(
       (snapshot) => _sendAll(AgentMessage.snapshot(snapshot)),
     );
     _settingsChanges = _preferences.changes.listen(
@@ -84,7 +84,7 @@ class AgentServer(
     _clients.add(client);
     client.done.ignore();
     _send(client, AgentMessage.identity(_identity));
-    _send(client, AgentMessage.snapshot(_manager.snapshot));
+    _send(client, AgentMessage.snapshot(_manager.state));
     _send(client, AgentMessage.settings(_preferences.settings));
     if (_pending case final request?) {
       _pending = null;

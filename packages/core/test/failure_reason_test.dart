@@ -5,116 +5,136 @@ import 'package:core/core.dart';
 import 'package:test/test.dart';
 
 void main() {
-  for (final (message, short, sentence) in [
+  const database = Tunnel(
+    id: 'a1',
+    sshHost: 'bastion',
+    localPort: 15432,
+    remoteHost: 'db.internal',
+    remotePort: 5432,
+  );
+  const docker = Tunnel(
+    id: 's6',
+    sshHost: 'bastion',
+    localPort: 2375,
+    remoteSocket: '/var/run/docker.sock',
+  );
+  const web = Tunnel(
+    id: 'r5',
+    kind: TunnelKind.remote,
+    sshHost: 'bastion',
+    localPort: 3000,
+    remotePort: 8080,
+  );
+
+  for (final (tunnel, failure, short, sentence) in [
     (
-      '127.0.0.1:8080 is already in use',
-      'port 8080 in use',
-      'Port 8080 is already in use.',
+      database,
+      TunnelFailure.sshNotFound,
+      'ssh not found',
+      "Can't find ssh on this computer.",
     ),
     (
-      '172.17.0.1:8080 is already in use',
-      'port 8080 in use',
-      'Port 8080 is already in use.',
+      database,
+      TunnelFailure.config,
+      "SSH settings don't work",
+      "The SSH settings for this server don't work.",
     ),
     (
-      "172.17.0.1 isn't an address of this computer",
+      database,
+      TunnelFailure.portInUse,
+      'port 15432 in use',
+      'Port 15432 is already in use.',
+    ),
+    (
+      web,
+      TunnelFailure.duplicateForward,
+      'port 8080 already open',
+      'Another tunnel already opens port 8080 on the server.',
+    ),
+    (
+      database,
+      TunnelFailure.addressUnavailable,
       'address not on this computer',
       "This computer doesn't have the From address.",
     ),
     (
-      'Error: remote port forwarding failed for listen port 8080',
+      database,
+      TunnelFailure.hostNotFound,
+      'server not found',
+      "Can't find the server.",
+    ),
+    (
+      database,
+      TunnelFailure.unreachable,
+      "can't reach the server",
+      "Can't reach the server.",
+    ),
+    (
+      database,
+      TunnelFailure.loginRefused,
+      'login refused',
+      'The server refused the login.',
+    ),
+    (
+      database,
+      TunnelFailure.hostKey,
+      'host key changed',
+      "The server's host key changed.",
+    ),
+    (
+      database,
+      TunnelFailure.dropped,
+      'disconnected',
+      'The connection dropped.',
+    ),
+    (
+      web,
+      TunnelFailure.remotePortRefused,
       "server won't open port 8080",
       "The server won't open port 8080: it's taken there, "
           "or forwarding isn't allowed.",
     ),
     (
-      'channel 0: open failed: connect failed: Connection refused\n'
-          'stdio forwarding failed',
-      "can't reach the server",
-      "Can't reach the server.",
+      database,
+      TunnelFailure.forwardProhibited,
+      "server won't forward",
+      "The server doesn't allow this tunnel.",
     ),
     (
-      'ssh: connect to host bastion port 22: Connection refused',
-      "can't reach the server",
-      "Can't reach the server.",
+      database,
+      TunnelFailure.forwardRefused,
+      "can't reach db.internal:5432",
+      "Can't reach db.internal:5432 through the server.",
     ),
     (
-      'ssh: connect to host bastion port 22: Operation timed out',
-      "can't reach the server",
-      "Can't reach the server.",
-    ),
-    (
-      'ssh: connect to host bastion port 22: No route to host',
-      "can't reach the server",
-      "Can't reach the server.",
-    ),
-    (
-      'ssh: Could not resolve hostname bastion: nodename nor servname '
-          'provided, or not known',
-      'server not found',
-      "Can't find the server.",
-    ),
-    (
-      'user@bastion: Permission denied (publickey).',
-      'login refused',
-      'The server refused the login.',
-    ),
-    (
-      'Host key verification failed.',
-      'host key changed',
-      "The server's host key changed.",
-    ),
-    (
-      '@ WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED! @',
-      'host key changed',
-      "The server's host key changed.",
-    ),
-    (
-      'the host key for bastion has changed; it now offers the ED25519 key '
-          'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cYw8u2bq3Jm8sY',
-      'host key changed',
-      "The server's host key changed.",
-    ),
-    (
-      'Connection to bastion closed by remote host.',
-      'disconnected',
-      'The connection dropped.',
-    ),
-    (
-      'Connection reset by 10.0.0.1 port 22',
-      'disconnected',
-      'The connection dropped.',
-    ),
-    (
-      'client_loop: send disconnect: Broken pipe',
-      'disconnected',
-      'The connection dropped.',
-    ),
-    ('Disconnected', 'disconnected', 'The connection dropped.'),
-    (
-      'Timeout, server bastion not responding.',
-      'server stopped answering',
-      'The server stopped answering.',
+      docker,
+      TunnelFailure.forwardRefused,
+      "can't open /var/run/docker.sock",
+      "Can't open /var/run/docker.sock on the server.",
     ),
   ]) {
-    test('says "$short" for "$message"', () {
-      expect(shortReason(message), short);
+    test('says "$short" for ${failure.name}', () {
+      expect(failureShort(tunnel, Failed('ssh said', failure: failure)), short);
     });
 
-    test('says "$sentence" for "$message"', () {
-      expect(plainReason(message), sentence);
+    test('says "$sentence" for ${failure.name}', () {
+      expect(failureSentence(tunnel, failure), sentence);
     });
   }
 
-  test('keeps an unknown message as ssh wrote it, when short', () {
-    expect(shortReason('  something new from ssh  '), 'something new from ssh');
+  test('keeps an unknown failure as ssh wrote it, when short', () {
+    expect(
+      failureShort(database, const Failed('  something new from ssh  ')),
+      'something new from ssh',
+    );
   });
 
-  for (final message in ['something new from ssh', 'Bad state: boom', '']) {
-    test('says only that it couldn\'t connect for "$message"', () {
-      expect(plainReason(message), "It couldn't connect.");
-    });
-  }
+  test("says only that it couldn't connect for an unknown failure", () {
+    expect(
+      failureSentence(database, TunnelFailure.other),
+      "It couldn't connect.",
+    );
+  });
 
   group('forwardWarning', () {
     test('names the destination a local tunnel could not reach', () {
@@ -173,61 +193,6 @@ void main() {
         ),
         "A site through the SOCKS proxy couldn't be reached.",
       );
-    });
-  });
-
-  group('a forward the server could not make', () {
-    const database = Tunnel(
-      id: 'a1',
-      sshHost: 'bastion',
-      localPort: 15432,
-      remoteHost: 'db.internal',
-      remotePort: 5432,
-    );
-    const docker = Tunnel(
-      id: 's6',
-      sshHost: 'bastion',
-      localPort: 2375,
-      remoteSocket: '/var/run/docker.sock',
-    );
-    const refused = Failed(
-      'channel 2: open failed: connect failed: Connection refused',
-      isForward: true,
-    );
-
-    test('names what the tunnel could not reach', () {
-      expect(failureShort(database, refused), "can't reach db.internal:5432");
-      expect(
-        failureSentence(database, refused),
-        "Can't reach db.internal:5432 through the server.",
-      );
-      expect(failureShort(docker, refused), "can't open /var/run/docker.sock");
-      expect(
-        failureSentence(docker, refused),
-        "Can't open /var/run/docker.sock on the server.",
-      );
-    });
-
-    test('says when the server forbids the forward', () {
-      const forbidden = Failed(
-        'channel 3: open failed: administratively prohibited: open failed',
-        isForward: true,
-      );
-
-      expect(failureShort(database, forbidden), "server won't forward");
-      expect(
-        failureSentence(database, forbidden),
-        "The server doesn't allow this tunnel.",
-      );
-    });
-
-    test('reads any other failure from what ssh said', () {
-      const unreachable = Failed(
-        'ssh: connect to host bastion port 22: Connection refused',
-      );
-
-      expect(failureShort(database, unreachable), "can't reach the server");
-      expect(failureSentence(database, unreachable), "Can't reach the server.");
     });
   });
 }
