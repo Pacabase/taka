@@ -67,11 +67,10 @@ class _TakaAppState extends State<TakaApp> {
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: _unfocus,
-        // Settings come from the agent once per connection, so their bloc is
-        // made with it, above the pages, and goes with it.
+        // The agent sends its settings once, so their bloc listens from connect.
         child: switch (link) {
           AgentConnected(:final agent) => BlocProvider(
-            key: ObjectKey(agent),
+            lazy: false,
             create: (_) =>
                 SettingsBloc(agent: agent)..add(const SettingsEvent.started()),
             child: child,

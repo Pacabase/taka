@@ -112,8 +112,7 @@ class TunnelSession({
   final _abort = Completer<void>();
   final _timers = <Type, Timer>{};
   final List<Future<HandBack?>> _cameForward = [];
-  // What the phases stand for, which aren't values the state can hold: the
-  // connect in flight, the open ssh, and ssh's close once it has stopped.
+  // Handles the phases stand for, which aren't values a state can hold.
   Future<void>? _attempt;
   _Opened? _tunnel;
   Future<void>? _closed;
@@ -148,7 +147,11 @@ class TunnelSession({
 
   this : super(const SessionState(phase: Opening())) {
     on<Connect>((event, emit) async {
-      if (isStopped) return event.settled.complete();
+      // Only a new session, a redial or a trusted key opens ssh.
+      if (state.phase
+          case Up() || Redialing() || AwaitingTrust() || GaveUp() || Ended()) {
+        return event.settled.complete();
+      }
 
       emit(
         state.copyWith(
@@ -387,8 +390,7 @@ class TunnelSession({
       _log.w('${tunnel.title}: could not check where it leads ($exception)');
     }
     // ssh logs the refusal only after the check's connection has closed.
-    await Future<void>.delayed(checkWindow);
-    add(const SessionEvent.checked());
+    _after(checkWindow, const SessionEvent.checked());
   }
 
   // 1Password prompts only for the app in front; a retry may find nobody there.
