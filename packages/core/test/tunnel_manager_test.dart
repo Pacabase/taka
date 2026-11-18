@@ -124,15 +124,15 @@ void main() {
   test('starts empty, then load reads the saved tunnels and says so', () async {
     final manager = TunnelManager(store: store, client: client);
     addTearDown(manager.close);
-    expect(manager.snapshot, const TunnelsSnapshot());
-    expect(manager.snapshot.statusOf('a1'), const Stopped());
-    final changes = manager.changes.toList();
+    expect(manager.state, const TunnelsSnapshot());
+    expect(manager.state.statusOf('a1'), const Stopped());
+    final changes = manager.stream.toList();
 
     await manager.load();
     await manager.close();
 
-    expect(manager.snapshot.tunnels, [database, proxy]);
-    expect(await changes, [manager.snapshot]);
+    expect(manager.state.tunnels, [database, proxy]);
+    expect(await changes, [manager.state]);
   });
 
   group('save', () {
@@ -142,7 +142,7 @@ void main() {
 
       await manager.save(added);
 
-      expect(manager.snapshot.tunnels, [database, proxy, added]);
+      expect(manager.state.tunnels, [database, proxy, added]);
       expect(store.tunnels, [database, proxy, added]);
     });
 
@@ -152,7 +152,7 @@ void main() {
 
       await manager.save(renamed);
 
-      expect(manager.snapshot.tunnels, [renamed, proxy]);
+      expect(manager.state.tunnels, [renamed, proxy]);
       expect(store.tunnels, [renamed, proxy]);
     });
 
@@ -176,7 +176,7 @@ void main() {
             abortTrigger: any(named: 'abortTrigger'),
           ),
         ).called(1);
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
       },
     );
 
@@ -190,7 +190,7 @@ void main() {
 
         expect(tunnel.closeCount, 0);
         verify(openAnyTunnel).called(1);
-        expect(manager.snapshot.tunnels.first.group, 'Prod');
+        expect(manager.state.tunnels.first.group, 'Prod');
       },
     );
 
@@ -201,7 +201,7 @@ void main() {
 
       await manager.save(proxy.copyWith(group: 'Prod'));
 
-      expect(manager.snapshot.tunnels.map((tunnel) => tunnel.id), [
+      expect(manager.state.tunnels.map((tunnel) => tunnel.id), [
         'a1',
         'c3',
         'b2',
@@ -228,7 +228,7 @@ void main() {
 
       expect(tunnel.closeCount, 0);
       verify(openAnyTunnel).called(1);
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(manager.state.statusOf('a1'), const Connected());
     });
   });
 
@@ -241,7 +241,7 @@ void main() {
 
         await manager.import([database]);
 
-        expect(manager.snapshot.tunnels, [
+        expect(manager.state.tunnels, [
           database.copyWith(colour: TunnelColour.red),
           proxy,
         ]);
@@ -256,7 +256,7 @@ void main() {
         groupColours: const {' cache ': TunnelColour.green},
       );
 
-      expect(manager.snapshot.groupColours, {'cache': TunnelColour.green});
+      expect(manager.state.groupColours, {'cache': TunnelColour.green});
     });
 
     test('brings group colours, but keeps the ones set here', () async {
@@ -276,7 +276,7 @@ void main() {
         },
       );
 
-      expect(manager.snapshot.groupColours, {
+      expect(manager.state.groupColours, {
         'Prod': TunnelColour.red,
         'cache': TunnelColour.green,
       });
@@ -288,7 +288,7 @@ void main() {
 
       await manager.import([added]);
 
-      expect(manager.snapshot.tunnels, [database, proxy, added]);
+      expect(manager.state.tunnels, [database, proxy, added]);
       expect(store.tunnels, [database, proxy, added]);
     });
 
@@ -300,7 +300,7 @@ void main() {
 
         await manager.import([database.copyWith(id: 'x9'), proxy]);
 
-        expect(manager.snapshot.tunnels, [
+        expect(manager.state.tunnels, [
           database.copyWith(group: 'Prod'),
           proxy,
         ]);
@@ -314,7 +314,7 @@ void main() {
 
       await manager.import([added]);
 
-      expect(manager.snapshot.tunnels.last.group, 'Prod');
+      expect(manager.state.tunnels.last.group, 'Prod');
     });
 
     test('keeps the group of a tunnel it adds', () async {
@@ -323,7 +323,7 @@ void main() {
 
       await manager.import([added]);
 
-      expect(manager.snapshot.tunnels.last, added);
+      expect(manager.state.tunnels.last, added);
     });
 
     test('skips a tunnel already saved, whatever its id', () async {
@@ -331,7 +331,7 @@ void main() {
 
       await manager.import([database.copyWith(id: 'z9'), proxy]);
 
-      expect(manager.snapshot.tunnels, [database, proxy]);
+      expect(manager.state.tunnels, [database, proxy]);
       expect(store.saveCount, 0);
     });
 
@@ -341,7 +341,7 @@ void main() {
 
       await manager.import([other, other.copyWith(localPort: 15434)]);
 
-      expect(manager.snapshot.tunnels.map((tunnel) => tunnel.id), [
+      expect(manager.state.tunnels.map((tunnel) => tunnel.id), [
         'a1',
         'b2',
         'a1-2',
@@ -406,7 +406,7 @@ void main() {
       await pumpEventQueue();
 
       expect(calls, isEmpty);
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(manager.state.statusOf('a1'), const Connected());
     });
 
     test('hands back when ssh fails', () async {
@@ -484,7 +484,7 @@ void main() {
       await pumpEventQueue();
 
       expect(calls, ['forward', 'forward', 'back', 'back']);
-      expect(manager.snapshot.statusOf('a1'), const Stopped());
+      expect(manager.state.statusOf('a1'), const Stopped());
     });
 
     test('hands back once ssh is up when coming forward is slow', () async {
@@ -516,8 +516,8 @@ void main() {
 
       await manager.toggle('a1');
 
-      expect(manager.snapshot.statusOf('a1'), const Connected());
-      expect(manager.snapshot.connectedCount, 1);
+      expect(manager.state.statusOf('a1'), const Connected());
+      expect(manager.state.connectedCount, 1);
       verify(
         () => client.openTunnel(
           const SshTarget('bastion', user: 'deploy'),
@@ -535,7 +535,7 @@ void main() {
 
       await manager.toggle('b2');
 
-      expect(manager.snapshot.statusOf('b2'), const Connected());
+      expect(manager.state.statusOf('b2'), const Connected());
       verify(
         () => client.openSocksProxy(
           const SshTarget('bastion'),
@@ -552,7 +552,7 @@ void main() {
       final manager = await loaded();
 
       await manager.toggle('s6');
-      expect(manager.snapshot.statusOf('s6'), const Connected());
+      expect(manager.state.statusOf('s6'), const Connected());
       verify(
         () => client.openSocketTunnel(
           const SshTarget('bastion'),
@@ -607,7 +607,7 @@ void main() {
 
       await manager.toggle('s6');
 
-      expect(manager.snapshot.statusOf('s6'), const Connected());
+      expect(manager.state.statusOf('s6'), const Connected());
       verifyNever(openAnyTunnel);
     });
 
@@ -634,7 +634,7 @@ void main() {
 
         await manager.toggle('r5');
 
-        expect(manager.snapshot.statusOf('r5'), const Connected());
+        expect(manager.state.statusOf('r5'), const Connected());
         verify(
           () => client.openRemoteTunnel(
             const SshTarget('bastion'),
@@ -671,7 +671,7 @@ void main() {
 
         await manager.toggle('r5');
 
-        expect(manager.snapshot.statusOf('r5'), const Stopped());
+        expect(manager.state.statusOf('r5'), const Stopped());
         expect(remote.closeCount, 1);
       });
 
@@ -687,10 +687,10 @@ void main() {
 
           opened.last.drop();
           time.flushMicrotasks();
-          expect(manager.snapshot.statusOf('r5'), isA<Reconnecting>());
+          expect(manager.state.statusOf('r5'), isA<Reconnecting>());
 
           time.elapse(const Duration(seconds: 1));
-          expect(manager.snapshot.statusOf('r5'), const Connected());
+          expect(manager.state.statusOf('r5'), const Connected());
           expect(opened, hasLength(2));
 
           unawaited(manager.close());
@@ -709,7 +709,7 @@ void main() {
         opened.complete(remote);
         await pumpEventQueue();
 
-        expect(manager.snapshot.statusOf('r5'), const Stopped());
+        expect(manager.state.statusOf('r5'), const Stopped());
         expect(remote.closeCount, 1);
       });
 
@@ -734,11 +734,11 @@ void main() {
         ).thenAnswer((_) async => isKnown = true);
         final manager = await loaded();
         await manager.toggle('r5');
-        expect(manager.snapshot.statusOf('r5'), isA<UnknownHostKey>());
+        expect(manager.state.statusOf('r5'), isA<UnknownHostKey>());
 
         await manager.trustHostKey('r5', hostKey.fingerprint);
 
-        expect(manager.snapshot.statusOf('r5'), const Connected());
+        expect(manager.state.statusOf('r5'), const Connected());
       });
 
       test('says why the server would not open its port', () async {
@@ -754,7 +754,7 @@ void main() {
         await manager.toggle('r5');
 
         expect(
-          manager.snapshot.statusOf('r5'),
+          manager.state.statusOf('r5'),
           const Failed(message, failure: TunnelFailure.remotePortRefused),
         );
       });
@@ -766,7 +766,7 @@ void main() {
         await manager.toggle('r5');
 
         expect(
-          manager.snapshot.statusOf('r5'),
+          manager.state.statusOf('r5'),
           const Failed('A remote tunnel needs a port on the SSH host'),
         );
       });
@@ -775,8 +775,8 @@ void main() {
     test('says Connecting while ssh connects', () async {
       final manager = await connecting(Completer<SshTunnel>().future);
 
-      expect(manager.snapshot.statusOf('a1'), const Connecting());
-      expect(manager.snapshot.statusOf('a1').isOn, isTrue);
+      expect(manager.state.statusOf('a1'), const Connecting());
+      expect(manager.state.statusOf('a1').isOn, isTrue);
     });
 
     test('again closes an open tunnel', () async {
@@ -785,7 +785,7 @@ void main() {
 
       await manager.toggle('a1');
 
-      expect(manager.snapshot.statusOf('a1'), const Stopped());
+      expect(manager.state.statusOf('a1'), const Stopped());
       expect(tunnel.closeCount, 1);
     });
 
@@ -798,7 +798,7 @@ void main() {
       await manager.toggle('a1');
       await connecting;
 
-      expect(manager.snapshot.statusOf('a1'), const Stopped());
+      expect(manager.state.statusOf('a1'), const Stopped());
     });
 
     test('closes a tunnel that opens after it was aborted', () async {
@@ -809,7 +809,7 @@ void main() {
       opened.complete(tunnel);
       await pumpEventQueue();
 
-      expect(manager.snapshot.statusOf('a1'), const Stopped());
+      expect(manager.state.statusOf('a1'), const Stopped());
       expect(tunnel.closeCount, 1);
     });
 
@@ -823,7 +823,7 @@ void main() {
       first.completeError(const SshTunnelAbortedException());
       await pumpEventQueue();
 
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(manager.state.statusOf('a1'), const Connected());
     });
 
     for (final (error, message, failure) in [
@@ -904,11 +904,8 @@ void main() {
 
         await manager.toggle('a1');
 
-        expect(
-          manager.snapshot.statusOf('a1'),
-          Failed(message, failure: failure),
-        );
-        expect(manager.snapshot.statusOf('a1').isOn, isFalse);
+        expect(manager.state.statusOf('a1'), Failed(message, failure: failure));
+        expect(manager.state.statusOf('a1').isOn, isFalse);
       });
     }
 
@@ -919,7 +916,7 @@ void main() {
       await manager.toggle('c3');
 
       expect(
-        manager.snapshot.statusOf('c3'),
+        manager.state.statusOf('c3'),
         const Failed('A local tunnel needs a remote host and port'),
       );
     });
@@ -962,7 +959,7 @@ void main() {
 
         await manager.toggle('a1');
 
-        expect(manager.snapshot.statusOf('a1'), asking);
+        expect(manager.state.statusOf('a1'), asking);
         expect(store.on, isEmpty);
         verifyNever(trustAnyHostKey);
       });
@@ -973,7 +970,7 @@ void main() {
 
         await manager.restore();
 
-        expect(manager.snapshot.statusOf('a1'), asking);
+        expect(manager.state.statusOf('a1'), asking);
         expect(store.on, isEmpty);
         verify(openAnyTunnel).called(1);
       });
@@ -984,7 +981,7 @@ void main() {
 
         await manager.trustHostKey('a1', hostKey.fingerprint);
 
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
         expect(store.on, {'a1'});
         verify(
           () => client.trustHostKey(
@@ -1045,7 +1042,7 @@ void main() {
         unawaited(manager.trustHostKey('a1', hostKey.fingerprint));
         await pumpEventQueue();
 
-        expect(manager.snapshot.statusOf('a1'), const Connecting());
+        expect(manager.state.statusOf('a1'), const Connecting());
         trusted.complete();
       });
 
@@ -1056,8 +1053,8 @@ void main() {
 
         await manager.trustHostKey('a1', hostKey.fingerprint);
 
-        expect(manager.snapshot.statusOf('a1'), const Connected());
-        expect(manager.snapshot.statusOf('b2'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('b2'), const Connected());
         verify(trustAnyHostKey).called(1);
       });
 
@@ -1069,7 +1066,7 @@ void main() {
         await manager.trustHostKey('b2', hostKey.fingerprint);
         await manager.trustHostKey('missing', hostKey.fingerprint);
 
-        expect(manager.snapshot.statusOf('a1'), asking);
+        expect(manager.state.statusOf('a1'), asking);
         verifyNever(trustAnyHostKey);
       });
 
@@ -1088,14 +1085,14 @@ void main() {
         await manager.trustHostKey('a1', hostKey.fingerprint);
 
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           const UnknownHostKey(
             host: 'bastion',
             type: 'RSA',
             fingerprint: 'SHA256:other',
           ),
         );
-        expect(manager.snapshot.statusOf('b2'), asking);
+        expect(manager.state.statusOf('b2'), asking);
       });
 
       test('says why the key could not be added', () async {
@@ -1110,7 +1107,7 @@ void main() {
         await manager.trustHostKey('a1', hostKey.fingerprint);
 
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           const Failed('known_hosts is read-only'),
         );
         verify(openAnyTunnel).called(1);
@@ -1129,7 +1126,7 @@ void main() {
         await manager.toggle('a1');
         await trusting;
 
-        expect(manager.snapshot.statusOf('a1'), const Stopped());
+        expect(manager.state.statusOf('a1'), const Stopped());
         verify(openAnyTunnel).called(1);
       });
 
@@ -1143,8 +1140,8 @@ void main() {
 
         await manager.trustHostKey('a1', hostKey.fingerprint);
 
-        expect(manager.snapshot.statusOf('a1'), isA<Failed>());
-        expect(manager.snapshot.statusOf('b2'), const Connected());
+        expect(manager.state.statusOf('a1'), isA<Failed>());
+        expect(manager.state.statusOf('b2'), const Connected());
       });
 
       test('leaves a tunnel waiting on another key alone', () async {
@@ -1165,8 +1162,8 @@ void main() {
 
         await manager.trustHostKey('a1', hostKey.fingerprint);
 
-        expect(manager.snapshot.statusOf('a1'), const Connected());
-        expect(manager.snapshot.statusOf('b2'), isA<UnknownHostKey>());
+        expect(manager.state.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('b2'), isA<UnknownHostKey>());
         verify(openAnySocksProxy).called(1);
       });
 
@@ -1195,7 +1192,7 @@ void main() {
 
         await manager.save(database.copyWith(name: 'Staging database'));
 
-        expect(manager.snapshot.statusOf('a1'), asking);
+        expect(manager.state.statusOf('a1'), asking);
         verify(openAnyTunnel).called(1);
       });
 
@@ -1210,7 +1207,7 @@ void main() {
         trusted.complete();
         await trusting;
 
-        expect(manager.snapshot.statusOf('a1'), const Stopped());
+        expect(manager.state.statusOf('a1'), const Stopped());
         verify(openAnyTunnel).called(1);
       });
 
@@ -1220,7 +1217,7 @@ void main() {
 
         await manager.toggle('a1');
 
-        expect(manager.snapshot.statusOf('a1'), asking);
+        expect(manager.state.statusOf('a1'), asking);
         verify(openAnyTunnel).called(2);
       });
     });
@@ -1230,7 +1227,7 @@ void main() {
 
       await manager.toggle('missing');
 
-      expect(manager.snapshot.statuses, isEmpty);
+      expect(manager.state.statuses, isEmpty);
     });
 
     test('can reconnect after a failure', () async {
@@ -1240,14 +1237,14 @@ void main() {
       final manager = await loaded();
       await manager.toggle('a1');
       expect(
-        manager.snapshot.statusOf('a1'),
+        manager.state.statusOf('a1'),
         const Failed('Timed out', failure: TunnelFailure.unreachable),
       );
       when(openAnyTunnel).thenAnswer((_) async => tunnel);
 
       await manager.toggle('a1');
 
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(manager.state.statusOf('a1'), const Connected());
     });
   });
 
@@ -1257,7 +1254,7 @@ void main() {
 
     await manager.connectAll();
 
-    expect(manager.snapshot.connectedCount, 2);
+    expect(manager.state.connectedCount, 2);
     verify(openAnyTunnel).called(1);
   });
 
@@ -1267,8 +1264,8 @@ void main() {
 
     await manager.connectAll(group: 'Prod');
 
-    expect(manager.snapshot.statusOf('a1'), const Connected());
-    expect(manager.snapshot.statusOf('b2'), const Stopped());
+    expect(manager.state.statusOf('a1'), const Connected());
+    expect(manager.state.statusOf('b2'), const Stopped());
   });
 
   test('disconnectAll with a group stops only the tunnels in it', () async {
@@ -1278,8 +1275,8 @@ void main() {
 
     await manager.disconnectAll(group: 'Prod');
 
-    expect(manager.snapshot.statusOf('a1'), const Stopped());
-    expect(manager.snapshot.statusOf('b2'), const Connected());
+    expect(manager.state.statusOf('a1'), const Stopped());
+    expect(manager.state.statusOf('b2'), const Connected());
   });
 
   test('disconnectAll stops every tunnel that is on', () async {
@@ -1289,8 +1286,8 @@ void main() {
     await manager.disconnectAll();
 
     expect(tunnel.closeCount, 1);
-    expect(manager.snapshot.statusOf('a1'), const Stopped());
-    expect(manager.snapshot.statusOf('b2'), const Stopped());
+    expect(manager.state.statusOf('a1'), const Stopped());
+    expect(manager.state.statusOf('b2'), const Stopped());
   });
 
   group('a dropped tunnel', () {
@@ -1345,13 +1342,13 @@ void main() {
       dropped((manager, time) {
         drop(time, closed);
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           Reconnecting(closed.message, failure: TunnelFailure.dropped),
         );
 
         time.elapse(const Duration(seconds: 1));
         expect(opened, hasLength(2));
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
       });
     });
 
@@ -1367,7 +1364,7 @@ void main() {
         time.elapse(const Duration(seconds: 1));
 
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           const UnknownHostKey(
             host: 'bastion',
             type: 'RSA',
@@ -1394,7 +1391,7 @@ void main() {
         drop(time);
 
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           const Reconnecting('Disconnected', failure: TunnelFailure.dropped),
         );
       });
@@ -1407,7 +1404,7 @@ void main() {
 
         time.elapse(const Duration(seconds: 1));
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           Reconnecting(timedOut.message, failure: TunnelFailure.unreachable),
         );
         time.elapse(const Duration(seconds: 2, milliseconds: 3999));
@@ -1415,7 +1412,7 @@ void main() {
 
         time.elapse(const Duration(milliseconds: 1));
         expect(opened, hasLength(2));
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
       });
     });
 
@@ -1426,13 +1423,13 @@ void main() {
 
         time.elapse(const Duration(seconds: 1 + 2 + 4 + 8 + 15 + 30 + 60));
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           Reconnecting(timedOut.message, failure: TunnelFailure.unreachable),
         );
 
         time.elapse(const Duration(minutes: 2));
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           Failed(timedOut.message, failure: TunnelFailure.unreachable),
         );
         expect(failures, hasLength(2));
@@ -1449,14 +1446,14 @@ void main() {
         drop(time, closed);
         time.elapse(const Duration(minutes: 5));
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           Failed(timedOut.message, failure: TunnelFailure.unreachable),
         );
 
         unawaited(manager.toggle('a1'));
         time.flushMicrotasks();
 
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
         expect(opened, hasLength(2));
       });
     });
@@ -1469,7 +1466,7 @@ void main() {
 
         time.elapse(const Duration(hours: 8));
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           Reconnecting(closed.message, failure: TunnelFailure.dropped),
         );
         expect(failures, hasLength(1));
@@ -1479,7 +1476,7 @@ void main() {
         expect(failures, isEmpty);
 
         time.elapse(const Duration(seconds: 2));
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
         expect(opened, hasLength(2));
       });
     });
@@ -1494,7 +1491,7 @@ void main() {
         locked = false;
         time.elapse(const Duration(minutes: 5));
 
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
         expect(opened, hasLength(2));
       });
     });
@@ -1508,7 +1505,7 @@ void main() {
 
         time.elapse(const Duration(seconds: 1));
 
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
         expect(opened, hasLength(2));
       });
     });
@@ -1521,7 +1518,7 @@ void main() {
         unawaited(manager.toggle('a1'));
         time.elapse(const Duration(hours: 1));
 
-        expect(manager.snapshot.statusOf('a1'), const Stopped());
+        expect(manager.state.statusOf('a1'), const Stopped());
         expect(opened, hasLength(1));
       });
     });
@@ -1549,7 +1546,7 @@ void main() {
         time.elapse(const Duration(minutes: 5));
 
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           Failed(denied.message, failure: TunnelFailure.loginRefused),
         );
         expect(opened, hasLength(1));
@@ -1563,7 +1560,7 @@ void main() {
         time.elapse(const Duration(minutes: 5));
 
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           Failed(denied.message, failure: TunnelFailure.loginRefused),
         );
         expect(opened, hasLength(1));
@@ -1581,7 +1578,7 @@ void main() {
 
         time.elapse(const Duration(seconds: 1));
 
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
         expect(opened, hasLength(2));
         expect(calls, isEmpty);
       });
@@ -1616,7 +1613,7 @@ void main() {
         unawaited(manager.trustHostKey('a1', 'new'));
         time.flushMicrotasks();
 
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
         expect(calls, ['forward', 'forward', 'back', 'back']);
       });
     });
@@ -1628,7 +1625,7 @@ void main() {
         unawaited(manager.toggle('a1'));
         time.elapse(const Duration(minutes: 5));
 
-        expect(manager.snapshot.statusOf('a1'), const Stopped());
+        expect(manager.state.statusOf('a1'), const Stopped());
         expect(opened, hasLength(1));
       });
     });
@@ -1759,7 +1756,7 @@ void main() {
       check.completeError(const SocketException('Connection refused'));
       await pumpEventQueue();
 
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(manager.state.statusOf('a1'), const Connected());
     });
 
     test('checks again when the tunnel is turned off and on', () async {
@@ -1781,7 +1778,7 @@ void main() {
       await manager.restore();
       await pumpEventQueue();
 
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(manager.state.statusOf('a1'), const Connected());
       expect(checked, isEmpty);
     });
 
@@ -1819,7 +1816,7 @@ void main() {
       await pumpEventQueue();
 
       expect(
-        manager.snapshot.statusOf('a1'),
+        manager.state.statusOf('a1'),
         Failed(refused.line, failure: TunnelFailure.forwardRefused),
       );
       expect(tunnel.closeCount, 1);
@@ -1865,7 +1862,7 @@ void main() {
       await pumpEventQueue();
 
       expect(
-        manager.snapshot.statusOf('a1'),
+        manager.state.statusOf('a1'),
         Failed(prohibited.line, failure: TunnelFailure.forwardProhibited),
       );
     });
@@ -1913,7 +1910,7 @@ void main() {
             ..elapse(const Duration(minutes: 5));
 
           expect(
-            manager.snapshot.statusOf('a1'),
+            manager.state.statusOf('a1'),
             Failed(refused.line, failure: TunnelFailure.forwardRefused),
           );
           expect(tunnel.closeCount, 1);
@@ -1941,7 +1938,7 @@ void main() {
           time.flushMicrotasks();
 
           expect(
-            manager.snapshot.statusOf('a1'),
+            manager.state.statusOf('a1'),
             Failed(refused.line, failure: TunnelFailure.forwardRefused),
           );
           unawaited(manager.close());
@@ -1956,7 +1953,7 @@ void main() {
           time.flushMicrotasks();
 
           expect(
-            manager.snapshot.statusOf('a1'),
+            manager.state.statusOf('a1'),
             const Connected(warning: 'Connection refused'),
           );
         });
@@ -1973,7 +1970,7 @@ void main() {
 
           expect(opens, 2);
           expect(
-            manager.snapshot.statusOf('a1'),
+            manager.state.statusOf('a1'),
             Failed(refused.line, failure: TunnelFailure.forwardRefused),
           );
         });
@@ -1989,7 +1986,7 @@ void main() {
           time.flushMicrotasks();
 
           expect(
-            manager.snapshot.statusOf('a1'),
+            manager.state.statusOf('a1'),
             const Connected(warning: 'Connection refused'),
           );
         });
@@ -2001,7 +1998,7 @@ void main() {
           time.flushMicrotasks();
 
           expect(
-            manager.snapshot.statusOf('a1'),
+            manager.state.statusOf('a1'),
             const Connected(warning: 'Connection refused'),
           );
         }, restored: true);
@@ -2017,7 +2014,7 @@ void main() {
       await manager.toggle('a1');
       await pumpEventQueue();
 
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(manager.state.statusOf('a1'), const Connected());
     });
   });
 
@@ -2055,7 +2052,7 @@ void main() {
         time.flushMicrotasks();
 
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           const Connected(warning: 'Connection refused'),
         );
       });
@@ -2067,7 +2064,7 @@ void main() {
         time.flushMicrotasks();
 
         expect(
-          manager.snapshot.statusOf('b2'),
+          manager.state.statusOf('b2'),
           const Connected(warning: 'Connection refused'),
         );
       });
@@ -2083,7 +2080,7 @@ void main() {
         time.flushMicrotasks();
 
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           const Connected(warning: 'administratively prohibited'),
         );
       });
@@ -2099,17 +2096,17 @@ void main() {
         time
           ..flushMicrotasks()
           ..elapse(lifetime ~/ 2);
-        expect(manager.snapshot.statusOf('a1'), isNot(const Connected()));
+        expect(manager.state.statusOf('a1'), isNot(const Connected()));
 
         time.elapse(lifetime ~/ 2);
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
       });
     });
 
     test('is announced once while ssh repeats it', () {
       warned(database, (manager, time) {
         final changes = <TunnelsSnapshot>[];
-        manager.changes.listen(changes.add);
+        manager.stream.listen(changes.add);
 
         sshSays(refused);
         time.flushMicrotasks();
@@ -2125,7 +2122,7 @@ void main() {
         unawaited(manager.toggle('a1'));
         time.flushMicrotasks();
         final changes = <TunnelsSnapshot>[];
-        manager.changes.listen(changes.add);
+        manager.stream.listen(changes.add);
 
         sshSays(refused);
         time
@@ -2141,7 +2138,7 @@ void main() {
         sshSays(const SshProgress('debug1: channel 3: new direct-tcpip'));
         time.flushMicrotasks();
 
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
       });
     });
   });
@@ -2162,7 +2159,7 @@ void main() {
 
       await manager.toggle('a1');
 
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(manager.state.statusOf('a1'), const Connected());
       expect(store.saveCount, 1);
     });
 
@@ -2194,7 +2191,7 @@ void main() {
       await manager.save(database.copyWith(localPort: 15433));
 
       expect(store.saveCount, saves + 1);
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(manager.state.statusOf('a1'), const Connected());
     });
 
     test('a failed save is logged, and the tunnel stays on', () async {
@@ -2207,7 +2204,7 @@ void main() {
       await manager.toggle('a1');
       await pumpEventQueue();
 
-      expect(manager.snapshot.statusOf('a1'), const Connected());
+      expect(manager.state.statusOf('a1'), const Connected());
       expect(lines, contains(startsWith('W/Tunnels: Could not save which')));
     });
 
@@ -2225,7 +2222,7 @@ void main() {
 
       final manager = await loaded();
 
-      expect(manager.snapshot.statusOf('a1'), const Stopped());
+      expect(manager.state.statusOf('a1'), const Stopped());
       expect(store.on, {'a1'});
       expect(store.saveCount, 0);
     });
@@ -2242,7 +2239,7 @@ void main() {
         await manager.restore();
 
         verify(openAnyTunnel).called(1);
-        expect(manager.snapshot.statusOf('b2'), const Stopped());
+        expect(manager.state.statusOf('b2'), const Stopped());
       },
     );
 
@@ -2252,8 +2249,8 @@ void main() {
 
       await manager.restore();
 
-      expect(manager.snapshot.statusOf('a1'), const Stopped());
-      expect(manager.snapshot.statusOf('b2'), const Connected());
+      expect(manager.state.statusOf('a1'), const Stopped());
+      expect(manager.state.statusOf('b2'), const Connected());
     });
 
     test('a restored tunnel tries again when its first try fails', () {
@@ -2273,7 +2270,7 @@ void main() {
         time.flushMicrotasks();
 
         expect(
-          manager.snapshot.statusOf('a1'),
+          manager.state.statusOf('a1'),
           const Reconnecting(
             'ssh: Could not resolve hostname bastion',
             failure: TunnelFailure.hostNotFound,
@@ -2282,7 +2279,7 @@ void main() {
         expect(store.on, {'a1'});
 
         time.elapse(const Duration(seconds: 1));
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
 
         unawaited(manager.close());
         time.flushMicrotasks();
@@ -2314,7 +2311,7 @@ void main() {
         time.elapse(const Duration(seconds: 1));
 
         // A retry with the network down mustn't take focus each time.
-        expect(manager.snapshot.statusOf('a1'), const Connected());
+        expect(manager.state.statusOf('a1'), const Connected());
         expect(calls, ['forward', 'forward', 'back', 'back']);
 
         unawaited(manager.close());
@@ -2334,7 +2331,7 @@ void main() {
       await manager.restore();
 
       expect(
-        manager.snapshot.statusOf('a1'),
+        manager.state.statusOf('a1'),
         const Failed(
           'deploy@bastion: Permission denied (publickey).',
           failure: TunnelFailure.loginRefused,
@@ -2483,7 +2480,7 @@ void main() {
     opened.completeError(const SshTunnelAbortedException());
     await pumpEventQueue();
 
-    expect(manager.snapshot.statuses.containsKey('a1'), isFalse);
+    expect(manager.state.statuses.containsKey('a1'), isFalse);
   });
 
   test('remove closes the tunnel, forgets it and saves', () async {
@@ -2493,8 +2490,8 @@ void main() {
     await manager.remove('a1');
 
     expect(tunnel.closeCount, 1);
-    expect(manager.snapshot.tunnels, [proxy]);
-    expect(manager.snapshot.statuses.containsKey('a1'), isFalse);
+    expect(manager.state.tunnels, [proxy]);
+    expect(manager.state.statuses.containsKey('a1'), isFalse);
     expect(store.tunnels, [proxy]);
   });
 
@@ -2503,7 +2500,7 @@ void main() {
 
     await manager.arrange([(id: 'b2', group: 'Prod'), (id: 'a1', group: null)]);
 
-    expect(manager.snapshot.tunnels, [proxy.copyWith(group: 'Prod'), database]);
+    expect(manager.state.tunnels, [proxy.copyWith(group: 'Prod'), database]);
     expect(store.tunnels, [proxy.copyWith(group: 'Prod'), database]);
   });
 
@@ -2514,7 +2511,7 @@ void main() {
     await manager.arrange([(id: 'a1', group: 'Prod'), (id: 'b2', group: null)]);
 
     expect(tunnel.closeCount, 0);
-    expect(manager.snapshot.statusOf('a1'), const Connected());
+    expect(manager.state.statusOf('a1'), const Connected());
   });
 
   test('arrange saves nothing when nothing changes', () async {
@@ -2534,7 +2531,7 @@ void main() {
 
       await manager.editGroup('Prod', name: 'Prod', colour: TunnelColour.blue);
 
-      expect(manager.snapshot.groupColours, {'Prod': TunnelColour.blue});
+      expect(manager.state.groupColours, {'Prod': TunnelColour.blue});
       expect(store.groupColours, {'Prod': TunnelColour.blue});
     });
 
@@ -2544,7 +2541,7 @@ void main() {
 
       await manager.editGroup('Prod', name: 'Prod', colour: null);
 
-      expect(manager.snapshot.groupColours, isEmpty);
+      expect(manager.state.groupColours, isEmpty);
       expect(store.groupColours, isEmpty);
     });
 
@@ -2553,7 +2550,7 @@ void main() {
 
       final manager = await loaded();
 
-      expect(manager.snapshot.groupColours, {'Prod': TunnelColour.red});
+      expect(manager.state.groupColours, {'Prod': TunnelColour.red});
     });
 
     test('goes once the group has no tunnels left', () async {
@@ -2562,19 +2559,19 @@ void main() {
 
       await manager.remove('a1');
 
-      expect(manager.snapshot.groupColours, isEmpty);
+      expect(manager.state.groupColours, isEmpty);
       expect(store.groupColours, isEmpty);
     });
 
     test('changes with the name in one edit', () async {
       final manager = await loaded();
       final changes = <TunnelsSnapshot>[];
-      manager.changes.listen(changes.add);
+      manager.stream.listen(changes.add);
 
       await manager.editGroup('Prod', name: 'Live', colour: TunnelColour.green);
 
-      expect(manager.snapshot.tunnels.first.group, 'Live');
-      expect(manager.snapshot.groupColours, {'Live': TunnelColour.green});
+      expect(manager.state.tunnels.first.group, 'Live');
+      expect(manager.state.groupColours, {'Live': TunnelColour.green});
       expect(changes, hasLength(1));
     });
 
@@ -2588,8 +2585,8 @@ void main() {
         colour: TunnelColour.blue,
       );
 
-      expect(manager.snapshot.tunnels.first.group, 'prod');
-      expect(manager.snapshot.groupColours, {'prod': TunnelColour.blue});
+      expect(manager.state.tunnels.first.group, 'prod');
+      expect(manager.state.groupColours, {'prod': TunnelColour.blue});
       expect(store.groupColours, {'prod': TunnelColour.blue});
     });
 
@@ -2604,11 +2601,11 @@ void main() {
 
       await manager.editGroup('Prod', name: 'live', colour: TunnelColour.blue);
 
-      expect(manager.snapshot.tunnels.map((tunnel) => tunnel.group), [
+      expect(manager.state.tunnels.map((tunnel) => tunnel.group), [
         'Live',
         'Live',
       ]);
-      expect(manager.snapshot.groupColours, {'Live': TunnelColour.blue});
+      expect(manager.state.groupColours, {'Live': TunnelColour.blue});
     });
 
     test('of a group joined with none picked stays that group\'s', () async {
@@ -2621,7 +2618,7 @@ void main() {
 
       await manager.editGroup('Prod', name: 'live', colour: null);
 
-      expect(manager.snapshot.groupColours, {'Live': TunnelColour.red});
+      expect(manager.state.groupColours, {'Live': TunnelColour.red});
     });
 
     test('saves nothing when nothing changes', () async {
@@ -2638,8 +2635,8 @@ void main() {
 
       await manager.editGroup('Prod', name: '  ', colour: TunnelColour.blue);
 
-      expect(manager.snapshot.tunnels.first.group, 'Prod');
-      expect(manager.snapshot.groupColours, {'Prod': TunnelColour.blue});
+      expect(manager.state.tunnels.first.group, 'Prod');
+      expect(manager.state.groupColours, {'Prod': TunnelColour.blue});
     });
 
     test(
@@ -2655,7 +2652,7 @@ void main() {
 
         await manager.editGroup('Live', name: 'Prod', colour: null);
 
-        expect(manager.snapshot.groupColours, isEmpty);
+        expect(manager.state.groupColours, isEmpty);
       },
     );
 
@@ -2669,7 +2666,7 @@ void main() {
 
       await manager.save(proxy.copyWith(group: 'Prod'));
 
-      expect(manager.snapshot.groupColours, isEmpty);
+      expect(manager.state.groupColours, isEmpty);
     });
 
     test('is ignored for a group with no tunnels', () async {
@@ -2678,14 +2675,14 @@ void main() {
       await manager.editGroup('Live', name: 'Live', colour: TunnelColour.blue);
       await manager.save(proxy.copyWith(group: 'Live'));
 
-      expect(manager.snapshot.groupColours, isEmpty);
+      expect(manager.state.groupColours, isEmpty);
     });
   });
 
   test('arrange saves nothing and says nothing for an unknown id', () async {
     final manager = await loaded();
     final changes = <TunnelsSnapshot>[];
-    manager.changes.listen(changes.add);
+    manager.stream.listen(changes.add);
 
     await manager.arrange([(id: 'gone', group: 'Prod')]);
 
@@ -2701,7 +2698,7 @@ void main() {
       final manager = await loaded();
       await manager.toggle('a1');
       var listenerClosed = false;
-      manager.changes.listen(
+      manager.stream.listen(
         null,
         onDone: () async {
           await manager.close();
@@ -2726,7 +2723,7 @@ void main() {
     await manager.toggle('a1');
     final connecting = manager.toggle('b2');
     await pumpEventQueue();
-    final changesDone = manager.changes.drain<void>();
+    final changesDone = manager.stream.drain<void>();
 
     await manager.close();
     await manager.close();

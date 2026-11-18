@@ -53,7 +53,7 @@ void main() {
   test('a client gets the snapshot when it connects', () async {
     await serve();
 
-    expect(await (await listen()).next, manager.snapshot);
+    expect(await (await listen()).next, manager.state);
   });
 
   test('a command reaches the manager and every client sees it', () async {
@@ -348,12 +348,12 @@ void main() {
         ..writeln('{}')
         ..writeln('{"show": "settings"}')
         ..writeln('{"tunnels": [1], "statuses": {}}')
-        ..writeln(jsonEncode(manager.snapshot.toJson()))
+        ..writeln(jsonEncode(manager.state.toJson()))
         ..destroy(),
     );
     final agent = await connect();
 
-    expect(await agent.snapshots.toList(), [manager.snapshot]);
+    expect(await agent.snapshots.toList(), [manager.state]);
     expect(await agent.tunnelRequests.length, 0);
   });
 
@@ -379,12 +379,12 @@ void main() {
       addTearDown(server.close);
       server.listen((socket) {
         addTearDown(socket.destroy);
-        socket.writeln(jsonEncode(manager.snapshot.toJson()));
+        socket.writeln(jsonEncode(manager.state.toJson()));
       });
       final agent = await connect();
 
       expect(await agent.identity, '');
-      expect(await agent.snapshots.first, manager.snapshot);
+      expect(await agent.snapshots.first, manager.state);
     },
   );
 
@@ -404,7 +404,7 @@ void main() {
 
   test('a quit command closes the manager', () async {
     await serve();
-    final changes = manager.changes.toList();
+    final changes = manager.stream.toList();
 
     (await connect()).send(const AgentCommand.quit());
 
@@ -438,6 +438,6 @@ void main() {
 
     await serve();
 
-    expect(await (await listen()).next, manager.snapshot);
+    expect(await (await listen()).next, manager.state);
   });
 }
