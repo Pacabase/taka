@@ -8,7 +8,7 @@ Taka is a menu bar app for SSH tunnels (`ssh -L`) and SOCKS proxies (`ssh -D`), 
 
 - **It runs the system's own `ssh`.** Never add an SSH implementation. `~/.ssh/config`, `ProxyJump`, certificates and agents (1Password and others) must work exactly as in a terminal. That is also why Taka isn't sandboxed and isn't on the Mac App Store (#10).
 - **It stores no secrets.** The tunnels file holds names, hosts and ports only, so an export is safe to commit. Keys, passwords and passphrases stay with ssh and the user's agent.
-- **Idle Taka stays small.** The background agent holds about 20–30 MB, and the Flutter window (about 50 MB on macOS) runs only while it's open; the README's Memory section has the figures for each system. Tray and tunnel work belongs in the agent, never in the window.
+- **Idle Taka stays small.** Tray and tunnel work belongs in the agent, never in the window, which runs only while it's open.
 - **Saved tunnels survive upgrades.** The tunnels file is versioned (`tunnels_file.dart`). A new optional field that older builds ignore keeps the version. Any other change in shape needs a new version that still reads every old one.
 
 ## How it fits together
