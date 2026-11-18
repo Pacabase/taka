@@ -10,7 +10,8 @@ import 'package:image/image.dart';
 import '../../tool/dev_icon.dart';
 
 void main() {
-  final icon = devIcon(decodePng(File(sourcePath).readAsBytesSync())!);
+  final source = decodePng(File(sourcePath).readAsBytesSync())!;
+  final icon = devIcon(source);
 
   bool samePixels(String path, Image expected) => listEquals(
     decodePng(File(path).readAsBytesSync())!.getBytes(),
@@ -34,5 +35,10 @@ void main() {
         reason: name,
       ),
     );
+  });
+
+  test('the Linux icon comes from the current icon; '
+      'run fvm dart run tool/dev_icon.dart', () {
+    expect(samePixels(linuxIconPath, linuxIcon(source)), isTrue);
   });
 }
