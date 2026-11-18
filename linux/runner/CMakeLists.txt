@@ -18,7 +18,7 @@ apply_standard_settings(${BINARY_NAME})
 
 # Add preprocessor definitions for the application ID.
 add_definitions(-DAPPLICATION_ID="${APPLICATION_ID}")
-add_definitions(-DAPP_NAME="${APP_NAME}")
+add_definitions(-DWINDOW_NAME="${WINDOW_NAME}")
 
 # Add dependency libraries. Add any application-specific dependencies here.
 target_link_libraries(${BINARY_NAME} PRIVATE flutter)

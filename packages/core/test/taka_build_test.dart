@@ -169,6 +169,11 @@ void main() {
         settings('WINDOW_NAME'),
         byConfiguration('WINDOW_NAME', (build) => build.windowName),
       );
+      expect(settings('ASSETCATALOG_COMPILER_APPICON_NAME'), {
+        'ASSETCATALOG_COMPILER_APPICON_NAME': 'AppIcon',
+        'ASSETCATALOG_COMPILER_APPICON_NAME[config=Debug]': 'AppIcon-Dev',
+        'ASSETCATALOG_COMPILER_APPICON_NAME[config=Profile]': 'AppIcon-Dev',
+      });
     });
 
     test("the window's bundle name is WINDOW_NAME", () {
@@ -198,6 +203,14 @@ void main() {
       expect(
         script,
         contains(
+          r'cp "$app/Contents/Resources/$ASSETCATALOG_COMPILER_APPICON_NAME.icns" '
+          r'"$helper/Contents/Resources/AppIcon.icns"'
+          '\n',
+        ),
+      );
+      expect(
+        script,
+        contains(
           r'echo "$PRODUCT_BUNDLE_IDENTIFIER" > '
           r'"$helper/Contents/Resources/app_id"'
           '\n',
@@ -213,12 +226,15 @@ void main() {
       final dev = cmake.indexOf(
         'if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")\n'
         r'  set(APPLICATION_ID "${APPLICATION_ID}.dev")'
-        '\n  set(APP_NAME "${TakaBuild.development.name}")',
+        '\n  set(WINDOW_NAME "${TakaBuild.development.windowName}")',
       );
 
       expect(release, isNot(-1));
       expect(dev, greaterThan(release));
-      expect(cmake, contains('set(APP_NAME "${TakaBuild.release.name}")'));
+      expect(
+        cmake,
+        contains('set(WINDOW_NAME "${TakaBuild.release.windowName}")'),
+      );
       expect(TakaBuild.development.appId, '${TakaBuild.release.appId}.dev');
       expect(
         cmake,
@@ -226,7 +242,7 @@ void main() {
       );
       expect(
         read('linux/runner/CMakeLists.txt'),
-        contains(r'add_definitions(-DAPP_NAME="${APP_NAME}")'),
+        contains(r'add_definitions(-DWINDOW_NAME="${WINDOW_NAME}")'),
       );
     });
 

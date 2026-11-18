@@ -22,7 +22,8 @@ plutil -replace CFBundleName -string "$PRODUCT_NAME" "$helper/Contents/Info.plis
 plutil -replace CFBundleDisplayName -string "$PRODUCT_NAME" "$helper/Contents/Info.plist"
 cp "$bundle/bin/taka_agent" "$helper/Contents/MacOS/Taka"
 cp -R "$bundle/lib" "$helper/Contents/lib"
-cp "$agent"/assets/*.png "$app/Contents/Resources/AppIcon.icns" "$helper/Contents/Resources/"
+cp "$agent"/assets/*.png "$helper/Contents/Resources/"
+cp "$app/Contents/Resources/$ASSETCATALOG_COMPILER_APPICON_NAME.icns" "$helper/Contents/Resources/AppIcon.icns"
 echo "$PRODUCT_BUNDLE_IDENTIFIER" > "$helper/Contents/Resources/app_id"
 
 codesign --force --sign "${EXPANDED_CODE_SIGN_IDENTITY:--}" "$helper"/Contents/lib/*.dylib "$helper"

@@ -35,10 +35,10 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # Must match TakaBuild.
-set(APP_NAME "Taka")
+set(WINDOW_NAME "Taka Settings")
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
   set(APPLICATION_ID "${APPLICATION_ID}.dev")
-  set(APP_NAME "Taka Dev")
+  set(WINDOW_NAME "Taka Settings Dev")
 endif()
 
 # Compilation settings that should be applied to most targets.
