@@ -20,12 +20,12 @@ typedef HandBack = Future<void> Function();
 
 @freezed
 sealed class const Phase._() with _$Phase {
-  /// [attempt] settles once ssh opened, failed, or was closed for a stop.
-  const factory opening({Reconnecting? retrying, Future<void>? attempt}) =
-      Opening;
+  const factory opening() = Opening;
 
-  const factory up(
-    _Opened tunnel, {
+  /// Opening again after a drop, still showing why it dropped.
+  const factory redialing(Reconnecting reconnecting) = Redialing;
+
+  const factory up({
     @Default('') String warning,
     @Default(false) bool isVerifying,
   }) = Up;
@@ -41,10 +41,11 @@ sealed class const Phase._() with _$Phase {
 
   const factory gaveUp(Failed failed) = GaveUp;
 
-  const factory ended(TunnelStatus last, Future<void> closed) = Ended;
+  const factory ended(TunnelStatus last) = Ended;
 
   TunnelStatus get status => switch (this) {
-    Opening(:final retrying) => retrying ?? const Connecting(),
+    Opening() => const Connecting(),
+    Redialing(:final reconnecting) => reconnecting,
     Up(:final warning) => Connected(warning: warning),
     Waiting(:final reconnecting) => reconnecting,
     AwaitingTrust(:final key) => UnknownHostKey(
@@ -111,6 +112,11 @@ class TunnelSession({
   final _abort = Completer<void>();
   final _timers = <Type, Timer>{};
   final List<Future<HandBack?>> _cameForward = [];
+  // What the phases stand for, which aren't values the state can hold: the
+  // connect in flight, the open ssh, and ssh's close once it has stopped.
+  Future<void>? _attempt;
+  _Opened? _tunnel;
+  Future<void>? _closed;
 
   @override
   String toString() => 'TunnelSession';
@@ -126,7 +132,7 @@ class TunnelSession({
   }
 
   Future<void> stop() {
-    if (state.phase case Ended(:final closed)) return closed;
+    if (_closed case final closed?) return closed;
 
     final closed = Completer<void>();
     add(SessionEvent.stop(closed));
@@ -144,15 +150,15 @@ class TunnelSession({
     on<Connect>((event, emit) async {
       if (isStopped) return event.settled.complete();
 
-      final retrying = switch (state.phase) {
-        Waiting(:final reconnecting) => reconnecting,
-        _ => null,
-      };
       emit(
         state.copyWith(
-          phase: Opening(retrying: retrying, attempt: event.settled.future),
+          phase: switch (state.phase) {
+            Waiting(:final reconnecting) => Redialing(reconnecting),
+            _ => const Opening(),
+          },
         ),
       );
+      _attempt = event.settled.future;
       final _Opened opened;
       try {
         opened = await _open();
@@ -168,9 +174,10 @@ class TunnelSession({
           !isRestored &&
           !state.hasConnected &&
           checkDestination != null;
+      _tunnel = opened;
       emit(
         state.copyWith(
-          phase: Up(opened, isVerifying: checks),
+          phase: Up(isVerifying: checks),
           hasConnected: true,
           isWatched: false,
         ),
@@ -232,7 +239,7 @@ class TunnelSession({
     });
 
     on<Refused>((event, emit) {
-      if (state.phase case Up(:final tunnel)) {
+      if ((state.phase, _tunnel) case (Up(), final tunnel?)) {
         final SshForwardFailed(:line) = event.log;
         _log.w('${this.tunnel.title} failed: $line');
         _end(
@@ -271,13 +278,11 @@ class TunnelSession({
     });
 
     on<Stop>((event, emit) {
-      if (state.phase case Ended(:final closed)) {
-        return event.closed.complete(closed);
-      }
+      if (_closed case final closed?) return event.closed.complete(closed);
 
-      final closed = switch (state.phase) {
-        Up(:final tunnel) => _close(tunnel),
-        Opening(:final attempt?) => attempt,
+      final closed = switch ((state.phase, _tunnel, _attempt)) {
+        (Up(), final tunnel?, _) => _close(tunnel),
+        (Opening() || Redialing(), _, final attempt?) => attempt,
         _ => Future<void>.value(),
       };
       _end(state.status, closed, emit);
@@ -295,7 +300,14 @@ class TunnelSession({
       timer.cancel();
     }
     _timers.clear();
-    if (currentState.phase is Opening) _handBack();
+    switch (currentState.phase) {
+      case Opening() || Redialing():
+        _attempt = null;
+        _handBack();
+      case Up():
+        _tunnel = null;
+      case _:
+    }
   }
 
   // Caught once here, so every later stop returns without the error.
@@ -317,7 +329,8 @@ class TunnelSession({
     Future<void> closed,
     Emitter<SessionState> emit,
   ) {
-    emit(state.copyWith(phase: Ended(last, closed)));
+    _closed = closed;
+    emit(state.copyWith(phase: Ended(last)));
     if (!_abort.isCompleted) _abort.complete();
   }
 
@@ -425,7 +438,7 @@ class TunnelSession({
       _sshLog.d('${tunnel.title}: ${log.line}');
       switch ((log, state.phase)) {
         // A ProxyCommand such as a browser sign-in may take focus between them.
-        case (SshLoginStarted(), Opening()):
+        case (SshLoginStarted(), Opening() || Redialing()):
           _comeForward();
         case (final SshForwardFailed failed, Up(isVerifying: true)):
           add(SessionEvent.refused(failed));

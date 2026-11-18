@@ -56,11 +56,12 @@ extension PhasePatterns on Phase {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Opening value)?  opening,TResult Function( Up value)?  up,TResult Function( Waiting value)?  waiting,TResult Function( AwaitingTrust value)?  awaitingTrust,TResult Function( Trusting value)?  trusting,TResult Function( GaveUp value)?  gaveUp,TResult Function( Ended value)?  ended,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Opening value)?  opening,TResult Function( Redialing value)?  redialing,TResult Function( Up value)?  up,TResult Function( Waiting value)?  waiting,TResult Function( AwaitingTrust value)?  awaitingTrust,TResult Function( Trusting value)?  trusting,TResult Function( GaveUp value)?  gaveUp,TResult Function( Ended value)?  ended,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Opening() when opening != null:
-return opening(_that);case Up() when up != null:
+return opening(_that);case Redialing() when redialing != null:
+return redialing(_that);case Up() when up != null:
 return up(_that);case Waiting() when waiting != null:
 return waiting(_that);case AwaitingTrust() when awaitingTrust != null:
 return awaitingTrust(_that);case Trusting() when trusting != null:
@@ -84,11 +85,12 @@ return ended(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Opening value)  opening,required TResult Function( Up value)  up,required TResult Function( Waiting value)  waiting,required TResult Function( AwaitingTrust value)  awaitingTrust,required TResult Function( Trusting value)  trusting,required TResult Function( GaveUp value)  gaveUp,required TResult Function( Ended value)  ended,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Opening value)  opening,required TResult Function( Redialing value)  redialing,required TResult Function( Up value)  up,required TResult Function( Waiting value)  waiting,required TResult Function( AwaitingTrust value)  awaitingTrust,required TResult Function( Trusting value)  trusting,required TResult Function( GaveUp value)  gaveUp,required TResult Function( Ended value)  ended,}){
 final _that = this;
 switch (_that) {
 case Opening():
-return opening(_that);case Up():
+return opening(_that);case Redialing():
+return redialing(_that);case Up():
 return up(_that);case Waiting():
 return waiting(_that);case AwaitingTrust():
 return awaitingTrust(_that);case Trusting():
@@ -108,11 +110,12 @@ return ended(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Opening value)?  opening,TResult? Function( Up value)?  up,TResult? Function( Waiting value)?  waiting,TResult? Function( AwaitingTrust value)?  awaitingTrust,TResult? Function( Trusting value)?  trusting,TResult? Function( GaveUp value)?  gaveUp,TResult? Function( Ended value)?  ended,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Opening value)?  opening,TResult? Function( Redialing value)?  redialing,TResult? Function( Up value)?  up,TResult? Function( Waiting value)?  waiting,TResult? Function( AwaitingTrust value)?  awaitingTrust,TResult? Function( Trusting value)?  trusting,TResult? Function( GaveUp value)?  gaveUp,TResult? Function( Ended value)?  ended,}){
 final _that = this;
 switch (_that) {
 case Opening() when opening != null:
-return opening(_that);case Up() when up != null:
+return opening(_that);case Redialing() when redialing != null:
+return redialing(_that);case Up() when up != null:
 return up(_that);case Waiting() when waiting != null:
 return waiting(_that);case AwaitingTrust() when awaitingTrust != null:
 return awaitingTrust(_that);case Trusting() when trusting != null:
@@ -135,16 +138,17 @@ return ended(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Reconnecting? retrying,  Future<void>? attempt)?  opening,TResult Function( _Opened tunnel,  String warning,  bool isVerifying)?  up,TResult Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult Function( SshHostKey key)?  awaitingTrust,TResult Function()?  trusting,TResult Function( Failed failed)?  gaveUp,TResult Function( TunnelStatus last,  Future<void> closed)?  ended,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  opening,TResult Function( Reconnecting reconnecting)?  redialing,TResult Function( String warning,  bool isVerifying)?  up,TResult Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult Function( SshHostKey key)?  awaitingTrust,TResult Function()?  trusting,TResult Function( Failed failed)?  gaveUp,TResult Function( TunnelStatus last)?  ended,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Opening() when opening != null:
-return opening(_that.retrying,_that.attempt);case Up() when up != null:
-return up(_that.tunnel,_that.warning,_that.isVerifying);case Waiting() when waiting != null:
+return opening();case Redialing() when redialing != null:
+return redialing(_that.reconnecting);case Up() when up != null:
+return up(_that.warning,_that.isVerifying);case Waiting() when waiting != null:
 return waiting(_that.reconnecting,_that.forUnlock);case AwaitingTrust() when awaitingTrust != null:
 return awaitingTrust(_that.key);case Trusting() when trusting != null:
 return trusting();case GaveUp() when gaveUp != null:
 return gaveUp(_that.failed);case Ended() when ended != null:
-return ended(_that.last,_that.closed);case _:
+return ended(_that.last);case _:
   return orElse();
 
 }
@@ -162,16 +166,17 @@ return ended(_that.last,_that.closed);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Reconnecting? retrying,  Future<void>? attempt)  opening,required TResult Function( _Opened tunnel,  String warning,  bool isVerifying)  up,required TResult Function( Reconnecting reconnecting,  bool forUnlock)  waiting,required TResult Function( SshHostKey key)  awaitingTrust,required TResult Function()  trusting,required TResult Function( Failed failed)  gaveUp,required TResult Function( TunnelStatus last,  Future<void> closed)  ended,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  opening,required TResult Function( Reconnecting reconnecting)  redialing,required TResult Function( String warning,  bool isVerifying)  up,required TResult Function( Reconnecting reconnecting,  bool forUnlock)  waiting,required TResult Function( SshHostKey key)  awaitingTrust,required TResult Function()  trusting,required TResult Function( Failed failed)  gaveUp,required TResult Function( TunnelStatus last)  ended,}) {final _that = this;
 switch (_that) {
 case Opening():
-return opening(_that.retrying,_that.attempt);case Up():
-return up(_that.tunnel,_that.warning,_that.isVerifying);case Waiting():
+return opening();case Redialing():
+return redialing(_that.reconnecting);case Up():
+return up(_that.warning,_that.isVerifying);case Waiting():
 return waiting(_that.reconnecting,_that.forUnlock);case AwaitingTrust():
 return awaitingTrust(_that.key);case Trusting():
 return trusting();case GaveUp():
 return gaveUp(_that.failed);case Ended():
-return ended(_that.last,_that.closed);}
+return ended(_that.last);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -185,16 +190,17 @@ return ended(_that.last,_that.closed);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Reconnecting? retrying,  Future<void>? attempt)?  opening,TResult? Function( _Opened tunnel,  String warning,  bool isVerifying)?  up,TResult? Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult? Function( SshHostKey key)?  awaitingTrust,TResult? Function()?  trusting,TResult? Function( Failed failed)?  gaveUp,TResult? Function( TunnelStatus last,  Future<void> closed)?  ended,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  opening,TResult? Function( Reconnecting reconnecting)?  redialing,TResult? Function( String warning,  bool isVerifying)?  up,TResult? Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult? Function( SshHostKey key)?  awaitingTrust,TResult? Function()?  trusting,TResult? Function( Failed failed)?  gaveUp,TResult? Function( TunnelStatus last)?  ended,}) {final _that = this;
 switch (_that) {
 case Opening() when opening != null:
-return opening(_that.retrying,_that.attempt);case Up() when up != null:
-return up(_that.tunnel,_that.warning,_that.isVerifying);case Waiting() when waiting != null:
+return opening();case Redialing() when redialing != null:
+return redialing(_that.reconnecting);case Up() when up != null:
+return up(_that.warning,_that.isVerifying);case Waiting() when waiting != null:
 return waiting(_that.reconnecting,_that.forUnlock);case AwaitingTrust() when awaitingTrust != null:
 return awaitingTrust(_that.key);case Trusting() when trusting != null:
 return trusting();case GaveUp() when gaveUp != null:
 return gaveUp(_that.failed);case Ended() when ended != null:
-return ended(_that.last,_that.closed);case _:
+return ended(_that.last);case _:
   return null;
 
 }
@@ -206,45 +212,76 @@ return ended(_that.last,_that.closed);case _:
 
 
 class Opening extends Phase {
-  const Opening({this.retrying, this.attempt}): super._();
+  const Opening(): super._();
   
 
- final  Reconnecting? retrying;
- final  Future<void>? attempt;
 
-/// Create a copy of Phase
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$OpeningCopyWith<Opening> get copyWith => _$OpeningCopyWithImpl<Opening>(this, _$identity);
+
 
 
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Opening&&const DeepCollectionEquality().equals(other.retrying, retrying)&&(identical(other.attempt, attempt) || other.attempt == attempt));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Opening);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'Phase.opening()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class Redialing extends Phase {
+  const Redialing(this.reconnecting): super._();
+  
+
+ final  Reconnecting reconnecting;
+
+/// Create a copy of Phase
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$RedialingCopyWith<Redialing> get copyWith => _$RedialingCopyWithImpl<Redialing>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Redialing&&const DeepCollectionEquality().equals(other.reconnecting, reconnecting));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,const DeepCollectionEquality().hash(retrying),attempt);
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(reconnecting));
 }
 
 @override
 String toString() {
-    return 'Phase.opening(retrying: $retrying, attempt: $attempt)';
+    return 'Phase.redialing(reconnecting: $reconnecting)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class $OpeningCopyWith<$Res> implements $PhaseCopyWith<$Res> {
-  factory $OpeningCopyWith(Opening value, $Res Function(Opening) _then) = _$OpeningCopyWithImpl;
+abstract mixin class $RedialingCopyWith<$Res> implements $PhaseCopyWith<$Res> {
+  factory $RedialingCopyWith(Redialing value, $Res Function(Redialing) _then) = _$RedialingCopyWithImpl;
 @useResult
 $Res call({
- Reconnecting? retrying, Future<void>? attempt
+ Reconnecting reconnecting
 });
 
 
@@ -252,20 +289,19 @@ $Res call({
 
 }
 /// @nodoc
-class _$OpeningCopyWithImpl<$Res>
-    implements $OpeningCopyWith<$Res> {
-  _$OpeningCopyWithImpl(this._self, this._then);
+class _$RedialingCopyWithImpl<$Res>
+    implements $RedialingCopyWith<$Res> {
+  _$RedialingCopyWithImpl(this._self, this._then);
 
-  final Opening _self;
-  final $Res Function(Opening) _then;
+  final Redialing _self;
+  final $Res Function(Redialing) _then;
 
 /// Create a copy of Phase
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? retrying = freezed,Object? attempt = freezed,}) {
-  return _then(Opening(
-retrying: freezed == retrying ? _self.retrying : retrying // ignore: cast_nullable_to_non_nullable
-as Reconnecting?,attempt: freezed == attempt ? _self.attempt : attempt // ignore: cast_nullable_to_non_nullable
-as Future<void>?,
+@pragma('vm:prefer-inline') $Res call({Object? reconnecting = freezed,}) {
+  return _then(Redialing(
+freezed == reconnecting ? _self.reconnecting : reconnecting // ignore: cast_nullable_to_non_nullable
+as Reconnecting,
   ));
 }
 
@@ -276,10 +312,9 @@ as Future<void>?,
 
 
 class Up extends Phase {
-  const Up(this.tunnel, {this.warning = '', this.isVerifying = false}): super._();
+  const Up({this.warning = '', this.isVerifying = false}): super._();
   
 
- final  _Opened tunnel;
 @JsonKey() final  String warning;
 @JsonKey() final  bool isVerifying;
 
@@ -293,18 +328,18 @@ $UpCopyWith<Up> get copyWith => _$UpCopyWithImpl<Up>(this, _$identity);
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Up&&(identical(other.tunnel, tunnel) || other.tunnel == tunnel)&&(identical(other.warning, warning) || other.warning == warning)&&(identical(other.isVerifying, isVerifying) || other.isVerifying == isVerifying));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Up&&(identical(other.warning, warning) || other.warning == warning)&&(identical(other.isVerifying, isVerifying) || other.isVerifying == isVerifying));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,tunnel,warning,isVerifying);
+    return Object.hash(runtimeType,warning,isVerifying);
 }
 
 @override
 String toString() {
-    return 'Phase.up(tunnel: $tunnel, warning: $warning, isVerifying: $isVerifying)';
+    return 'Phase.up(warning: $warning, isVerifying: $isVerifying)';
 }
 
 
@@ -315,7 +350,7 @@ abstract mixin class $UpCopyWith<$Res> implements $PhaseCopyWith<$Res> {
   factory $UpCopyWith(Up value, $Res Function(Up) _then) = _$UpCopyWithImpl;
 @useResult
 $Res call({
- _Opened tunnel, String warning, bool isVerifying
+ String warning, bool isVerifying
 });
 
 
@@ -332,10 +367,9 @@ class _$UpCopyWithImpl<$Res>
 
 /// Create a copy of Phase
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? tunnel = null,Object? warning = null,Object? isVerifying = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? warning = null,Object? isVerifying = null,}) {
   return _then(Up(
-null == tunnel ? _self.tunnel : tunnel // ignore: cast_nullable_to_non_nullable
-as _Opened,warning: null == warning ? _self.warning : warning // ignore: cast_nullable_to_non_nullable
+warning: null == warning ? _self.warning : warning // ignore: cast_nullable_to_non_nullable
 as String,isVerifying: null == isVerifying ? _self.isVerifying : isVerifying // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
@@ -586,11 +620,10 @@ as Failed,
 
 
 class Ended extends Phase {
-  const Ended(this.last, this.closed): super._();
+  const Ended(this.last): super._();
   
 
  final  TunnelStatus last;
- final  Future<void> closed;
 
 /// Create a copy of Phase
 /// with the given fields replaced by the non-null parameter values.
@@ -602,18 +635,18 @@ $EndedCopyWith<Ended> get copyWith => _$EndedCopyWithImpl<Ended>(this, _$identit
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Ended&&(identical(other.last, last) || other.last == last)&&(identical(other.closed, closed) || other.closed == closed));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Ended&&(identical(other.last, last) || other.last == last));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,last,closed);
+    return Object.hash(runtimeType,last);
 }
 
 @override
 String toString() {
-    return 'Phase.ended(last: $last, closed: $closed)';
+    return 'Phase.ended(last: $last)';
 }
 
 
@@ -624,7 +657,7 @@ abstract mixin class $EndedCopyWith<$Res> implements $PhaseCopyWith<$Res> {
   factory $EndedCopyWith(Ended value, $Res Function(Ended) _then) = _$EndedCopyWithImpl;
 @useResult
 $Res call({
- TunnelStatus last, Future<void> closed
+ TunnelStatus last
 });
 
 
@@ -641,11 +674,10 @@ class _$EndedCopyWithImpl<$Res>
 
 /// Create a copy of Phase
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? last = null,Object? closed = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? last = null,}) {
   return _then(Ended(
 null == last ? _self.last : last // ignore: cast_nullable_to_non_nullable
-as TunnelStatus,null == closed ? _self.closed : closed // ignore: cast_nullable_to_non_nullable
-as Future<void>,
+as TunnelStatus,
   ));
 }
 

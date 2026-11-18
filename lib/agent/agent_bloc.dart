@@ -4,7 +4,6 @@ import 'package:bloc/bloc.dart';
 import 'package:core/core.dart';
 import 'package:fimber/fimber.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:taka/pages/settings/settings_bloc.dart';
 
 part 'agent_bloc.freezed.dart';
 part 'agent_event.dart';
@@ -25,12 +24,7 @@ class AgentBloc({required Future<AgentClient> Function() connect})
         final agent = await connect();
         if (isClosed) return unawaited(agent.close());
 
-        emit(
-          AgentConnected(
-            agent,
-            SettingsBloc(agent: agent)..add(const SettingsEvent.started()),
-          ),
-        );
+        emit(AgentConnected(agent));
       } catch (exception) {
         Fimber.e("Taka's background helper didn't start", ex: exception);
         emit(AgentFailed(exception));
@@ -40,10 +34,7 @@ class AgentBloc({required Future<AgentClient> Function() connect})
 
   @override
   Future<void> close() async {
-    if (state case AgentConnected(:final agent, :final settings)) {
-      await settings.close();
-      await agent.close();
-    }
+    if (state case AgentConnected(:final agent)) await agent.close();
     return super.close();
   }
 }

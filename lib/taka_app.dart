@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/agent/agent_bloc.dart';
 import 'package:taka/pages/about/about_page.dart';
 import 'package:taka/pages/agent_error_page.dart';
+import 'package:taka/pages/settings/settings_bloc.dart';
 import 'package:taka/pages/settings/settings_page.dart';
 import 'package:taka/theme/taka_theme.dart';
 
@@ -66,7 +67,17 @@ class _TakaAppState extends State<TakaApp> {
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: _unfocus,
-        child: child,
+        // Settings come from the agent once per connection, so their bloc is
+        // made with it, above the pages, and goes with it.
+        child: switch (link) {
+          AgentConnected(:final agent) => BlocProvider(
+            key: ObjectKey(agent),
+            create: (_) =>
+                SettingsBloc(agent: agent)..add(const SettingsEvent.started()),
+            child: child,
+          ),
+          _ => child,
+        },
       ),
     ),
     home: switch (link) {
@@ -81,11 +92,8 @@ class _TakaAppState extends State<TakaApp> {
       AgentConnected(:final agent) => widget.home(agent),
     },
     routes: {
-      if (link case AgentConnected(:final settings))
-        TakaApp.settingsRoute: (_) => BlocProvider.value(
-          value: settings,
-          child: SettingsPage(version: widget.version),
-        ),
+      if (link is AgentConnected)
+        TakaApp.settingsRoute: (_) => SettingsPage(version: widget.version),
     },
   );
 

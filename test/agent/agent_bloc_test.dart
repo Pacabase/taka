@@ -118,16 +118,13 @@ void main() {
     expect(agent.controller.isClosed, isTrue);
   });
 
-  test('closing it closes the helper link and its settings', () async {
-    final agent = FakeAgent();
-    final bloc = AgentBloc(connect: () async => agent)
+  test('closing it closes the helper link', () async {
+    final bloc = AgentBloc(connect: () async => helper)
       ..add(const AgentEvent.connect());
     await pumpEventQueue();
-    final AgentConnected(:settings) = bloc.state as AgentConnected;
 
     await bloc.close();
 
-    expect(agent.controller.isClosed, isTrue);
-    expect(settings.isClosed, isTrue);
+    expect(helper.controller.isClosed, isTrue);
   });
 }

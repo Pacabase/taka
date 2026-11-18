@@ -309,12 +309,12 @@ return connected(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  connecting,TResult Function( Object error)?  failed,TResult Function( AgentClient agent,  SettingsBloc settings)?  connected,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  connecting,TResult Function( Object error)?  failed,TResult Function( AgentClient agent)?  connected,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AgentConnecting() when connecting != null:
 return connecting();case AgentFailed() when failed != null:
 return failed(_that.error);case AgentConnected() when connected != null:
-return connected(_that.agent,_that.settings);case _:
+return connected(_that.agent);case _:
   return orElse();
 
 }
@@ -332,12 +332,12 @@ return connected(_that.agent,_that.settings);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  connecting,required TResult Function( Object error)  failed,required TResult Function( AgentClient agent,  SettingsBloc settings)  connected,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  connecting,required TResult Function( Object error)  failed,required TResult Function( AgentClient agent)  connected,}) {final _that = this;
 switch (_that) {
 case AgentConnecting():
 return connecting();case AgentFailed():
 return failed(_that.error);case AgentConnected():
-return connected(_that.agent,_that.settings);}
+return connected(_that.agent);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -351,12 +351,12 @@ return connected(_that.agent,_that.settings);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  connecting,TResult? Function( Object error)?  failed,TResult? Function( AgentClient agent,  SettingsBloc settings)?  connected,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  connecting,TResult? Function( Object error)?  failed,TResult? Function( AgentClient agent)?  connected,}) {final _that = this;
 switch (_that) {
 case AgentConnecting() when connecting != null:
 return connecting();case AgentFailed() when failed != null:
 return failed(_that.error);case AgentConnected() when connected != null:
-return connected(_that.agent,_that.settings);case _:
+return connected(_that.agent);case _:
   return null;
 
 }
@@ -467,11 +467,10 @@ null == error ? _self.error : error ,
 
 
 class AgentConnected implements AgentState {
-  const AgentConnected(this.agent, this.settings);
+  const AgentConnected(this.agent);
   
 
  final  AgentClient agent;
- final  SettingsBloc settings;
 
 /// Create a copy of AgentState
 /// with the given fields replaced by the non-null parameter values.
@@ -483,18 +482,18 @@ $AgentConnectedCopyWith<AgentConnected> get copyWith => _$AgentConnectedCopyWith
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is AgentConnected&&(identical(other.agent, agent) || other.agent == agent)&&(identical(other.settings, settings) || other.settings == settings));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is AgentConnected&&(identical(other.agent, agent) || other.agent == agent));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,agent,settings);
+    return Object.hash(runtimeType,agent);
 }
 
 @override
 String toString() {
-    return 'AgentState.connected(agent: $agent, settings: $settings)';
+    return 'AgentState.connected(agent: $agent)';
 }
 
 
@@ -505,7 +504,7 @@ abstract mixin class $AgentConnectedCopyWith<$Res> implements $AgentStateCopyWit
   factory $AgentConnectedCopyWith(AgentConnected value, $Res Function(AgentConnected) _then) = _$AgentConnectedCopyWithImpl;
 @useResult
 $Res call({
- AgentClient agent, SettingsBloc settings
+ AgentClient agent
 });
 
 
@@ -522,11 +521,10 @@ class _$AgentConnectedCopyWithImpl<$Res>
 
 /// Create a copy of AgentState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? agent = null,Object? settings = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? agent = null,}) {
   return _then(AgentConnected(
 null == agent ? _self.agent : agent // ignore: cast_nullable_to_non_nullable
-as AgentClient,null == settings ? _self.settings : settings // ignore: cast_nullable_to_non_nullable
-as SettingsBloc,
+as AgentClient,
   ));
 }
 
