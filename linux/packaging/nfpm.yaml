@@ -22,7 +22,7 @@ contents:
     type: symlink
   - src: linux/packaging/com.pacabase.taka.desktop
     dst: /usr/share/applications/com.pacabase.taka.desktop
-  - src: assets/icon/icon.png
+  - src: assets/icon/icon-linux.png
     dst: /usr/share/pixmaps/com.pacabase.taka.png
 
 # The window needs GTK 3, and the helper's tray library also needs libX11 and
