@@ -161,9 +161,8 @@ TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
 
 List<TrayEntry> _tunnelActions(Tunnel tunnel, TunnelStatus status) {
   final whyDown = [
-    if (status case final Failed failure)
+    if (status case Failed(:final failure) || Reconnecting(:final failure))
       InfoEntry(failureSentence(tunnel, failure)),
-    if (status case Reconnecting(:final reason)) InfoEntry(plainReason(reason)),
     if (status is Failed)
       TunnelActionEntry(tunnel, TunnelAction.tryAgain, 'Try Again'),
     if (status case UnknownHostKey(:final host))

@@ -27,9 +27,7 @@ class _TakaAppState extends State<TakaApp> {
   static const _menu = MethodChannel('taka/menu');
 
   final _navigator = GlobalKey<NavigatorState>();
-  AgentClient? _agent;
-  SettingsBloc? _settings;
-  Object? _error;
+  _AgentLink _link = const _Connecting();
 
   @override
   void initState() {
@@ -48,23 +46,24 @@ class _TakaAppState extends State<TakaApp> {
   @override
   void dispose() {
     _menu.setMethodCallHandler(null);
-    unawaited(_settings?.close());
+    if (_link case _Connected(:final settings)) unawaited(settings.close());
     super.dispose();
   }
 
   Future<void> _connect() async {
-    setState(() => _error = null);
+    setState(() => _link = const _Connecting());
     try {
       final agent = await widget.connect();
       if (!mounted) return;
-      setState(() {
-        _agent = agent;
-        _settings = SettingsBloc(agent: agent)
-          ..add(const SettingsEvent.started());
-      });
+      setState(
+        () => _link = _Connected(
+          agent,
+          SettingsBloc(agent: agent)..add(const SettingsEvent.started()),
+        ),
+      );
     } catch (exception) {
       Fimber.e("Taka's background helper didn't start", ex: exception);
-      if (mounted) setState(() => _error = exception);
+      if (mounted) setState(() => _link = _Failed(exception));
     }
   }
 
@@ -83,20 +82,23 @@ class _TakaAppState extends State<TakaApp> {
         child: child,
       ),
     ),
-    home: switch ((_agent, _error)) {
-      (final agent?, _) => widget.home(agent),
-      (_, final error?) => AgentErrorPage(
+    home: switch (_link) {
+      _Connecting() => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      _Failed(:final error) => AgentErrorPage(
         error: error,
         version: widget.version,
         onTryAgain: _connect,
       ),
-      _ => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      _Connected(:final agent) => widget.home(agent),
     },
     routes: {
-      TakaApp.settingsRoute: (_) => BlocProvider.value(
-        value: _settings!,
-        child: SettingsPage(version: widget.version),
-      ),
+      if (_link case _Connected(:final settings))
+        TakaApp.settingsRoute: (_) => BlocProvider.value(
+          value: settings,
+          child: SettingsPage(version: widget.version),
+        ),
     },
   );
 
@@ -109,7 +111,7 @@ class _TakaAppState extends State<TakaApp> {
   }
 
   void _showSettings() {
-    if (_settings == null) return;
+    if (_link is! _Connected) return;
 
     final navigator = _navigator.currentState!;
     var isShown = false;
@@ -128,3 +130,12 @@ class _TakaAppState extends State<TakaApp> {
       ),
     );
 }
+
+sealed class const _AgentLink() {}
+
+class const _Connecting() extends _AgentLink {}
+
+class const _Failed(final Object error) extends _AgentLink {}
+
+class const _Connected(final AgentClient agent, final SettingsBloc settings)
+    extends _AgentLink {}

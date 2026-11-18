@@ -14,11 +14,6 @@ typedef _Opened = ({Future<void> done, Future<void> Function() close});
 /// Hands focus back to the app that had it before Taka came forward.
 typedef HandBack = Future<void> Function();
 
-// A ProxyCommand such as a browser sign-in may take focus between these lines.
-final _newLogin = RegExp(
-  '^debug1: (Connecting to |Executing proxy command|Authenticating to )',
-);
-
 class TunnelSession({
   required final Tunnel tunnel,
   required final SshClient client,
@@ -54,11 +49,11 @@ class TunnelSession({
   }
 
   Future<void> connect() async {
-    final reason = switch (_phase) {
-      _Waiting(:final reason) => reason,
+    final retrying = switch (_phase) {
+      _Waiting(:final status) => status,
       _ => null,
     };
-    _enter(_Opening(tunnel.title, reason: reason), quietly: true);
+    _enter(_Opening(tunnel.title, retrying: retrying), quietly: true);
     final _Opened opened;
     try {
       opened = await _open();
@@ -155,11 +150,11 @@ class TunnelSession({
     void onLog(SshLog log) {
       _sshLog.d('${tunnel.title}: ${log.line}');
       switch ((log, _phase)) {
-        case (SshProgress(:final line), final _Opening opening)
-            when _newLogin.hasMatch(line):
+        // A ProxyCommand such as a browser sign-in may take focus between them.
+        case (SshLoginStarted(), final _Opening opening):
           _comeForward(opening);
-        case (SshForwardFailed(:final line), final _Up up) when up.isVerifying:
-          _refuse(line);
+        case (final SshForwardFailed failed, final _Up up) when up.isVerifying:
+          _refuse(failed);
         case (SshForwardFailed(:final reason), final _Up up):
           _warn(up, reason);
         case _:
@@ -223,15 +218,18 @@ class TunnelSession({
       return _enter(_AwaitingTrust(hostKey));
     }
     final message = exception == null ? 'Disconnected' : _messageOf(exception);
+    final failure = _failureOf(exception);
     final isPermanent = switch (exception) {
-      SshException(:final isPermanent) => isPermanent,
-      null => false,
+      SshPermanentException() => true,
+      SshException() || null => false,
       _ => true,
     };
-    if (!(isRestored || _hasConnected) || isPermanent) return _fail(message);
+    if (!(isRestored || _hasConnected) || isPermanent) {
+      return _fail(message, failure);
+    }
     if (_attempts == retryDelays.length) {
       _log.w('${tunnel.title}: giving up after $_attempts tries');
-      return _fail(message);
+      return _fail(message, failure);
     }
 
     final delay = retryDelays[_attempts++];
@@ -239,7 +237,12 @@ class TunnelSession({
     _log.w(
       '${tunnel.title} dropped: $message; reconnecting in ${delay.inSeconds}s',
     );
-    _enter(_Waiting(message, Timer(delay, () => unawaited(_reconnect()))));
+    _enter(
+      _Waiting(
+        Reconnecting(message, failure: failure),
+        Timer(delay, () => unawaited(_reconnect())),
+      ),
+    );
   }
 
   // A login prompt, such as a browser sign-in, needs someone at the screen.
@@ -253,7 +256,7 @@ class TunnelSession({
       }
       _enter(
         _Waiting(
-          waiting.reason,
+          waiting.status,
           Timer(lockedRecheck, () => unawaited(_reconnect())),
           forUnlock: true,
         ),
@@ -277,15 +280,39 @@ class TunnelSession({
     _ => '$exception',
   };
 
-  void _fail(String message, {bool isForward = false}) {
+  TunnelFailure _failureOf(Object? exception) => switch (exception) {
+    null || SshDroppedException() => TunnelFailure.dropped,
+    SshNotFoundException() => TunnelFailure.sshNotFound,
+    SshConfigException() => TunnelFailure.config,
+    SshPortInUseException() => TunnelFailure.portInUse,
+    SshDuplicateForwardException() => TunnelFailure.duplicateForward,
+    SshAddressUnavailableException() => TunnelFailure.addressUnavailable,
+    SshHostNotFoundException() => TunnelFailure.hostNotFound,
+    SshUnreachableException() => TunnelFailure.unreachable,
+    SshLoginRefusedException() => TunnelFailure.loginRefused,
+    SshHostKeyRefusedException() ||
+    SshHostKeyChangedException() ||
+    SshUnknownHostKeyException() => TunnelFailure.hostKey,
+    SshRemotePortRefusedException() => TunnelFailure.remotePortRefused,
+    _ => TunnelFailure.other,
+  };
+
+  void _fail(String message, TunnelFailure failure) {
     _log.w('${tunnel.title} failed: $message');
-    _enter(_Failed(Failed(message, isForward: isForward)));
+    _enter(_Failed(Failed(message, failure: failure)));
   }
 
-  void _refuse(String line) {
-    _log.w('${tunnel.title} failed: $line');
+  void _refuse(SshForwardFailed failed) {
+    _log.w('${tunnel.title} failed: ${failed.line}');
     unawaited(
-      _stop(Failed(line, isForward: true)).catchError(
+      _stop(
+        Failed(
+          failed.line,
+          failure: failed is SshForwardProhibited
+              ? TunnelFailure.forwardProhibited
+              : TunnelFailure.forwardRefused,
+        ),
+      ).catchError(
         (Object exception) =>
             _log.w('${tunnel.title}: could not close ssh ($exception)'),
       ),
@@ -313,14 +340,12 @@ sealed class _Phase {
   void dispose() {}
 }
 
-class _Opening(final String title, {final String? reason}) extends _Phase {
+class _Opening(final String title, {final Reconnecting? retrying})
+    extends _Phase {
   final List<Future<HandBack?>> cameForward = [];
 
   @override
-  TunnelStatus get status => switch (reason) {
-    final reason? => Reconnecting(reason),
-    null => const Connecting(),
-  };
+  TunnelStatus get status => retrying ?? const Connecting();
 
   @override
   void dispose() {
@@ -356,13 +381,10 @@ class _Up(
 }
 
 class _Waiting(
-  final String reason,
+  @override final Reconnecting status,
   final Timer retry, {
   final bool forUnlock = false,
 }) extends _Phase {
-  @override
-  TunnelStatus get status => Reconnecting(reason);
-
   @override
   void dispose() => retry.cancel();
 }

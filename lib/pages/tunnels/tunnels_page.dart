@@ -26,10 +26,7 @@ class const TunnelsPage({
 }
 
 class _TunnelsPageState extends State<TunnelsPage> {
-  var _isFormOpen = false;
-  Tunnel? _editing;
-  ({String group, TunnelColour? colour})? _editingGroup;
-  var _newKind = TunnelKind.local;
+  _Screen _screen = const _ListScreen();
   var _hosts = const <String>[];
   late final StreamSubscription<OpenTunnel> _tunnelRequests;
 
@@ -66,7 +63,7 @@ class _TunnelsPageState extends State<TunnelsPage> {
     _openForm(tunnel);
   }
 
-  bool get _isOpen => _isFormOpen || _editingGroup != null;
+  bool get _isOpen => _screen is! _ListScreen;
 
   @override
   Widget build(BuildContext context) {
@@ -80,8 +77,8 @@ class _TunnelsPageState extends State<TunnelsPage> {
         ),
         // A group whose tunnels went, from the tray say, has nothing to edit.
         BlocListener<TunnelsBloc, TunnelsState>(
-          listenWhen: (_, state) => switch ((_editingGroup, state)) {
-            ((:final group, colour: _), Ready(:final snapshot)) =>
+          listenWhen: (_, state) => switch ((_screen, state)) {
+            (_EditGroupScreen(:final group), Ready(:final snapshot)) =>
               !snapshot.tunnels.groups.contains(group),
             _ => false,
           },
@@ -92,11 +89,11 @@ class _TunnelsPageState extends State<TunnelsPage> {
         body: Column(
           children: [
             TunnelsHeader(
-              title: switch ((_editingGroup, _isFormOpen, _editing)) {
-                (_?, _, _) => 'Edit group',
-                (null, false, _) => 'Tunnels',
-                (null, true, null) => 'New tunnel',
-                (null, true, _?) => 'Edit tunnel',
+              title: switch (_screen) {
+                _ListScreen() => 'Tunnels',
+                _NewTunnelScreen() => 'New tunnel',
+                _EditTunnelScreen() => 'Edit tunnel',
+                _EditGroupScreen() => 'Edit group',
               },
               isFormOpen: _isOpen,
               onPressed: _isOpen ? _closeForm : _openForm,
@@ -116,8 +113,24 @@ class _TunnelsPageState extends State<TunnelsPage> {
                     child: child,
                   ),
                 ),
-                child: switch (_editingGroup) {
-                  (:final group, :final colour) => GroupForm(
+                child: switch (_screen) {
+                  _ListScreen() => _TunnelList(
+                    key: const ValueKey('list'),
+                    onEdit: _openForm,
+                    onEditGroup: (group, colour) => setState(
+                      () => _screen = _EditGroupScreen(group, colour),
+                    ),
+                    onAdd: (kind) => _openForm(null, kind),
+                  ),
+                  _NewTunnelScreen(:final kind) => _tunnelForm(
+                    key: ValueKey('new ${kind.name}'),
+                    kind: kind,
+                  ),
+                  _EditTunnelScreen(:final tunnel) => _tunnelForm(
+                    key: ValueKey(tunnel.id),
+                    initial: tunnel,
+                  ),
+                  _EditGroupScreen(:final group, :final colour) => GroupForm(
                     key: ValueKey('group $group'),
                     group: group,
                     colour: colour,
@@ -135,39 +148,6 @@ class _TunnelsPageState extends State<TunnelsPage> {
                     },
                     onCancel: _closeForm,
                   ),
-                  null when _isFormOpen => TunnelForm(
-                    key: ValueKey(_editing?.id ?? 'new ${_newKind.name}'),
-                    initial: _editing,
-                    kind: _newKind,
-                    hosts: _hosts,
-                    groups: context.select(
-                      (TunnelsBloc bloc) => switch (bloc.state) {
-                        Ready(:final snapshot) => snapshot.tunnels.groups,
-                        _ => const <String>[],
-                      },
-                    ),
-                    groupColours: context.select(
-                      (TunnelsBloc bloc) => switch (bloc.state) {
-                        Ready(:final snapshot) => snapshot.groupColours,
-                        _ => const <String, TunnelColour>{},
-                      },
-                    ),
-                    onSave: (tunnel) {
-                      context.read<TunnelsBloc>().add(
-                        TunnelsEvent.send(AgentCommand.save(tunnel)),
-                      );
-                      _closeForm();
-                    },
-                    onCancel: _closeForm,
-                  ),
-                  null => _TunnelList(
-                    key: const ValueKey('list'),
-                    onEdit: _openForm,
-                    onEditGroup: (group, colour) => setState(
-                      () => _editingGroup = (group: group, colour: colour),
-                    ),
-                    onAdd: (kind) => _openForm(null, kind),
-                  ),
                 },
               ),
             ),
@@ -177,14 +157,44 @@ class _TunnelsPageState extends State<TunnelsPage> {
     );
   }
 
+  Widget _tunnelForm({
+    required Key key,
+    Tunnel? initial,
+    TunnelKind kind = TunnelKind.local,
+  }) => TunnelForm(
+    key: key,
+    initial: initial,
+    kind: kind,
+    hosts: _hosts,
+    groups: context.select(
+      (TunnelsBloc bloc) => switch (bloc.state) {
+        Ready(:final snapshot) => snapshot.tunnels.groups,
+        _ => const <String>[],
+      },
+    ),
+    groupColours: context.select(
+      (TunnelsBloc bloc) => switch (bloc.state) {
+        Ready(:final snapshot) => snapshot.groupColours,
+        _ => const <String, TunnelColour>{},
+      },
+    ),
+    onSave: (tunnel) {
+      context.read<TunnelsBloc>().add(
+        TunnelsEvent.send(AgentCommand.save(tunnel)),
+      );
+      _closeForm();
+    },
+    onCancel: _closeForm,
+  );
+
   // Read on every open, so edits to ~/.ssh/config show up.
   void _openForm([Tunnel? tunnel, TunnelKind kind = TunnelKind.local]) {
-    setState(() {
-      _isFormOpen = true;
-      _editingGroup = null;
-      _editing = tunnel;
-      _newKind = kind;
-    });
+    setState(
+      () => _screen = switch (tunnel) {
+        final tunnel? => _EditTunnelScreen(tunnel),
+        null => _NewTunnelScreen(kind),
+      },
+    );
     unawaited(
       configuredSshHosts().then((hosts) {
         if (mounted) setState(() => _hosts = hosts);
@@ -192,11 +202,19 @@ class _TunnelsPageState extends State<TunnelsPage> {
     );
   }
 
-  void _closeForm() => setState(() {
-    _isFormOpen = false;
-    _editingGroup = null;
-  });
+  void _closeForm() => setState(() => _screen = const _ListScreen());
 }
+
+sealed class const _Screen();
+
+class const _ListScreen() extends _Screen;
+
+class const _NewTunnelScreen(final TunnelKind kind) extends _Screen;
+
+class const _EditTunnelScreen(final Tunnel tunnel) extends _Screen;
+
+class const _EditGroupScreen(final String group, final TunnelColour? colour)
+    extends _Screen;
 
 class const _TunnelList({
   super.key,
