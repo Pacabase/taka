@@ -24,9 +24,10 @@ class FakeAgent implements AgentClient {
   void send(AgentCommand command) => sent.add(command);
 
   @override
-  Future<void> close() {
+  // Like the socket's, it doesn't wait for listeners that never came.
+  Future<void> close() async {
     unawaited(settingsController.close());
     unawaited(tunnelRequestsController.close());
-    return controller.close();
+    unawaited(controller.close());
   }
 }

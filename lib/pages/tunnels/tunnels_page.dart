@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
+import 'package:taka/pages/tunnels/tunnels_screen_cubit.dart';
 import 'package:taka/pages/tunnels/widgets/group_form.dart';
 import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_form.dart';
@@ -20,53 +21,26 @@ import 'package:taka/widgets/fill_or_scroll.dart';
 class const TunnelsPage({
   super.key,
   final Stream<OpenTunnel> tunnelRequests = const Stream.empty(),
-}) extends StatefulWidget {
+}) extends StatelessWidget {
   @override
-  State<TunnelsPage> createState() => _TunnelsPageState();
+  Widget build(BuildContext context) => BlocProvider(
+    create: (context) => TunnelsScreenCubit(
+      tunnels: context.read<TunnelsBloc>(),
+      tunnelRequests: tunnelRequests,
+    ),
+    child: const _TunnelsView(),
+  );
 }
 
-class _TunnelsPageState extends State<TunnelsPage> {
-  _Screen _screen = const _ListScreen();
-  var _hosts = const <String>[];
-  late final StreamSubscription<OpenTunnel> _tunnelRequests;
-
-  @override
-  void initState() {
-    super.initState();
-    _tunnelRequests = widget.tunnelRequests.listen(
-      (request) => unawaited(_openRequested(request)),
-    );
-  }
-
-  @override
-  void dispose() {
-    unawaited(_tunnelRequests.cancel());
-    super.dispose();
-  }
-
-  Future<void> _openRequested(OpenTunnel request) async {
-    final bloc = context.read<TunnelsBloc>();
-    // A window opened from the tray gets the request before its first snapshot.
-    final state = bloc.state is Loading
-        ? await bloc.stream.firstWhere(
-            (state) => state is! Loading,
-            orElse: () => const Loading(),
-          )
-        : bloc.state;
-    if (!mounted || state is! Ready) return;
-    final tunnel = state.snapshot.tunnels
-        .where((tunnel) => tunnel.id == request.id)
-        .firstOrNull;
-    if (request.id != null && tunnel == null) return;
-
-    Navigator.popUntil(context, (route) => route.isFirst);
-    _openForm(tunnel);
-  }
-
-  bool get _isOpen => _screen is! _ListScreen;
-
+class const _TunnelsView() extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final screens = context.read<TunnelsScreenCubit>();
+    final TunnelsScreenState(:screen, :hosts) = context
+        .watch<TunnelsScreenCubit>()
+        .state;
+    final isOpen = screen is! ListScreen;
+
     return MultiBlocListener(
       listeners: [
         BlocListener<TunnelsBloc, TunnelsState>(
@@ -75,28 +49,24 @@ class _TunnelsPageState extends State<TunnelsPage> {
             ServicesBinding.instance.exitApplication(AppExitType.required),
           ),
         ),
-        // A group whose tunnels went, from the tray say, has nothing to edit.
-        BlocListener<TunnelsBloc, TunnelsState>(
-          listenWhen: (_, state) => switch ((_screen, state)) {
-            (_EditGroupScreen(:final group), Ready(:final snapshot)) =>
-              !snapshot.tunnels.groups.contains(group),
-            _ => false,
-          },
-          listener: (_, _) => _closeForm(),
+        BlocListener<TunnelsScreenCubit, TunnelsScreenState>(
+          listenWhen: (previous, state) => previous.requests != state.requests,
+          listener: (context, _) =>
+              Navigator.popUntil(context, (route) => route.isFirst),
         ),
       ],
       child: Scaffold(
         body: Column(
           children: [
             TunnelsHeader(
-              title: switch (_screen) {
-                _ListScreen() => 'Tunnels',
-                _NewTunnelScreen() => 'New tunnel',
-                _EditTunnelScreen() => 'Edit tunnel',
-                _EditGroupScreen() => 'Edit group',
+              title: switch (screen) {
+                ListScreen() => 'Tunnels',
+                NewTunnelScreen() => 'New tunnel',
+                EditTunnelScreen() => 'Edit tunnel',
+                EditGroupScreen() => 'Edit group',
               },
-              isFormOpen: _isOpen,
-              onPressed: _isOpen ? _closeForm : _openForm,
+              isFormOpen: isOpen,
+              onPressed: isOpen ? screens.closeForm : screens.openTunnel,
               onSettings: () =>
                   Navigator.pushNamed(context, TakaApp.settingsRoute),
             ),
@@ -113,24 +83,24 @@ class _TunnelsPageState extends State<TunnelsPage> {
                     child: child,
                   ),
                 ),
-                child: switch (_screen) {
-                  _ListScreen() => _TunnelList(
+                child: switch (screen) {
+                  ListScreen() => _TunnelList(
                     key: const ValueKey('list'),
-                    onEdit: _openForm,
-                    onEditGroup: (group, colour) => setState(
-                      () => _screen = _EditGroupScreen(group, colour),
-                    ),
-                    onAdd: (kind) => _openForm(null, kind),
+                    onEdit: screens.openTunnel,
+                    onEditGroup: screens.editGroup,
+                    onAdd: (kind) => screens.openTunnel(null, kind),
                   ),
-                  _NewTunnelScreen(:final kind) => _tunnelForm(
+                  NewTunnelScreen(:final kind) => _TunnelFormScreen(
                     key: ValueKey('new ${kind.name}'),
                     kind: kind,
+                    hosts: hosts,
                   ),
-                  _EditTunnelScreen(:final tunnel) => _tunnelForm(
+                  EditTunnelScreen(:final tunnel) => _TunnelFormScreen(
                     key: ValueKey(tunnel.id),
                     initial: tunnel,
+                    hosts: hosts,
                   ),
-                  _EditGroupScreen(:final group, :final colour) => GroupForm(
+                  EditGroupScreen(:final group, :final colour) => GroupForm(
                     key: ValueKey('group $group'),
                     group: group,
                     colour: colour,
@@ -144,9 +114,9 @@ class _TunnelsPageState extends State<TunnelsPage> {
                           ),
                         ),
                       );
-                      _closeForm();
+                      screens.closeForm();
                     },
-                    onCancel: _closeForm,
+                    onCancel: screens.closeForm,
                   ),
                 },
               ),
@@ -156,65 +126,44 @@ class _TunnelsPageState extends State<TunnelsPage> {
       ),
     );
   }
-
-  Widget _tunnelForm({
-    required Key key,
-    Tunnel? initial,
-    TunnelKind kind = TunnelKind.local,
-  }) => TunnelForm(
-    key: key,
-    initial: initial,
-    kind: kind,
-    hosts: _hosts,
-    groups: context.select(
-      (TunnelsBloc bloc) => switch (bloc.state) {
-        Ready(:final snapshot) => snapshot.tunnels.groups,
-        _ => const <String>[],
-      },
-    ),
-    groupColours: context.select(
-      (TunnelsBloc bloc) => switch (bloc.state) {
-        Ready(:final snapshot) => snapshot.groupColours,
-        _ => const <String, TunnelColour>{},
-      },
-    ),
-    onSave: (tunnel) {
-      context.read<TunnelsBloc>().add(
-        TunnelsEvent.send(AgentCommand.save(tunnel)),
-      );
-      _closeForm();
-    },
-    onCancel: _closeForm,
-  );
-
-  // Read on every open, so edits to ~/.ssh/config show up.
-  void _openForm([Tunnel? tunnel, TunnelKind kind = TunnelKind.local]) {
-    setState(
-      () => _screen = switch (tunnel) {
-        final tunnel? => _EditTunnelScreen(tunnel),
-        null => _NewTunnelScreen(kind),
-      },
-    );
-    unawaited(
-      configuredSshHosts().then((hosts) {
-        if (mounted) setState(() => _hosts = hosts);
-      }),
-    );
-  }
-
-  void _closeForm() => setState(() => _screen = const _ListScreen());
 }
 
-sealed class const _Screen();
+class const _TunnelFormScreen({
+  super.key,
+  final Tunnel? initial,
+  final TunnelKind kind = TunnelKind.local,
+  required final List<String> hosts,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final screens = context.read<TunnelsScreenCubit>();
 
-class const _ListScreen() extends _Screen;
-
-class const _NewTunnelScreen(final TunnelKind kind) extends _Screen;
-
-class const _EditTunnelScreen(final Tunnel tunnel) extends _Screen;
-
-class const _EditGroupScreen(final String group, final TunnelColour? colour)
-    extends _Screen;
+    return TunnelForm(
+      initial: initial,
+      kind: kind,
+      hosts: hosts,
+      groups: context.select(
+        (TunnelsBloc bloc) => switch (bloc.state) {
+          Ready(:final snapshot) => snapshot.tunnels.groups,
+          _ => const <String>[],
+        },
+      ),
+      groupColours: context.select(
+        (TunnelsBloc bloc) => switch (bloc.state) {
+          Ready(:final snapshot) => snapshot.groupColours,
+          _ => const <String, TunnelColour>{},
+        },
+      ),
+      onSave: (tunnel) {
+        context.read<TunnelsBloc>().add(
+          TunnelsEvent.send(AgentCommand.save(tunnel)),
+        );
+        screens.closeForm();
+      },
+      onCancel: screens.closeForm,
+    );
+  }
+}
 
 class const _TunnelList({
   super.key,
@@ -262,12 +211,23 @@ class const _TunnelList({
             ),
           ),
         ),
-        Ready(:final snapshot) => _rows(context, snapshot),
+        Ready(:final snapshot) => _TunnelRows(
+          snapshot: snapshot,
+          onEdit: onEdit,
+          onEditGroup: onEditGroup,
+        ),
       },
     );
   }
+}
 
-  Widget _rows(BuildContext context, TunnelsSnapshot snapshot) {
+class const _TunnelRows({
+  required final TunnelsSnapshot snapshot,
+  required final void Function(Tunnel tunnel) onEdit,
+  required final void Function(String group, TunnelColour? colour) onEditGroup,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     final colors = TakaColors.of(context);
     final rows = snapshot.tunnels.rows;
 
@@ -354,10 +314,10 @@ class const _TunnelList({
       ],
     );
   }
-
-  void _send(BuildContext context, AgentCommand command) =>
-      context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 }
+
+void _send(BuildContext context, AgentCommand command) =>
+    context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
 
 class const _InGroup({required final Color? guide, required final Widget child})
     extends StatelessWidget {
