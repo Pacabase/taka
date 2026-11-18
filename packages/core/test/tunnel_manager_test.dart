@@ -1043,6 +1043,7 @@ void main() {
         await manager.toggle('a1');
 
         unawaited(manager.trustHostKey('a1', hostKey.fingerprint));
+        await pumpEventQueue();
 
         expect(manager.snapshot.statusOf('a1'), const Connecting());
         trusted.complete();
@@ -1824,6 +1825,28 @@ void main() {
       expect(tunnel.closeCount, 1);
     });
 
+    test('removing a refused tunnel waits for ssh to close', () async {
+      final closed = Completer<void>();
+      late void Function(SshLog log) sshSays;
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        sshSays =
+            invocation.namedArguments[#onLog]! as void Function(SshLog log);
+        return _SlowTunnel(closed.future);
+      });
+      final manager = await checking(check: (_, _) async => sshSays(refused));
+      await manager.toggle('a1');
+      await pumpEventQueue();
+      var isRemoved = false;
+
+      unawaited(manager.remove('a1').then((_) => isRemoved = true));
+      await pumpEventQueue();
+      expect(isRemoved, isFalse);
+
+      closed.complete();
+      await pumpEventQueue();
+      expect(isRemoved, isTrue);
+    });
+
     test('says when the server forbids what the check reached', () async {
       const prohibited = SshForwardProhibited(
         'channel 3: open failed: administratively prohibited: open failed',
@@ -2027,8 +2050,9 @@ void main() {
     });
 
     test("keeps the tunnel connected with ssh's reason", () {
-      warned(database, (manager, _) {
+      warned(database, (manager, time) {
         sshSays(refused);
+        time.flushMicrotasks();
 
         expect(
           manager.snapshot.statusOf('a1'),
@@ -2038,8 +2062,9 @@ void main() {
     });
 
     test("keeps a SOCKS proxy connected with ssh's reason", () {
-      warned(proxy, (manager, _) {
+      warned(proxy, (manager, time) {
         sshSays(refused);
+        time.flushMicrotasks();
 
         expect(
           manager.snapshot.statusOf('b2'),
@@ -2049,12 +2074,13 @@ void main() {
     });
 
     test('says when the SSH host forbids forwarding', () {
-      warned(database, (manager, _) {
+      warned(database, (manager, time) {
         sshSays(
           const SshForwardProhibited(
             'channel 3: open failed: administratively prohibited: open failed',
           ),
         );
+        time.flushMicrotasks();
 
         expect(
           manager.snapshot.statusOf('a1'),
@@ -2066,10 +2092,13 @@ void main() {
     test('fades once ssh has said nothing more for a while', () {
       warned(database, (manager, time) {
         sshSays(refused);
-        time.elapse(lifetime ~/ 2);
+        time
+          ..flushMicrotasks()
+          ..elapse(lifetime ~/ 2);
         sshSays(refused);
-
-        time.elapse(lifetime ~/ 2);
+        time
+          ..flushMicrotasks()
+          ..elapse(lifetime ~/ 2);
         expect(manager.snapshot.statusOf('a1'), isNot(const Connected()));
 
         time.elapse(lifetime ~/ 2);
@@ -2083,6 +2112,7 @@ void main() {
         manager.changes.listen(changes.add);
 
         sshSays(refused);
+        time.flushMicrotasks();
         sshSays(refused);
         time.flushMicrotasks();
 
@@ -2098,15 +2128,18 @@ void main() {
         manager.changes.listen(changes.add);
 
         sshSays(refused);
-        time.elapse(lifetime);
+        time
+          ..flushMicrotasks()
+          ..elapse(lifetime);
 
         expect(changes, isEmpty);
       });
     });
 
     test('ignores lines that are not open failures', () {
-      warned(database, (manager, _) {
+      warned(database, (manager, time) {
         sshSays(const SshProgress('debug1: channel 3: new direct-tcpip'));
+        time.flushMicrotasks();
 
         expect(manager.snapshot.statusOf('a1'), const Connected());
       });

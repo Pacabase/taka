@@ -281,7 +281,7 @@ class TunnelManager({
     final session = _sessions[tunnel.id] = TunnelSession(
       tunnel: tunnel,
       client: client,
-      onChange: _emit,
+      notify: _emit,
       comeForward: comeForward,
       isLocked: isLocked,
       checkDestination: checkDestination,
