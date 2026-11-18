@@ -478,14 +478,54 @@ void main() {
         expect(await socket.toList(), isEmpty);
       }, skip: loopback ? false : 'A Unix socket needs no token');
 
-      test("a second agent leaves the first one's ticket alone", () async {
-        await serve();
-        final ticket = await File(path).readAsString();
+      test("closing leaves a newer agent's ticket alone", () async {
+        final server = await serve();
+        final newer = AgentTicket.random(1).encoded;
+        await File(path).writeAsString(newer);
 
-        await AgentServer.bind(path, manager, preferences, loopback: loopback);
+        await server.close();
 
-        expect(await File(path).readAsString(), ticket);
+        expect(await File(path).readAsString(), newer);
       }, skip: loopback ? false : 'A Unix socket has no ticket');
+
+      Future<Socket> stranger() async => Socket.connect(
+        InternetAddress.loopbackIPv4,
+        (await AgentTicket.read(path))!.port,
+      );
+
+      test('a command in place of the token is refused', () async {
+        await serve();
+        final socket = await stranger();
+        addTearDown(socket.destroy);
+
+        socket.writeln(jsonEncode(const AgentCommand.quit().toJson()));
+
+        expect(await socket.toList(), isEmpty);
+        expect(manager.isClosed, isFalse);
+      }, skip: loopback ? false : 'A Unix socket needs no token');
+
+      test('a first line longer than any token is dropped', () async {
+        await serve();
+        final socket = await stranger();
+        addTearDown(socket.destroy);
+
+        socket.write('x' * 4096);
+
+        expect(await socket.toList(), isEmpty);
+      }, skip: loopback ? false : 'A Unix socket needs no token');
+
+      test('a client still without the token is dropped on close', () async {
+        final server = await serve();
+        final socket = await stranger();
+        addTearDown(socket.destroy);
+        final ended = socket.drain<void>().then((_) {}, onError: (Object _) {});
+        // Accepted in order, so the stranger is in by the client's snapshot.
+        await (await listen()).next;
+
+        await server.close();
+
+        await ended.timeout(const Duration(seconds: 1));
+      }, skip: loopback ? false : 'A Unix socket needs no token');
 
       test(
         "a silent program on a dead agent's port isn't taken for an agent",
@@ -493,6 +533,24 @@ void main() {
           final silent = await fakeAgent();
           addTearDown(silent.close);
           silent.listen((socket) => addTearDown(socket.destroy));
+
+          await serve();
+
+          expect(await (await listen()).next, manager.state);
+        },
+        skip: loopback ? false : 'Only the agent can listen on its Unix socket',
+      );
+
+      test(
+        "a program that talks on a dead agent's port isn't taken for an agent",
+        () async {
+          final talking = await fakeAgent();
+          addTearDown(talking.close);
+          talking.listen(
+            (socket) => socket
+              ..writeln('HTTP/1.1 400 Bad Request')
+              ..destroy(),
+          );
 
           await serve();
 

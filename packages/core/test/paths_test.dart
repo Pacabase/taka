@@ -184,7 +184,12 @@ void main() {
       folder('windows', windows),
       r'C:\Users\someone\AppData\Roaming\Taka Dev',
     );
-    expect(socket('linux', home), endsWith('com.pacabase.taka.dev/agent.sock'));
+    for (final system in ['macos', 'linux']) {
+      expect(
+        socket(system, home),
+        endsWith('com.pacabase.taka.dev/agent.sock'),
+      );
+    }
     expect(
       socket('windows', windows),
       r'C:\Users\someone\AppData\Local\Taka Dev\agent.port',
@@ -332,6 +337,7 @@ void main() {
         TakaInstall.fromAgent(
           development.agent,
           environment: {'TAKA_APP': development.app},
+          operatingSystem: 'macos',
         ),
         development,
       );

@@ -13,6 +13,8 @@ import 'package:fimber/fimber.dart';
 
 final _log = FimberLog('Socket');
 
+const _tokenWait = Duration(seconds: 2);
+
 class AgentServer(
   final ServerSocket _server,
   final TunnelManager _manager,
@@ -20,9 +22,12 @@ class AgentServer(
   final String _identity, [
   final String? _ticketPath,
   final AgentTicket? _ticket,
+  final RandomAccessFile? _lock,
 ]) {
   final Set<Socket> _clients = {};
+  final Set<Socket> _strangers = {};
   AgentMessage? _pending;
+  bool _isClosed = false;
   late final StreamSubscription<TunnelsSnapshot> _changes;
   late final StreamSubscription<AgentSettings> _settingsChanges;
 
@@ -84,27 +89,39 @@ class AgentServer(
     AgentPreferences preferences,
     String identity,
   ) async {
-    if (await _isAnsweredOverLoopback(path)) return null;
+    await File(path).parent.create(recursive: true);
+    // Held for the agent's life, so no second agent starts between check and ticket.
+    final lock = await File('$path.lock').open(mode: FileMode.write);
+    try {
+      await lock.lock();
+    } on FileSystemException {
+      await lock.close();
+      return null;
+    }
+    if (await _isAgentOverLoopback(path)) {
+      await lock.close();
+      return null;
+    }
 
-    final file = File(path);
-    await file.parent.create(recursive: true);
-    if (await file.exists()) await file.delete();
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     final ticket = AgentTicket.random(server.port);
-    try {
-      await file.create(exclusive: true);
-      await file.writeAsString(ticket.encoded, flush: true);
-    } on FileSystemException catch (exception) {
-      await server.close();
-      // Another agent may have written its ticket a moment ago.
-      if (await _isAnsweredOverLoopback(path)) return null;
-      throw SocketException('Could not write $path: ${exception.message}');
-    }
-    return AgentServer(server, manager, preferences, identity, path, ticket);
+    // Renamed into place, so a window never reads it half-written.
+    final draft = await File('$path.new')
+        .writeAsString(ticket.encoded, flush: true);
+    await draft.rename(path);
+    return AgentServer(
+      server,
+      manager,
+      preferences,
+      identity,
+      path,
+      ticket,
+      lock,
+    );
   }
 
   // Another program may have the port of an agent that has since died.
-  static Future<bool> _isAnsweredOverLoopback(String path) async {
+  static Future<bool> _isAgentOverLoopback(String path) async {
     final Socket socket;
     try {
       socket = await connectAgentSocket(path, loopback: true);
@@ -112,9 +129,17 @@ class AgentServer(
       return false;
     }
 
+    socket.done.ignore();
     try {
-      await socket.first.timeout(const Duration(seconds: 1));
-      return true;
+      final line = await utf8.decoder
+          .bind(socket)
+          .transform(const LineSplitter())
+          .first
+          .timeout(const Duration(seconds: 1));
+      return switch (jsonDecode(line)) {
+        {'agent': String _} => true,
+        _ => false,
+      };
     } on Object {
       return false;
     } finally {
@@ -136,10 +161,29 @@ class AgentServer(
     client.done.ignore();
     final ticket = _ticket;
     var isAdmitted = ticket == null;
-    if (isAdmitted) _admit(client);
+    if (isAdmitted) {
+      _admit(client);
+    } else {
+      _strangers.add(client);
+      Timer(_tokenWait, () {
+        if (!isAdmitted) _drop(client);
+      });
+    }
 
+    var firstLineLength = 0;
+    var hasFirstLine = ticket == null;
     utf8.decoder
-        .bind(client)
+        .bind(
+          client.map((bytes) {
+            if (!hasFirstLine) {
+              final end = bytes.indexOf(10);
+              hasFirstLine = end != -1;
+              firstLineLength += hasFirstLine ? end : bytes.length;
+              if (firstLineLength > ticket!.token.length) _drop(client);
+            }
+            return bytes;
+          }),
+        )
         .transform(const LineSplitter())
         .listen(
           (line) {
@@ -147,6 +191,7 @@ class AgentServer(
               unawaited(_handle(line));
             } else if (ticket!.admits(line)) {
               isAdmitted = true;
+              _strangers.remove(client);
               _admit(client);
             } else {
               _drop(client);
@@ -220,18 +265,26 @@ class AgentServer(
 
   void _drop(Socket client) {
     _clients.remove(client);
+    _strangers.remove(client);
     client.destroy();
   }
 
   Future<void> close() async {
+    if (_isClosed) return;
+    _isClosed = true;
     await _changes.cancel();
     await _settingsChanges.cancel();
     await _server.close();
-    [..._clients].forEach(_drop);
+    [..._clients, ..._strangers].forEach(_drop);
     if (_ticketPath case final path?) {
       if ((await AgentTicket.read(path))?.token == _ticket?.token) {
-        await File(path).delete();
+        try {
+          await File(path).delete();
+        } on PathNotFoundException {
+          // A newer agent removed it first.
+        }
       }
     }
+    await _lock?.close();
   }
 }

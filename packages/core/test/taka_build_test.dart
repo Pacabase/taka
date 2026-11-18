@@ -266,5 +266,58 @@ void main() {
         ),
       );
     });
+
+    test(
+      'the Windows embed script writes the app ID for its configuration',
+      () {
+        final script = read('windows/embed_agent.ps1');
+
+        expect(
+          read('windows/CMakeLists.txt'),
+          contains(
+            r'\"${CMAKE_INSTALL_PREFIX}/agent\"'
+            '\n'
+            r'      \"\${CMAKE_INSTALL_CONFIG_NAME}\"',
+          ),
+        );
+        expect(
+          script,
+          contains(
+            "\$appId = if (\$Configuration -eq 'Release') "
+            "{ '${TakaBuild.release.appId}' } "
+            "else { '${TakaBuild.development.appId}' }\n",
+          ),
+        );
+        expect(
+          script,
+          contains(
+            r'Set-Content -NoNewline -Path "$Destination\app_id" -Value $appId',
+          ),
+        );
+      },
+    );
+
+    test('a Windows window is one per build, named like its agent', () {
+      final main = read('windows/runner/main.cpp');
+
+      expect(
+        read('windows/runner/CMakeLists.txt'),
+        contains(r'"$<$<NOT:$<CONFIG:Release>>:TAKA_DEVELOPMENT>"'),
+      );
+      for (final (build, prefix) in [
+        (TakaBuild.development, '#ifdef TAKA_DEVELOPMENT\n'),
+        (TakaBuild.release, '#else\n'),
+      ]) {
+        expect(
+          main,
+          contains(
+            '$prefix'
+            'constexpr wchar_t kWindowMutex[] = '
+            'L"Local\\\\${build.appId}.window";\n'
+            'constexpr wchar_t kWindowTitle[] = L"${build.name}";\n',
+          ),
+        );
+      }
+    });
   });
 }

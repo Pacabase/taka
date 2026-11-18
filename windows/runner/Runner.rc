@@ -94,7 +94,11 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "Pacabase" "\0"
+#ifdef TAKA_DEVELOPMENT
+            VALUE "FileDescription", "Taka Settings Dev" "\0"
+#else
             VALUE "FileDescription", "Taka Settings" "\0"
+#endif
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "taka" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 the Taka project authors." "\0"

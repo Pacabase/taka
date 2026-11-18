@@ -39,5 +39,5 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: 
 Filename: "{app}\taka.exe"; Description: "Open Taka"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-; Windows matches names in any case, so this stops the window (taka.exe) and the agent (Taka.exe).
-Filename: "{sys}\taskkill.exe"; Parameters: "/f /im taka.exe"; Flags: runhidden; RunOnceId: "StopTaka"
+; Only this install's window and agent, by its working directory so no quote in the path breaks it.
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -Command ""$folder = (Get-Location).Path + '\'; Get-Process taka -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -and $_.Path.StartsWith($folder, 'OrdinalIgnoreCase') } | Stop-Process -Force"""; WorkingDir: "{app}"; Flags: runhidden; RunOnceId: "StopTaka"
