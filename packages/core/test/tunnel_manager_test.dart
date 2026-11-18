@@ -1844,6 +1844,29 @@ void main() {
       expect(isRemoved, isTrue);
     });
 
+    test(
+      'removing a refused tunnel whose ssh failed to close still removes it',
+      () async {
+        late void Function(SshLog log) sshSays;
+        tunnel.closeError = Exception('ssh would not close');
+        when(openAnyTunnel).thenAnswer((invocation) async {
+          sshSays =
+              invocation.namedArguments[#onLog]! as void Function(SshLog log);
+          return tunnel;
+        });
+        final manager = await checking(check: (_, _) async => sshSays(refused));
+        await manager.toggle('a1');
+        await pumpEventQueue();
+
+        await manager.remove('a1');
+
+        expect(
+          manager.state.tunnels.map((tunnel) => tunnel.id),
+          isNot(contains('a1')),
+        );
+      },
+    );
+
     test('says when the server forbids what the check reached', () async {
       const prohibited = SshForwardProhibited(
         'channel 3: open failed: administratively prohibited: open failed',
@@ -2109,7 +2132,6 @@ void main() {
         manager.stream.listen(changes.add);
 
         sshSays(refused);
-        time.flushMicrotasks();
         sshSays(refused);
         time.flushMicrotasks();
 
@@ -2714,6 +2736,18 @@ void main() {
 
       expect(opened, hasLength(2));
       expect(manager.state.statusOf('a1'), const Connected());
+      expect((opened.last as FakeTunnel).closeCount, 0);
+      verify(
+        () => client.openTunnel(
+          any(),
+          remoteHost: any(named: 'remoteHost'),
+          remotePort: any(named: 'remotePort'),
+          bindAddress: any(named: 'bindAddress'),
+          localPort: 15433,
+          onLog: any(named: 'onLog'),
+          abortTrigger: any(named: 'abortTrigger'),
+        ),
+      ).called(1);
     },
   );
 

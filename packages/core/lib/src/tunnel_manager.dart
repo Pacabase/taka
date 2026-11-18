@@ -249,41 +249,20 @@ class TunnelManager({
 
   // A listener may call close again from inside this call.
   @override
-  Future<void> close() async {
-    final isFirst = _closing == null;
-    await (_closing ??= _stopAll());
-    if (isFirst) await super.close();
-  }
-
-  Future<void> _stopAll() async {
-    await Future.wait(
-      _sessions.values.map(
-        (session) => session.stop().catchError(
-          (Object exception) => _log.w(
-            '${session.tunnel.title}: could not close ssh ($exception)',
-          ),
-        ),
-      ),
-    );
-  }
+  Future<void> close() => _closing ??= () async {
+    await Future.wait(_sessions.values.map((session) => session.stop()));
+    await super.close();
+  }();
 
   // Another call may have started it while this one waited, such as a toggle
   // while save stopped it: a second session would leave ssh running untracked.
   Future<void> _start(Tunnel tunnel, {bool isRestored = false}) {
     if (_closing != null || _isOn(tunnel.id)) return Future.value();
 
-    if (_sessions[tunnel.id] case final replaced?) {
-      unawaited(
-        replaced.stop().catchError(
-          (Object exception) =>
-              _log.w('${tunnel.title}: could not close ssh ($exception)'),
-        ),
-      );
-    }
+    if (_sessions[tunnel.id] case final replaced?) unawaited(replaced.stop());
     final session = _sessions[tunnel.id] = TunnelSession(
       tunnel: tunnel,
       client: client,
-      notify: _emit,
       comeForward: comeForward,
       isLocked: isLocked,
       checkDestination: checkDestination,
@@ -294,6 +273,10 @@ class TunnelManager({
       stableAfter: stableAfter,
       isRestored: isRestored,
     );
+    session.stream
+        .map((state) => state.status)
+        .distinct()
+        .listen((_) => _emit());
     _emit();
     _log.i('Connecting ${tunnel.title}: ${tunnel.summary}');
     return session.connect();

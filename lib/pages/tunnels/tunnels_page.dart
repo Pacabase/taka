@@ -35,15 +35,15 @@ class const TunnelsPage({
 class const _TunnelsView() extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final screen = context.read<TunnelsScreenCubit>();
-    final TunnelsScreenState(screen: shown, :hosts) = context
+    final screens = context.read<TunnelsScreenCubit>();
+    final TunnelsScreenState(:screen, :hosts) = context
         .watch<TunnelsScreenCubit>()
         .state;
-    final isOpen = shown is! ListScreen;
+    final isOpen = screen is! ListScreen;
 
     void save(AgentCommand command) {
       context.read<TunnelsBloc>().add(TunnelsEvent.send(command));
-      screen.closeForm();
+      screens.closeForm();
     }
 
     Widget tunnelForm({
@@ -68,7 +68,7 @@ class const _TunnelsView() extends StatelessWidget {
         },
       ),
       onSave: (tunnel) => save(AgentCommand.save(tunnel)),
-      onCancel: screen.closeForm,
+      onCancel: screens.closeForm,
     );
 
     return MultiBlocListener(
@@ -89,14 +89,14 @@ class const _TunnelsView() extends StatelessWidget {
         body: Column(
           children: [
             TunnelsHeader(
-              title: switch (shown) {
+              title: switch (screen) {
                 ListScreen() => 'Tunnels',
                 NewTunnelScreen() => 'New tunnel',
                 EditTunnelScreen() => 'Edit tunnel',
                 EditGroupScreen() => 'Edit group',
               },
               isFormOpen: isOpen,
-              onPressed: isOpen ? screen.closeForm : screen.openTunnel,
+              onPressed: isOpen ? screens.closeForm : screens.openTunnel,
               onSettings: () =>
                   Navigator.pushNamed(context, TakaApp.settingsRoute),
             ),
@@ -113,12 +113,12 @@ class const _TunnelsView() extends StatelessWidget {
                     child: child,
                   ),
                 ),
-                child: switch (shown) {
+                child: switch (screen) {
                   ListScreen() => _TunnelList(
                     key: const ValueKey('list'),
-                    onEdit: screen.openTunnel,
-                    onEditGroup: screen.editGroup,
-                    onAdd: (kind) => screen.openTunnel(null, kind),
+                    onEdit: screens.openTunnel,
+                    onEditGroup: screens.editGroup,
+                    onAdd: (kind) => screens.openTunnel(null, kind),
                   ),
                   NewTunnelScreen(:final kind) => tunnelForm(
                     key: ValueKey('new ${kind.name}'),
@@ -135,7 +135,7 @@ class const _TunnelsView() extends StatelessWidget {
                     onSave: (name, colour) => save(
                       AgentCommand.editGroup(group, name: name, colour: colour),
                     ),
-                    onCancel: screen.closeForm,
+                    onCancel: screens.closeForm,
                   ),
                 },
               ),

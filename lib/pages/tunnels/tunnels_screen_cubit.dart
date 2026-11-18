@@ -18,8 +18,7 @@ sealed class TunnelsScreen with _$TunnelsScreen {
   const factory editGroup(String group, TunnelColour? colour) = EditGroupScreen;
 }
 
-/// [requests] counts the tray's requests it opened a form for, each of which
-/// brings the tunnels window to the front of its own dialogs and pages.
+/// [requests] counts tray requests; each one pops the window's dialogs.
 @freezed
 sealed class TunnelsScreenState with _$TunnelsScreenState {
   const factory({
@@ -29,7 +28,6 @@ sealed class TunnelsScreenState with _$TunnelsScreenState {
   }) = _TunnelsScreenState;
 }
 
-/// Which screen the tunnels window shows, and the SSH hosts its form offers.
 class TunnelsScreenCubit({
   required final TunnelsBloc tunnels,
   required final Stream<OpenTunnel> tunnelRequests,

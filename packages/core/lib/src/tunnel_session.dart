@@ -20,7 +20,6 @@ typedef HandBack = Future<void> Function();
 
 @freezed
 sealed class const Phase._() with _$Phase {
-  /// [retrying] while it redials after a drop.
   const factory opening({Reconnecting? retrying}) = Opening;
 
   const factory up(
@@ -40,7 +39,6 @@ sealed class const Phase._() with _$Phase {
 
   const factory gaveUp(Failed failed) = GaveUp;
 
-  /// [last] is what it showed when it stopped; [closed] is ssh's close.
   const factory ended(TunnelStatus last, Future<void> closed) = Ended;
 
   TunnelStatus get status => switch (this) {
@@ -58,8 +56,7 @@ sealed class const Phase._() with _$Phase {
   };
 }
 
-/// [hasConnected] decides whether a drop retries and whether the destination
-/// is checked; [isWatched], whether a login comes forward.
+/// [isWatched] isn't [hasConnected]: a trust after a reconnect comes forward.
 @freezed
 sealed class const SessionState._() with _$SessionState {
   const factory({
@@ -98,7 +95,6 @@ sealed class const SessionEvent._() with _$SessionEvent {
 class TunnelSession({
   required final Tunnel tunnel,
   required final SshClient client,
-  required final void Function() notify,
   required final Future<HandBack> Function()? comeForward,
   required final Future<bool> Function()? isLocked,
   required final Future<void> Function(String address, int localPort)?
@@ -111,7 +107,6 @@ class TunnelSession({
   final bool isRestored = false,
 }) extends Bloc<SessionEvent, SessionState> {
   final _abort = Completer<void>();
-  // Each phase's timers, which end with it.
   final _timers = <Type, Timer>{};
   final List<Future<HandBack?>> _cameForward = [];
 
@@ -144,13 +139,6 @@ class TunnelSession({
   }
 
   this : super(const SessionState(phase: Opening())) {
-    var shown = state.status;
-    stream.listen((state) {
-      if (state.status == shown) return;
-      shown = state.status;
-      notify();
-    });
-
     on<Connect>((event, emit) async {
       if (isStopped) return event.settled.complete();
 
@@ -166,7 +154,7 @@ class TunnelSession({
         _drop(exception, emit);
         return event.settled.complete();
       }
-      if (isStopped) return event.settled.complete(opened.close());
+      if (isStopped) return event.settled.complete(_close(opened));
 
       // Not on reconnects or at login: each check hits the service for real.
       final checks =
@@ -241,14 +229,6 @@ class TunnelSession({
       if (state.phase case Up(:final tunnel)) {
         final SshForwardFailed(:line) = event.log;
         _log.w('${this.tunnel.title} failed: $line');
-        final closed = tunnel.close();
-        unawaited(
-          closed.catchError(
-            (Object exception) => _log.w(
-              '${this.tunnel.title}: could not close ssh ($exception)',
-            ),
-          ),
-        );
         _end(
           Failed(
             line,
@@ -256,7 +236,7 @@ class TunnelSession({
                 ? TunnelFailure.forwardProhibited
                 : TunnelFailure.forwardRefused,
           ),
-          closed,
+          _close(tunnel),
           emit,
         );
       }
@@ -290,7 +270,7 @@ class TunnelSession({
       }
 
       final closed = switch (state.phase) {
-        Up(:final tunnel) => tunnel.close(),
+        Up(:final tunnel) => _close(tunnel),
         _ => Future<void>.value(),
       };
       _end(state.status, closed, emit);
@@ -310,6 +290,12 @@ class TunnelSession({
     _timers.clear();
     if (currentState.phase is Opening) _handBack();
   }
+
+  // Caught once here, so every later stop returns without the error.
+  Future<void> _close(_Opened tunnel) => tunnel.close().catchError(
+    (Object exception) =>
+        _log.w('${this.tunnel.title}: could not close ssh ($exception)'),
+  );
 
   void _after(Duration delay, SessionEvent event) {
     _timers.remove(event.runtimeType)?.cancel();
@@ -382,7 +368,7 @@ class TunnelSession({
     }
     // ssh logs the refusal only after the check's connection has closed.
     await Future<void>.delayed(checkWindow);
-    if (!isClosed) add(const SessionEvent.checked());
+    add(const SessionEvent.checked());
   }
 
   // 1Password prompts only for the app in front; a retry may find nobody there.

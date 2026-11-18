@@ -76,6 +76,31 @@ void main() {
     expect(cubit.state.requests, 1);
   });
 
+  test("the tray's request for a new tunnel opens a new form", () async {
+    await snapshot([database]);
+
+    requests.add(const OpenTunnel());
+    await pumpEventQueue();
+
+    expect(cubit.state.screen, const NewTunnelScreen(TunnelKind.local));
+    expect(cubit.state.requests, 1);
+  });
+
+  test('hosts read after it closes are dropped', () async {
+    final hosts = Completer<List<String>>();
+    final closing = TunnelsScreenCubit(
+      tunnels: tunnels,
+      tunnelRequests: const Stream.empty(),
+      sshHosts: () => hosts.future,
+    )..openTunnel();
+
+    await closing.close();
+    hosts.complete(['bastion']);
+    await pumpEventQueue();
+
+    expect(closing.state.hosts, isEmpty);
+  });
+
   test('a request before the first snapshot opens once it comes', () async {
     requests.add(const OpenTunnel('a1'));
     await pumpEventQueue();

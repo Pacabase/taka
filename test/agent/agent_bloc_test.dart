@@ -1,13 +1,20 @@
 @Tags(['unit'])
 library;
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
+import 'package:core/core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/agent/agent_bloc.dart';
 
 import '../pages/tunnels/fake_agent.dart';
 
 void main() {
+  late FakeAgent helper;
+
+  setUp(() => helper = FakeAgent());
+
   test('starts connecting and names itself', () async {
     final bloc = AgentBloc(connect: () async => FakeAgent());
     addTearDown(bloc.close);
@@ -18,9 +25,15 @@ void main() {
 
   blocTest<AgentBloc, AgentState>(
     'is connected once the helper answers',
-    build: () => AgentBloc(connect: () async => FakeAgent()),
+    build: () => AgentBloc(connect: () async => helper),
     act: (bloc) => bloc.add(const AgentEvent.connect()),
-    expect: () => [isA<AgentConnected>()],
+    expect: () => [
+      isA<AgentConnected>().having(
+        (state) => state.agent,
+        'agent',
+        same(helper),
+      ),
+    ],
   );
 
   final failure = StateError('no helper');
@@ -67,6 +80,43 @@ void main() {
     expect: () => [isA<AgentConnected>()],
     verify: (_) => expect(tries, 1),
   );
+
+  test('connects once for two tries in a row', () async {
+    final connecting = Completer<AgentClient>();
+    var tries = 0;
+    final bloc =
+        AgentBloc(
+            connect: () {
+              tries++;
+              return connecting.future;
+            },
+          )
+          ..add(const AgentEvent.connect())
+          ..add(const AgentEvent.connect());
+    addTearDown(bloc.close);
+    await pumpEventQueue();
+
+    connecting.complete(helper);
+    await pumpEventQueue();
+
+    expect(tries, 1);
+    expect(bloc.state, isA<AgentConnected>());
+  });
+
+  test('closing while it connects closes the helper link it gets', () async {
+    final agent = FakeAgent();
+    final connecting = Completer<AgentClient>();
+    final bloc = AgentBloc(connect: () => connecting.future)
+      ..add(const AgentEvent.connect());
+    await pumpEventQueue();
+
+    final closed = bloc.close();
+    connecting.complete(agent);
+    await closed;
+    await pumpEventQueue();
+
+    expect(agent.controller.isClosed, isTrue);
+  });
 
   test('closing it closes the helper link and its settings', () async {
     final agent = FakeAgent();

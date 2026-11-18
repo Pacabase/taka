@@ -26,7 +26,7 @@ A tunnel bug or a missing ssh option belongs in [`system_ssh`](https://github.co
 
 Keep it simple. Build only what the current change needs, and prefer the straightforward over the clever. No abstractions in advance.
 
-- **State:** BLoC (`flutter_bloc`) with Freezed. Short state names, inline handlers in the constructor, and every state and event `@freezed`. Every `Bloc` overrides `toString()` to its class name.
+- **State:** BLoC (`flutter_bloc`) with Freezed. A Cubit fits state changed by methods with no events worth naming, such as `TunnelManager` and `TunnelsScreenCubit`; its state is still `@freezed`. Short state names, inline handlers in the constructor, and every state and event `@freezed`. Every `Bloc` overrides `toString()` to its class name.
 - **Constructors:** declare fields in a primary constructor, like `class const TunnelTile({super.key, required final Tunnel tunnel}) extends StatelessWidget`. Write freezed factories without the class name (`const factory connected() = Connected;`).
 - **Naming:** no abbreviations (`index`, not `idx`; `tunnel`, not `t`). Write `catch (exception)`.
 - **Collections:** prefer `.where()`, `.map()`, collection-`for`/`if` and `package:collection` over loops that build up a result.

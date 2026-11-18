@@ -43,13 +43,16 @@ void main() {
     shown = [];
   });
 
-  TunnelSession session({bool isRestored = false, bool Function()? locked}) {
-    late final TunnelSession session;
-    return session = TunnelSession(
+  // [shown] gets each status the window would see, once per change.
+  TunnelSession session({
+    bool isRestored = false,
+    bool Function()? locked,
+    Future<HandBack> Function()? comeForward,
+  }) {
+    final session = TunnelSession(
       tunnel: database,
       client: client,
-      notify: () => shown.add(session.status),
-      comeForward: null,
+      comeForward: comeForward,
       isLocked: locked == null ? null : () async => locked(),
       checkDestination: null,
       warningLifetime: const Duration(seconds: 30),
@@ -59,6 +62,11 @@ void main() {
       stableAfter: const Duration(minutes: 1),
       isRestored: isRestored,
     );
+    var last = session.status;
+    session.stream.map((state) => state.status).listen((status) {
+      if (status != last) shown.add(last = status);
+    });
+    return session;
   }
 
   test('is up once ssh opens, and someone is no longer watching', () {
@@ -86,7 +94,13 @@ void main() {
         ..flushMicrotasks()
         ..elapse(const Duration(minutes: 1));
 
-      expect(failing.state.phase, isA<GaveUp>());
+      expect(
+        failing.status,
+        const Failed(
+          'Connection reset by 10.0.0.1 port 22',
+          failure: TunnelFailure.dropped,
+        ),
+      );
       verify(openAnyTunnel).called(1);
     });
   });
@@ -135,6 +149,14 @@ void main() {
 
       time.elapse(const Duration(minutes: 1));
       expect(up.state.attempts, 0);
+      expect(shown, [
+        const Connected(),
+        const Reconnecting(
+          'Connection reset by 10.0.0.1 port 22',
+          failure: TunnelFailure.dropped,
+        ),
+        const Connected(),
+      ]);
     });
   });
 
@@ -192,40 +214,129 @@ void main() {
     });
   });
 
-  test('stopping while ssh opens closes what it opens, and ends', () {
+  test(
+    'stopping while ssh opens aborts ssh, closes what it opens, and ends',
+    () {
+      fakeAsync((time) {
+        final opened = Completer<SshTunnel>();
+        late Future<void> abortTrigger;
+        final tunnel = FakeTunnel(15432);
+        when(openAnyTunnel).thenAnswer((invocation) {
+          abortTrigger =
+              invocation.namedArguments[#abortTrigger]! as Future<void>;
+          return opened.future;
+        });
+        final opening = session();
+        unawaited(opening.connect());
+        time.flushMicrotasks();
+        var isAborted = false;
+        unawaited(abortTrigger.then((_) => isAborted = true));
+
+        unawaited(opening.stop());
+        time.flushMicrotasks();
+        expect(isAborted, isTrue);
+        opened.complete(tunnel);
+        time.flushMicrotasks();
+
+        expect(opening.state.phase, isA<Ended>());
+        expect(tunnel.closeCount, 1);
+      });
+    },
+  );
+
+  test('stopping while ssh logs in hands focus back', () {
     fakeAsync((time) {
-      final opened = Completer<SshTunnel>();
-      final tunnel = FakeTunnel(15432);
-      when(openAnyTunnel).thenAnswer((_) => opened.future);
-      final opening = session();
+      final calls = <String>[];
+      late void Function(SshLog log) sshSays;
+      when(openAnyTunnel).thenAnswer((invocation) {
+        sshSays =
+            invocation.namedArguments[#onLog]! as void Function(SshLog log);
+        return Completer<SshTunnel>().future;
+      });
+      final opening = session(
+        comeForward: () async {
+          calls.add('forward');
+          return () async => calls.add('back');
+        },
+      );
       unawaited(opening.connect());
+      time.flushMicrotasks();
+      sshSays(const SshLoginStarted('debug1: Connecting to bastion port 22.'));
       time.flushMicrotasks();
 
       unawaited(opening.stop());
       time.flushMicrotasks();
-      opened.complete(tunnel);
-      time.flushMicrotasks();
 
-      expect(opening.state.phase, isA<Ended>());
-      expect(tunnel.closeCount, 1);
+      expect(calls, ['forward', 'back']);
     });
   });
 
-  test('ignores a drop once it has stopped', () {
+  test('two stops close ssh once and finish together', () {
     fakeAsync((time) {
       final tunnel = FakeTunnel(15432);
       when(openAnyTunnel).thenAnswer((_) async => tunnel);
       final up = session();
       unawaited(up.connect());
       time.flushMicrotasks();
+      var stopped = 0;
 
+      unawaited(up.stop().then((_) => stopped++));
+      unawaited(up.stop().then((_) => stopped++));
+      time.flushMicrotasks();
+
+      expect(stopped, 2);
+      expect(tunnel.closeCount, 1);
+    });
+  });
+
+  test('trusting with no key to trust does nothing', () {
+    fakeAsync((time) {
+      when(openAnyTunnel).thenAnswer((_) async => FakeTunnel(15432));
+      final up = session();
+      unawaited(up.connect());
+      time.flushMicrotasks();
+      bool? trusted;
+
+      unawaited(up.trust().then((result) => trusted = result));
+      time.flushMicrotasks();
+
+      expect(trusted, isFalse);
+      expect(up.state.phase, isA<Up>());
+    });
+  });
+
+  test('ignores a drop once it has stopped', () {
+    fakeAsync((time) {
+      final tunnel = _DropsLater();
+      when(openAnyTunnel).thenAnswer((_) async => tunnel);
+      final up = session();
+      unawaited(up.connect());
+      time.flushMicrotasks();
       unawaited(up.stop());
+      time.flushMicrotasks();
+
+      tunnel.dropped.completeError(dropped);
       time
         ..flushMicrotasks()
         ..elapse(const Duration(minutes: 5));
 
       expect(up.state.phase, isA<Ended>());
+      expect(shown.last, const Connected());
       verify(openAnyTunnel).called(1);
     });
   });
+}
+
+// Closes at once, and drops only when the test says, as ssh may after a stop.
+class _DropsLater implements SshTunnel {
+  final dropped = Completer<void>();
+
+  @override
+  int get localPort => 15432;
+
+  @override
+  Future<void> get done => dropped.future;
+
+  @override
+  Future<void> close() async {}
 }
