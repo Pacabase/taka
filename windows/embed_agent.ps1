@@ -29,4 +29,4 @@ Rename-Item "$Destination\bin\taka_agent.exe" Taka.exe
 Copy-Item "$agent\assets\*.png" $Destination
 # Must match TakaBuild.
 $appId = if ($Configuration -eq 'Release') { 'com.pacabase.taka' } else { 'com.pacabase.taka.dev' }
-Set-Content -NoNewline "$Destination\app_id" $appId
+Set-Content -NoNewline -Path "$Destination\app_id" -Value $appId

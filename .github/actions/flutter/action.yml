@@ -29,12 +29,12 @@ runs:
       if: runner.os == 'Windows'
       shell: pwsh
       env:
-        FVM: 4.0.5
+        FVM_VERSION: 4.0.5
       run: |
         $zip = "$env:RUNNER_TEMP\fvm.zip"
-        Invoke-WebRequest "https://github.com/leoafarias/fvm/releases/download/$env:FVM/fvm-$env:FVM-windows-x64.zip" -OutFile $zip
+        Invoke-WebRequest "https://github.com/leoafarias/fvm/releases/download/$env:FVM_VERSION/fvm-$env:FVM_VERSION-windows-x64.zip" -OutFile $zip
         if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne '51040562aca33e96867e43f5b71ce9b6d626736ec1435322e151624a086a56a2') {
-          throw "fvm-$env:FVM-windows-x64.zip doesn't match its checksum"
+          throw "fvm-$env:FVM_VERSION-windows-x64.zip doesn't match its checksum"
         }
         Expand-Archive $zip -DestinationPath $env:RUNNER_TEMP
         "$env:RUNNER_TEMP\fvm" >> $env:GITHUB_PATH
