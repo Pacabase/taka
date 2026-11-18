@@ -44,6 +44,17 @@ An error such as `libgtk-3.so.0: cannot open shared object file` means GTK 3 is 
 
 Windows is on the [roadmap](#roadmap).
 
+## Memory
+
+Taka is two programs. A small background helper owns the tray icon and runs your tunnels all day. The window starts when you open it and quits when you close it, so it uses no memory the rest of the time.
+
+|           | Background helper | Window, while open |
+| --------- | ----------------- | ------------------ |
+| **macOS** | about 20–30 MB    | about 50 MB        |
+| **Linux** | about 25 MB       | depends on the graphics driver; about 150 MB without a GPU |
+
+Each tunnel's `ssh` adds 1–3 MB, and tunnels to the same server share one `ssh`. The figures are each system's own measure of memory the program holds for itself (macOS: memory in Activity Monitor; Linux: private memory), with four tunnels open.
+
 ## Mac App Store
 
 Taka isn't on the Mac App Store. The store only allows sandboxed apps, and a sandboxed app can't use your own `ssh` setup, which is what Taka is built on. If you'd use a store version with its own SSH built in, give [issue #10](https://github.com/Pacabase/taka/issues/10) a 👍.
