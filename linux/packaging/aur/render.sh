@@ -26,7 +26,7 @@ file_sum() {
 x64=$(release_sum "Taka-$version-linux-x64.tar.gz")
 arm64=$(release_sum "Taka-$version-linux-arm64.tar.gz")
 desktop=$(file_sum linux/packaging/com.pacabase.taka.desktop)
-icon=$(file_sum assets/icon/icon.png)
+icon=$(file_sum assets/icon/icon-tile.png)
 licence=$(file_sum LICENSE)
 
 mkdir -p "$out"

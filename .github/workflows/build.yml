@@ -283,7 +283,7 @@ jobs:
           sh linux/packaging/aur/render.sh "$VERSION" dist/SHA256SUMS aur
           cp "dist/Taka-$VERSION-linux-x64.tar.gz" aur/
           cp linux/packaging/com.pacabase.taka.desktop "aur/taka-$VERSION.desktop"
-          cp assets/icon/icon.png "aur/taka-$VERSION.png"
+          cp assets/icon/icon-tile.png "aur/taka-$VERSION.png"
           cp LICENSE "aur/taka-$VERSION-LICENSE"
           sh linux/packaging/aur/build.sh aur
       - run: sh linux/packaging/check_install.sh aur

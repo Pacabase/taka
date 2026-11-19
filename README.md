@@ -80,7 +80,6 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Activity log** per tunnel.
 - [ ] **Tags**, several per tunnel, to filter the list by.
 - [ ] **Import** hosts from `~/.ssh/config`.
-- [ ] **More Linux packages** — AppImage.
 
 ### Signed Windows releases
 

@@ -37,12 +37,10 @@ jobs:
             exit 1
           fi
           version=${TAG#v}
-          case "$version" in
-            *-* | *+*)
-              echo "::notice::$TAG is a pre-release; the AUR gets stable releases only."
-              exit 0
-              ;;
-          esac
+          if ! echo "$version" | grep -Eqx '[0-9]+\.[0-9]+\.[0-9]+'; then
+            echo "::notice::$TAG is a pre-release; the AUR gets stable releases only."
+            exit 0
+          fi
           status=$(curl -sS -o "$RUNNER_TEMP/release.json" -w '%{http_code}' \
             -H "Authorization: Bearer $GH_TOKEN" "$API/repos/$REPO/releases/tags/$TAG")
           case "$status" in
@@ -60,11 +58,13 @@ jobs:
             echo "::notice::$TAG is a pre-release; the AUR gets stable releases only."
             exit 0
           fi
+          for file in SHA256SUMS "Taka-$version-linux-x64.tar.gz" "Taka-$version-linux-arm64.tar.gz"; do
+            if ! jq -e --arg file "$file" 'any(.assets[]; .name == $file)' "$RUNNER_TEMP/release.json" >/dev/null; then
+              echo "::notice::$TAG has no $file yet; Release publishes to the AUR once its files are attached."
+              exit 0
+            fi
+          done
           sums=$(jq -r '.assets[] | select(.name == "SHA256SUMS") | .browser_download_url' "$RUNNER_TEMP/release.json")
-          if [ -z "$sums" ]; then
-            echo "::notice::$TAG has no SHA256SUMS yet; Release publishes to the AUR once its files are attached."
-            exit 0
-          fi
           curl -fsSLo "$RUNNER_TEMP/SHA256SUMS" "$sums"
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - if: steps.release.outputs.version
@@ -111,6 +111,10 @@ jobs:
           VERSION: ${{ needs.package.outputs.version }}
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
         run: |
+          if [ -z "$AUR_SSH_PRIVATE_KEY" ]; then
+            echo "::error::The aur environment has no AUR_SSH_PRIVATE_KEY secret."
+            exit 1
+          fi
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > "$HOME/.ssh/aur"
           chmod 600 "$HOME/.ssh/aur"

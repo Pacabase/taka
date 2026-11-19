@@ -45,6 +45,10 @@ jobs:
             gh release create "$TAG" dist/* --verify-tag --draft --generate-notes --title "Taka ${TAG#v}"
           elif [ "$draft" = true ]; then
             gh release upload "$TAG" dist/* --clobber
+            # Published during the upload, so the AUR run it set off found no files.
+            if [ "$(gh release view "$TAG" --json isDraft -q .isDraft)" = false ]; then
+              echo "published=true" >> "$GITHUB_OUTPUT"
+            fi
           else
             # A release made on GitHub's website is already published; never
             # replace files people may have downloaded.

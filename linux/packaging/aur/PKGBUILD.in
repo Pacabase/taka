@@ -12,7 +12,7 @@ conflicts=('taka')
 options=('!strip' '!debug')
 _raw="https://raw.githubusercontent.com/Pacabase/taka/v$pkgver"
 source=("taka-$pkgver.desktop::$_raw/linux/packaging/com.pacabase.taka.desktop"
-        "taka-$pkgver.png::$_raw/assets/icon/icon.png"
+        "taka-$pkgver.png::$_raw/assets/icon/icon-tile.png"
         "taka-$pkgver-LICENSE::$_raw/LICENSE")
 source_x86_64=("https://github.com/Pacabase/taka/releases/download/v$pkgver/Taka-$pkgver-linux-x64.tar.gz")
 source_aarch64=("https://github.com/Pacabase/taka/releases/download/v$pkgver/Taka-$pkgver-linux-arm64.tar.gz")
