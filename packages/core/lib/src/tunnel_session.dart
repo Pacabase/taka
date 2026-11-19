@@ -210,7 +210,7 @@ class TunnelSession({
       final locked = await _isLocked();
       if (state.phase case final Waiting waiting) {
         if (!locked) {
-          // Whoever unlocked it is at the screen for 1Password's prompt.
+          // Whoever unlocked it is at the screen for a login prompt.
           if (waiting.forUnlock) emit(state.copyWith(isWatched: true));
           return add(SessionEvent.connect(Completer()));
         }
