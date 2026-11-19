@@ -253,3 +253,37 @@ jobs:
           name: Taka-${{ matrix.target }}
           path: dist
       - run: sh linux/packaging/check_install.sh dist
+
+  # The AUR package, built from the tarball above as it would be from the
+  # release. Arch has no official arm64 image.
+  linux-aur:
+    name: linux-x64 on archlinux
+    if: contains(fromJSON(inputs.linux-targets), 'linux-x64')
+    needs: [version, linux]
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: Taka-linux-x64
+          path: dist
+      - name: Build the package from the local files
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          (cd dist && sha256sum "Taka-$VERSION-linux-x64.tar.gz" > SHA256SUMS)
+          # Only x86_64 is built here, so this sum is never checked.
+          echo "0000000000000000000000000000000000000000000000000000000000000000  Taka-$VERSION-linux-arm64.tar.gz" >> dist/SHA256SUMS
+          sh linux/packaging/aur/render.sh "$VERSION" dist/SHA256SUMS aur
+          cp "dist/Taka-$VERSION-linux-x64.tar.gz" aur/
+          cp linux/packaging/com.pacabase.taka.desktop "aur/taka-$VERSION.desktop"
+          cp assets/icon/icon-tile.png "aur/taka-$VERSION.png"
+          cp LICENSE "aur/taka-$VERSION-LICENSE"
+          sh linux/packaging/aur/build.sh aur
+      - run: sh linux/packaging/check_install.sh aur

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Usage: check_install.sh <folder with the .deb and .rpm>
+# Usage: check_install.sh <folder with the .deb and .rpm, or the Arch package>
 # Installs Taka's package on this clean system, as root, and checks that it
 # brought every library the app and its helper load.
 set -eu
@@ -9,8 +9,10 @@ packages=$(cd "$1" && pwd)
 if command -v apt-get >/dev/null; then
   apt-get update -qq
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$packages"/*.deb >/dev/null
-else
+elif command -v dnf >/dev/null; then
   dnf install -y -q "$packages"/*.rpm
+else
+  pacman -U --noconfirm "$packages"/*.pkg.tar.zst
 fi
 
 # The plugins find Flutter's own library only once the app has loaded it.
