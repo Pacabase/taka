@@ -45,7 +45,7 @@ jobs:
             gh release create "$TAG" dist/* --verify-tag --draft --generate-notes --title "Taka ${TAG#v}"
           elif [ "$draft" = true ]; then
             gh release upload "$TAG" dist/* --clobber
-            # Published during the upload, so the AUR run it set off found no files.
+            # Published during the upload, so the Publish run it set off found no files.
             if [ "$(gh release view "$TAG" --json isDraft -q .isDraft)" = false ]; then
               echo "published=true" >> "$GITHUB_OUTPUT"
             fi
@@ -56,11 +56,11 @@ jobs:
             echo "published=true" >> "$GITHUB_OUTPUT"
           fi
 
-  # A draft goes to the AUR when it's published. One published before its files
-  # were attached goes now.
-  aur:
+  # A draft goes to the stores when it's published. One published before its
+  # files were attached goes now.
+  publish:
     needs: release
     if: needs.release.outputs.published == 'true'
-    uses: ./.github/workflows/aur.yml
+    uses: ./.github/workflows/publish.yml
     permissions:
       contents: read
