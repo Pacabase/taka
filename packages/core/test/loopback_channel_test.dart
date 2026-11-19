@@ -119,7 +119,10 @@ void main() {
           (socket) => addTearDown(socket.destroy),
         );
 
-        expect(await channel.listen(), isNotNull);
+        final listener = await channel.listen();
+        addTearDown(() => listener?.close());
+
+        expect(listener, isNotNull);
       },
     );
 
