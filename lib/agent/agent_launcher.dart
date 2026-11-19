@@ -90,7 +90,7 @@ String _lastLines(File file, {int count = 20}) {
 
 Future<SocketAgentClient?> _connect(String path) async {
   try {
-    return await SocketAgentClient.connect(path);
+    return await SocketAgentClient.connect(AgentChannel.at(path));
   } on SocketException {
     return null;
   }

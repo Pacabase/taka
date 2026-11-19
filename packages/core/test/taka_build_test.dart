@@ -73,6 +73,7 @@ void main() {
       final agent = TakaInstall.fromAgent(
         '$app/Library/LoginItems/Taka.app/Contents/MacOS/Taka',
         environment: {},
+        operatingSystem: 'macos',
       );
 
       expect(window.build, TakaBuild.release);
@@ -94,6 +95,7 @@ void main() {
       final agent = TakaInstall.fromAgent(
         '$app/Library/LoginItems/Taka.app/Contents/MacOS/Taka',
         environment: {},
+        operatingSystem: 'macos',
       );
 
       expect(window.build, TakaBuild.development);
@@ -112,11 +114,30 @@ void main() {
       final agent = TakaInstall.fromAgent(
         '${assets.path}/agent/bin/taka_agent',
         environment: {},
+        operatingSystem: 'linux',
       );
 
       expect(window.build, TakaBuild.release);
       expect(agent.build, TakaBuild.release);
     });
+
+    test('beside a Windows install', () {
+      writeAppId('com.pacabase.taka', into: '${assets.path}/agent');
+
+      final window = TakaInstall.fromWindow(
+        '${assets.path}/taka.exe',
+        environment: {},
+        operatingSystem: 'windows',
+      );
+      final agent = TakaInstall.fromAgent(
+        '${assets.path}/agent/bin/Taka.exe',
+        environment: {},
+        operatingSystem: 'windows',
+      );
+
+      expect(window.build, TakaBuild.release);
+      expect(agent.build, TakaBuild.release);
+    }, testOn: 'windows');
 
     test('not from anywhere else', () {
       writeAppId('com.pacabase.taka\n', into: '${assets.path}/agent/bin');
@@ -125,6 +146,7 @@ void main() {
         TakaInstall.fromAgent(
           '${assets.path}/agent/bin/taka_agent',
           environment: {},
+          operatingSystem: 'linux',
         ).build,
         TakaBuild.development,
       );

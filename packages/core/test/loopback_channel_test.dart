@@ -28,13 +28,10 @@ void main() {
       return (listener, links);
     }
 
-    Future<Socket> stranger() async {
-      final socket = await Socket.connect(
-        InternetAddress.loopbackIPv4,
-        (await AgentTicket.read(path))!.port,
-      );
-      return socket;
-    }
+    Future<Socket> stranger() async => Socket.connect(
+      InternetAddress.loopbackIPv4,
+      (await AgentTicket.read(path))!.port,
+    );
 
     test(
       'a client with the token gets through, with what it sends next',
@@ -49,6 +46,32 @@ void main() {
         expect(await (await listener.links.first).lines.first, 'hello');
       },
     );
+
+    test(
+      'a client is dropped unheard if it sends no token in 2 seconds',
+      () async {
+        final (_, links) = await listen();
+        final socket = await stranger();
+        addTearDown(socket.close);
+
+        expect(await socket.toList(), isEmpty);
+        expect(links, isEmpty);
+      },
+    );
+
+    test('connecting with no ticket is a SocketException, so the window starts an agent', () {
+      expect(channel.connect(), throwsA(isA<SocketException>()));
+    });
+
+    test('closing lets the next agent listen', () async {
+      final listener = (await channel.listen())!;
+      await listener.close();
+
+      final next = await channel.listen();
+      addTearDown(() => next?.close());
+
+      expect(next, isNotNull);
+    });
 
     for (final (name, line) in [
       ('a wrong token', 'not the token'),
@@ -95,13 +118,19 @@ void main() {
       expect((await AgentTicket.read(file.path))?.encoded, ticket.encoded);
     });
 
-    test('is null for a missing, empty or broken file', () async {
+    test('is null for a missing, empty, broken or half-written file', () async {
       final directory = await Directory.systemTemp.createTemp('taka_ticket');
       addTearDown(() => directory.delete(recursive: true));
       final file = File('${directory.path}/agent.port');
 
       expect(await AgentTicket.read(file.path), isNull);
-      for (final text in ['', 'port token', '4242', '4242 a b']) {
+      for (final text in [
+        '',
+        'port token',
+        '4242',
+        '4242 a b',
+        '4242 ${AgentTicket.random(1).token.substring(0, 20)}',
+      ]) {
         await file.writeAsString(text);
         expect(await AgentTicket.read(file.path), isNull, reason: text);
       }

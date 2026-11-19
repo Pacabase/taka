@@ -1,4 +1,4 @@
-export 'src/agent_channel.dart';
+export 'src/agent_channel.dart' hide linesOf;
 export 'src/agent_client.dart';
 export 'src/agent_command.dart';
 export 'src/agent_message.dart';

@@ -22,7 +22,7 @@ final class LoopbackChannel(final String path) extends AgentChannel {
   Future<AgentListener?> listen() async {
     await File(path).parent.create(recursive: true);
     // Held for the agent's life; the system frees it if the agent dies.
-    final lock = await File('$path.lock').open(mode: FileMode.write);
+    final lock = await File('$path.lock').open(mode: FileMode.append);
     try {
       await lock.lock();
     } on FileSystemException {
@@ -30,13 +30,18 @@ final class LoopbackChannel(final String path) extends AgentChannel {
       return null;
     }
 
-    final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-    final ticket = AgentTicket.random(server.port);
-    // Renamed into place, so a window never reads it half-written.
-    final draft = await File('$path.new')
-        .writeAsString(ticket.encoded, flush: true);
-    await draft.rename(path);
-    return _LoopbackListener(server, path, ticket, lock);
+    ServerSocket? server;
+    try {
+      server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final ticket = AgentTicket.random(server.port);
+      // A window reading it half-written finds no ticket and tries again.
+      await File(path).writeAsString(ticket.encoded, flush: true);
+      return _LoopbackListener(server, path, ticket, lock);
+    } on Object {
+      await server?.close();
+      await lock.close();
+      rethrow;
+    }
   }
 }
 
@@ -71,10 +76,15 @@ final class _LoopbackListener(
 
   @override
   Future<void> close() async {
-    await _links.close();
+    unawaited(_links.close());
     await _server.close();
-    await File(_path).delete();
-    await _lock.close();
+    try {
+      await File(_path).delete();
+    } on PathNotFoundException {
+      // Someone removed it already.
+    } finally {
+      await _lock.close();
+    }
   }
 }
 
@@ -100,7 +110,8 @@ final class const AgentTicket(final int port, final String token) {
       return null;
     }
 
-    final match = RegExp(r'^(\d+) (\S+)$').firstMatch(text.trim());
+    // A whole token, so a ticket read half-written isn't taken for one.
+    final match = RegExp(r'^(\d+) ([\w-]{43}=)$').firstMatch(text.trim());
     final port = int.tryParse(match?.group(1) ?? '');
     final token = match?.group(2);
     return port == null || token == null ? null : AgentTicket(port, token);

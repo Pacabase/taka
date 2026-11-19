@@ -36,13 +36,12 @@ class AgentServer(
   }
 
   static Future<AgentServer?> bind(
-    String path,
+    AgentChannel channel,
     TunnelManager manager,
     AgentPreferences preferences, {
     String identity = '',
-    bool? loopback,
   }) async {
-    final listener = await AgentChannel.at(path, loopback: loopback).listen();
+    final listener = await channel.listen();
     return listener == null
         ? null
         : AgentServer(listener, manager, preferences, identity);

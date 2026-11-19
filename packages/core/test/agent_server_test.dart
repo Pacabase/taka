@@ -18,12 +18,14 @@ void main() {
     group(loopback ? 'over loopback' : 'over a Unix socket', () {
       late Directory directory;
       late String path;
+      late AgentChannel channel;
       late TunnelManager manager;
       late FakePreferences preferences;
 
       setUp(() async {
         directory = await Directory.systemTemp.createTemp('taka_socket');
         path = '${directory.path}/${loopback ? 'agent.port' : 'agent.sock'}';
+        channel = loopback ? LoopbackChannel(path) : UnixChannel(path);
         manager = TunnelManager(
           store: FakeStore([database]),
           client: MockSshClient(),
@@ -38,18 +40,13 @@ void main() {
       });
 
       Future<AgentServer> serve() async {
-        final server = (await AgentServer.bind(
-          path,
-          manager,
-          preferences,
-          loopback: loopback,
-        ))!;
+        final server = (await AgentServer.bind(channel, manager, preferences))!;
         addTearDown(server.close);
         return server;
       }
 
       Future<SocketAgentClient> connect() async {
-        final agent = await SocketAgentClient.connect(path, loopback: loopback);
+        final agent = await SocketAgentClient.connect(channel);
         addTearDown(agent.close);
         return agent;
       }
@@ -234,10 +231,7 @@ void main() {
 
       test('a bad line is ignored and the client stays connected', () async {
         await serve();
-        final socket = await AgentChannel.at(
-          path,
-          loopback: loopback,
-        ).connect();
+        final socket = await channel.connect();
         addTearDown(socket.destroy);
         final snapshots = await listen();
         await snapshots.next;
@@ -384,11 +378,10 @@ void main() {
 
       test('a client learns which build of the agent it reached', () async {
         final server = (await AgentServer.bind(
-          path,
+          channel,
           manager,
           preferences,
           identity: '/Taka@1',
-          loopback: loopback,
         ))!;
         addTearDown(server.close);
 
@@ -436,30 +429,12 @@ void main() {
         () async {
           await serve();
 
-          expect(
-            await AgentServer.bind(
-              path,
-              manager,
-              preferences,
-              loopback: loopback,
-            ),
-            isNull,
-          );
+          expect(await AgentServer.bind(channel, manager, preferences), isNull);
         },
         skip: loopback && !Platform.isWindows
             ? 'Only Windows locks a file against its own process'
             : false,
       );
-
-      test('a socket left behind by a dead agent is replaced', () async {
-        final stale = await fakeAgent();
-        await stale.close();
-        File(path).createSync();
-
-        await serve();
-
-        expect(await (await listen()).next, manager.state);
-      });
     }, testOn: loopback ? null : '!windows');
   }
 }

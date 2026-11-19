@@ -200,14 +200,25 @@ jobs:
           SETUP: Taka-${{ needs.version.outputs.version }}-${{ matrix.target }}-setup.exe
         run: |
           $app = "$env:RUNNER_TEMP\installed"
-          Start-Process "dist\$env:SETUP" -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$app"
+          function Run($program, $arguments) {
+            $process = Start-Process $program -Wait -PassThru -ArgumentList $arguments
+            if ($process.ExitCode) { throw "$program exited with $($process.ExitCode)" }
+          }
+          function Running { Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -like "$app\*" } }
+          Run "dist\$env:SETUP" '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$app"
           if (-not (Test-Path "$app\taka.exe") -or -not (Test-Path "$app\agent\bin\Taka.exe")) {
             throw "The installer didn't install Taka"
           }
-          Start-Process "$app\unins000.exe" -Wait -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
+          # Running, so the uninstaller has to stop it.
+          Start-Process "$app\agent\bin\Taka.exe"
+          for ($second = 0; -not (Running) -and $second -lt 30; $second++) { Start-Sleep 1 }
+          Start-Sleep 3
+          if (-not (Running)) { throw "The installed agent didn't keep running" }
+          Run "$app\unins000.exe" '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'
           # The uninstaller hands over to a copy of itself and returns at once.
           for ($second = 0; (Test-Path "$app\taka.exe") -and $second -lt 60; $second++) { Start-Sleep 1 }
           if (Test-Path "$app\taka.exe") { throw "The uninstaller left Taka behind" }
+          if (Running) { throw "The uninstaller left Taka running" }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: Taka-${{ matrix.target }}

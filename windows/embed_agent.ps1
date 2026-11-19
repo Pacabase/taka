@@ -21,7 +21,13 @@ if (-not (Test-Path "$bundle\bin\taka_agent.exe")) {
   Write-Error "The app is built for $Platform, but Dart builds the agent only for this machine"
 }
 
-Remove-Item -Recurse -Force $Destination -ErrorAction SilentlyContinue
+# Windows can't replace a running agent, such as one a previous run left.
+$folder = [IO.Path]::GetFullPath($Destination).TrimEnd('\') + '\'
+# CMake may run a 32-bit PowerShell, where Get-Process has no 64-bit program's path.
+$running = Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($folder, 'OrdinalIgnoreCase') }
+$running | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+$running | ForEach-Object { Wait-Process -Id $_.ProcessId -Timeout 10 -ErrorAction SilentlyContinue }
+if (Test-Path $Destination) { Remove-Item -Recurse -Force $Destination }
 New-Item -ItemType Directory -Force $Destination | Out-Null
 Copy-Item -Recurse "$bundle\bin", "$bundle\lib" $Destination
 # Task Manager shows a program without a description by its file name.

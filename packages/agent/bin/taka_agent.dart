@@ -78,7 +78,7 @@ Future<void> _start() async {
   final AgentServer server;
   try {
     final bound = await AgentServer.bind(
-      agentSocketPath(),
+      AgentChannel.at(agentSocketPath()),
       manager,
       preferences,
       identity: identity,
@@ -89,7 +89,7 @@ Future<void> _start() async {
       return;
     }
     server = bound;
-  } on SocketException catch (exception) {
+  } on IOException catch (exception) {
     Fimber.e('Could not listen on ${agentSocketPath()}', ex: exception);
     Application.instance.quit(1);
     return;

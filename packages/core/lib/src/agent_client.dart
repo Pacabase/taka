@@ -48,12 +48,8 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
     );
   }
 
-  static Future<SocketAgentClient> connect(
-    String path, {
-    bool? loopback,
-  }) async => SocketAgentClient(
-    await AgentChannel.at(path, loopback: loopback).connect(),
-  );
+  static Future<SocketAgentClient> connect(AgentChannel channel) async =>
+      SocketAgentClient(await channel.connect());
 
   @override
   Future<String> get identity => _identity.future;

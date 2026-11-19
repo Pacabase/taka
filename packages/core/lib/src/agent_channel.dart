@@ -7,10 +7,8 @@ import 'package:core/src/unix_channel.dart';
 /// Where the window and the agent meet: a Unix socket on macOS and Linux, and
 /// a loopback port on Windows, where Dart has no Unix sockets.
 abstract class AgentChannel {
-  static AgentChannel at(String path, {bool? loopback}) =>
-      (loopback ?? Platform.isWindows)
-      ? LoopbackChannel(path)
-      : UnixChannel(path);
+  static AgentChannel at(String path) =>
+      Platform.isWindows ? LoopbackChannel(path) : UnixChannel(path);
 
   /// Null when another agent already answers here.
   Future<AgentListener?> listen();
