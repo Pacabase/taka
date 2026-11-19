@@ -1,7 +1,6 @@
 @Tags(['unit'])
 library;
 
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -37,13 +36,6 @@ void main() {
       return socket;
     }
 
-    Future<ServerSocket> deadAgentsPort() async {
-      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-      addTearDown(server.close);
-      await File(path).writeAsString(AgentTicket.random(server.port).encoded);
-      return server;
-    }
-
     test(
       'a client with the token gets through, with what it sends next',
       () async {
@@ -74,71 +66,19 @@ void main() {
       });
     }
 
-    test('a first line longer than any token is dropped', () async {
-      final (_, links) = await listen();
-      final socket = await stranger();
-      addTearDown(socket.close);
-
-      socket.write('x' * 4096);
-
-      expect(await socket.toList(), isEmpty);
-      expect(links, isEmpty);
-    });
-
-    test('a client still without the token is dropped on close', () async {
-      final listener = (await channel.listen())!;
-      final socket = await stranger();
-      addTearDown(socket.close);
-      final ended = socket.drain<void>().then((_) {}, onError: (Object _) {});
-      final client = await channel.connect();
-      addTearDown(client.close);
-      // Accepted in order, so the stranger is in by the client's link.
-      await listener.links.first;
-
-      await listener.close();
-
-      await ended.timeout(const Duration(seconds: 1));
-    });
-
-    test('closing removes its ticket, but not a newer agent\'s', () async {
-      final (listener, _) = await listen();
-      await listener.close();
-      expect(File(path).existsSync(), isFalse);
-
-      final (again, _) = await listen();
-      final newer = AgentTicket.random(1).encoded;
-      await File(path).writeAsString(newer);
-      await again.close();
-      expect(await File(path).readAsString(), newer);
-    });
-
     test(
-      "a silent program on a dead agent's port isn't taken for an agent",
+      "replaces a dead agent's ticket, and removes its own on close",
       () async {
-        (await deadAgentsPort()).listen(
-          (socket) => addTearDown(socket.destroy),
-        );
+        await File(path).writeAsString(AgentTicket.random(1).encoded);
 
-        final listener = await channel.listen();
-        addTearDown(() => listener?.close());
+        final listener = (await channel.listen())!;
+        final client = await channel.connect();
+        addTearDown(client.close);
+        client.writeln('hello');
+        expect(await (await listener.links.first).lines.first, 'hello');
 
-        expect(listener, isNotNull);
-      },
-    );
-
-    test(
-      "a program that talks on a dead agent's port isn't taken for an agent",
-      () async {
-        (await deadAgentsPort()).listen(
-          (socket) => socket
-            ..writeln('HTTP/1.1 400 Bad Request')
-            ..destroy(),
-        );
-
-        final listener = await channel.listen();
-        addTearDown(() => listener?.close());
-
-        expect(listener, isNotNull);
+        await listener.close();
+        expect(File(path).existsSync(), isFalse);
       },
     );
   });

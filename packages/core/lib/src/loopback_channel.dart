@@ -3,9 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:async/async.dart';
 import 'package:core/src/agent_channel.dart';
-
-const _tokenWait = Duration(seconds: 2);
 
 /// Windows' channel: the agent listens on a loopback port, which any local
 /// program can reach, so a client must first send the token from the ticket
@@ -22,15 +21,11 @@ final class LoopbackChannel(final String path) extends AgentChannel {
   @override
   Future<AgentListener?> listen() async {
     await File(path).parent.create(recursive: true);
-    // Held for the agent's life, so no second agent starts between check and ticket.
+    // Held for the agent's life; the system frees it if the agent dies.
     final lock = await File('$path.lock').open(mode: FileMode.write);
     try {
       await lock.lock();
     } on FileSystemException {
-      await lock.close();
-      return null;
-    }
-    if (await _isAgentListening()) {
       await lock.close();
       return null;
     }
@@ -43,30 +38,6 @@ final class LoopbackChannel(final String path) extends AgentChannel {
     await draft.rename(path);
     return _LoopbackListener(server, path, ticket, lock);
   }
-
-  // Another program may have the port of an agent that has since died.
-  Future<bool> _isAgentListening() async {
-    final Socket socket;
-    try {
-      socket = await connect();
-    } on SocketException {
-      return false;
-    }
-
-    socket.done.ignore();
-    try {
-      final line = await linesOf(socket).first
-          .timeout(const Duration(seconds: 1));
-      return switch (jsonDecode(line)) {
-        {'agent': String _} => true,
-        _ => false,
-      };
-    } on Object {
-      return false;
-    } finally {
-      socket.destroy();
-    }
-  }
 }
 
 final class _LoopbackListener(
@@ -76,70 +47,33 @@ final class _LoopbackListener(
   final RandomAccessFile _lock,
 ) implements AgentListener {
   final _links = StreamController<AgentLink>();
-  final Set<Socket> _strangers = {};
-  bool _isClosed = false;
 
   this {
-    _server.listen(_check, onDone: _links.close);
+    _server.listen((socket) => unawaited(_check(socket)));
   }
 
   @override
   Stream<AgentLink> get links => _links.stream;
 
-  void _check(Socket socket) {
+  Future<void> _check(Socket socket) async {
     socket.done.ignore();
-    _strangers.add(socket);
-    void drop() {
-      _strangers.remove(socket);
-      socket.destroy();
+    final lines = StreamQueue(linesOf(socket));
+    try {
+      final token = await lines.next.timeout(const Duration(seconds: 2));
+      if (_ticket.admits(token) && !_links.isClosed) {
+        return _links.add(AgentLink(socket, lines.rest));
+      }
+    } on Object {
+      // It left or stayed silent.
     }
-
-    final wait = Timer(_tokenWait, drop);
-    StreamController<String>? rest;
-    var firstLineLength = 0;
-    var hasFirstLine = false;
-    linesOf(
-      socket.map((bytes) {
-        if (!hasFirstLine) {
-          final end = bytes.indexOf(10);
-          hasFirstLine = end != -1;
-          firstLineLength += hasFirstLine ? end : bytes.length;
-          if (firstLineLength > _ticket.token.length) drop();
-        }
-        return bytes;
-      }),
-    ).listen(
-      (line) {
-        if (rest case final rest?) return rest.add(line);
-        wait.cancel();
-        _strangers.remove(socket);
-        if (!_ticket.admits(line)) return socket.destroy();
-        rest = StreamController<String>();
-        _links.add(AgentLink(socket, rest!.stream));
-      },
-      onError: (Object exception) =>
-          rest == null ? drop() : (rest!..addError(exception)).close(),
-      onDone: () => rest == null ? drop() : rest!.close(),
-      cancelOnError: true,
-    );
+    socket.destroy();
   }
 
   @override
   Future<void> close() async {
-    if (_isClosed) return;
-    _isClosed = true;
+    await _links.close();
     await _server.close();
-    for (final socket in [..._strangers]) {
-      socket.destroy();
-    }
-    _strangers.clear();
-    if ((await AgentTicket.read(_path))?.token == _ticket.token) {
-      try {
-        await File(_path).delete();
-      } on PathNotFoundException {
-        // A newer agent removed it first.
-      }
-    }
+    await File(_path).delete();
     await _lock.close();
   }
 }

@@ -431,19 +431,25 @@ void main() {
         await changes;
       });
 
-      test('a second agent finds the first one running', () async {
-        await serve();
+      test(
+        'a second agent finds the first one running',
+        () async {
+          await serve();
 
-        expect(
-          await AgentServer.bind(
-            path,
-            manager,
-            preferences,
-            loopback: loopback,
-          ),
-          isNull,
-        );
-      });
+          expect(
+            await AgentServer.bind(
+              path,
+              manager,
+              preferences,
+              loopback: loopback,
+            ),
+            isNull,
+          );
+        },
+        skip: loopback && !Platform.isWindows
+            ? 'Only Windows locks a file against its own process'
+            : false,
+      );
 
       test('a socket left behind by a dead agent is replaced', () async {
         final stale = await fakeAgent();
