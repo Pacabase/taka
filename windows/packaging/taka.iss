@@ -39,6 +39,6 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: 
 Filename: "{app}\taka.exe"; Description: "Open Taka"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-; Only this install's window and agent, found by the working directory so no quote in the path breaks it,
-; through Win32_Process since this 32-bit uninstaller's Get-Process has no 64-bit program's path.
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -Command ""$folder = (Get-Location).Path + '\'; Get-CimInstance Win32_Process | Where-Object {{ $_.ExecutablePath -and $_.ExecutablePath.StartsWith($folder, 'OrdinalIgnoreCase') } | ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force }"""; WorkingDir: "{app}"; Flags: runhidden; RunOnceId: "StopTaka"
+; This install's taka.exe and Taka.exe only, not the uninstaller beside them, found by the working directory so
+; no quote in the path breaks it, through Win32_Process since a 32-bit uninstaller's Get-Process has no 64-bit path.
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -Command ""$folder = (Get-Location).Path + '\'; Get-CimInstance Win32_Process | Where-Object {{ $_.Name -eq 'taka.exe' -and $_.ExecutablePath.StartsWith($folder, 'OrdinalIgnoreCase') } | ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force }"""; WorkingDir: "{app}"; Flags: runhidden; RunOnceId: "StopTaka"
