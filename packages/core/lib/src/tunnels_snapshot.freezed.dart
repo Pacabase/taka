@@ -132,14 +132,14 @@ return unknownHostKey(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  stopped,TResult Function()?  connecting,TResult Function( String warning)?  connected,TResult Function( String message,  bool isForward)?  failed,TResult Function( String reason)?  reconnecting,TResult Function( String host,  String type,  String fingerprint)?  unknownHostKey,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  stopped,TResult Function()?  connecting,TResult Function( String warning)?  connected,TResult Function( String message,  TunnelFailure failure)?  failed,TResult Function( String message,  TunnelFailure failure)?  reconnecting,TResult Function( String host,  String type,  String fingerprint)?  unknownHostKey,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped();case Connecting() when connecting != null:
 return connecting();case Connected() when connected != null:
 return connected(_that.warning);case Failed() when failed != null:
-return failed(_that.message,_that.isForward);case Reconnecting() when reconnecting != null:
-return reconnecting(_that.reason);case UnknownHostKey() when unknownHostKey != null:
+return failed(_that.message,_that.failure);case Reconnecting() when reconnecting != null:
+return reconnecting(_that.message,_that.failure);case UnknownHostKey() when unknownHostKey != null:
 return unknownHostKey(_that.host,_that.type,_that.fingerprint);case _:
   return orElse();
 
@@ -158,14 +158,14 @@ return unknownHostKey(_that.host,_that.type,_that.fingerprint);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  stopped,required TResult Function()  connecting,required TResult Function( String warning)  connected,required TResult Function( String message,  bool isForward)  failed,required TResult Function( String reason)  reconnecting,required TResult Function( String host,  String type,  String fingerprint)  unknownHostKey,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  stopped,required TResult Function()  connecting,required TResult Function( String warning)  connected,required TResult Function( String message,  TunnelFailure failure)  failed,required TResult Function( String message,  TunnelFailure failure)  reconnecting,required TResult Function( String host,  String type,  String fingerprint)  unknownHostKey,}) {final _that = this;
 switch (_that) {
 case Stopped():
 return stopped();case Connecting():
 return connecting();case Connected():
 return connected(_that.warning);case Failed():
-return failed(_that.message,_that.isForward);case Reconnecting():
-return reconnecting(_that.reason);case UnknownHostKey():
+return failed(_that.message,_that.failure);case Reconnecting():
+return reconnecting(_that.message,_that.failure);case UnknownHostKey():
 return unknownHostKey(_that.host,_that.type,_that.fingerprint);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -180,14 +180,14 @@ return unknownHostKey(_that.host,_that.type,_that.fingerprint);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  stopped,TResult? Function()?  connecting,TResult? Function( String warning)?  connected,TResult? Function( String message,  bool isForward)?  failed,TResult? Function( String reason)?  reconnecting,TResult? Function( String host,  String type,  String fingerprint)?  unknownHostKey,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  stopped,TResult? Function()?  connecting,TResult? Function( String warning)?  connected,TResult? Function( String message,  TunnelFailure failure)?  failed,TResult? Function( String message,  TunnelFailure failure)?  reconnecting,TResult? Function( String host,  String type,  String fingerprint)?  unknownHostKey,}) {final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped();case Connecting() when connecting != null:
 return connecting();case Connected() when connected != null:
 return connected(_that.warning);case Failed() when failed != null:
-return failed(_that.message,_that.isForward);case Reconnecting() when reconnecting != null:
-return reconnecting(_that.reason);case UnknownHostKey() when unknownHostKey != null:
+return failed(_that.message,_that.failure);case Reconnecting() when reconnecting != null:
+return reconnecting(_that.message,_that.failure);case UnknownHostKey() when unknownHostKey != null:
 return unknownHostKey(_that.host,_that.type,_that.fingerprint);case _:
   return null;
 
@@ -332,11 +332,11 @@ as String,
 
 
 class Failed extends TunnelStatus {
-  const Failed(this.message, {this.isForward = false}): super._();
+  const Failed(this.message, {this.failure = TunnelFailure.other}): super._();
   
 
  final  String message;
-@JsonKey() final  bool isForward;
+@JsonKey() final  TunnelFailure failure;
 
 /// Create a copy of TunnelStatus
 /// with the given fields replaced by the non-null parameter values.
@@ -348,18 +348,18 @@ $FailedCopyWith<Failed> get copyWith => _$FailedCopyWithImpl<Failed>(this, _$ide
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Failed&&(identical(other.message, message) || other.message == message)&&(identical(other.isForward, isForward) || other.isForward == isForward));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Failed&&(identical(other.message, message) || other.message == message)&&(identical(other.failure, failure) || other.failure == failure));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,message,isForward);
+    return Object.hash(runtimeType,message,failure);
 }
 
 @override
 String toString() {
-    return 'TunnelStatus.failed(message: $message, isForward: $isForward)';
+    return 'TunnelStatus.failed(message: $message, failure: $failure)';
 }
 
 
@@ -370,7 +370,7 @@ abstract mixin class $FailedCopyWith<$Res> implements $TunnelStatusCopyWith<$Res
   factory $FailedCopyWith(Failed value, $Res Function(Failed) _then) = _$FailedCopyWithImpl;
 @useResult
 $Res call({
- String message, bool isForward
+ String message, TunnelFailure failure
 });
 
 
@@ -387,11 +387,11 @@ class _$FailedCopyWithImpl<$Res>
 
 /// Create a copy of TunnelStatus
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? message = null,Object? isForward = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? message = null,Object? failure = null,}) {
   return _then(Failed(
 null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
-as String,isForward: null == isForward ? _self.isForward : isForward // ignore: cast_nullable_to_non_nullable
-as bool,
+as String,failure: null == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
+as TunnelFailure,
   ));
 }
 
@@ -402,10 +402,11 @@ as bool,
 
 
 class Reconnecting extends TunnelStatus {
-  const Reconnecting(this.reason): super._();
+  const Reconnecting(this.message, {this.failure = TunnelFailure.other}): super._();
   
 
- final  String reason;
+ final  String message;
+@JsonKey() final  TunnelFailure failure;
 
 /// Create a copy of TunnelStatus
 /// with the given fields replaced by the non-null parameter values.
@@ -417,18 +418,18 @@ $ReconnectingCopyWith<Reconnecting> get copyWith => _$ReconnectingCopyWithImpl<R
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is Reconnecting&&(identical(other.reason, reason) || other.reason == reason));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Reconnecting&&(identical(other.message, message) || other.message == message)&&(identical(other.failure, failure) || other.failure == failure));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,reason);
+    return Object.hash(runtimeType,message,failure);
 }
 
 @override
 String toString() {
-    return 'TunnelStatus.reconnecting(reason: $reason)';
+    return 'TunnelStatus.reconnecting(message: $message, failure: $failure)';
 }
 
 
@@ -439,7 +440,7 @@ abstract mixin class $ReconnectingCopyWith<$Res> implements $TunnelStatusCopyWit
   factory $ReconnectingCopyWith(Reconnecting value, $Res Function(Reconnecting) _then) = _$ReconnectingCopyWithImpl;
 @useResult
 $Res call({
- String reason
+ String message, TunnelFailure failure
 });
 
 
@@ -456,10 +457,11 @@ class _$ReconnectingCopyWithImpl<$Res>
 
 /// Create a copy of TunnelStatus
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? reason = null,}) {
+@pragma('vm:prefer-inline') $Res call({Object? message = null,Object? failure = null,}) {
   return _then(Reconnecting(
-null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
-as String,
+null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String,failure: null == failure ? _self.failure : failure // ignore: cast_nullable_to_non_nullable
+as TunnelFailure,
   ));
 }
 

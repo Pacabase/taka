@@ -59,7 +59,7 @@ void main() {
   testWidgets('Import adds the tunnels in the chosen file', (tester) async {
     const tunnel = Tunnel(id: 'a1', sshHost: 'bastion', localPort: 1080);
     pickFiles().opened = XFile.fromData(
-      utf8.encode(encodeTunnels([tunnel])),
+      utf8.encode(encodeTunnels(const TunnelBook(tunnels: [tunnel]))),
       path: '/Users/me/Taka tunnels.json',
     );
     await pumpPage(tester, const AgentSettings());
@@ -144,6 +144,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AboutPage), findsOneWidget);
+  });
+
+  testWidgets('A short window scrolls to About Taka, and About scrolls too', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 120));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpPage(tester, const AgentSettings(launchesAtLogin: false));
+
+    await tester.ensureVisible(find.text('About Taka'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('About Taka'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.textContaining('Icons by Lucide'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Icons by Lucide'), findsOneWidget);
   });
 }
 

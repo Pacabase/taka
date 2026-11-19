@@ -18,10 +18,15 @@ void main() {
       Connected(),
       Connected(warning: 'Connection refused'),
       Reconnecting('Connection to bastion closed by remote host.'),
+      Reconnecting('Timed out', failure: TunnelFailure.unreachable),
       Failed('127.0.0.1:5432 is already in use'),
       Failed(
+        '127.0.0.1:5432 is already in use',
+        failure: TunnelFailure.portInUse,
+      ),
+      Failed(
         'channel 2: open failed: connect failed: Connection refused',
-        isForward: true,
+        failure: TunnelFailure.forwardRefused,
       ),
       UnknownHostKey(
         host: 'bastion',
@@ -45,7 +50,11 @@ void main() {
       ({'status': 'failed', 'message': 3}, const Failed('')),
       ({'status': 'connected', 'warning': 3}, const Connected()),
       ({'status': 'reconnecting'}, const Reconnecting('')),
-      ({'status': 'reconnecting', 'reason': 3}, const Reconnecting('')),
+      ({'status': 'reconnecting', 'message': 3}, const Reconnecting('')),
+      (
+        {'status': 'failed', 'message': 'boom', 'failure': 'newKind'},
+        const Failed('boom'),
+      ),
       ({'status': 'unknownHostKey', 'host': 'bastion'}, const Stopped()),
       (<String, Object?>{}, const Stopped()),
       (null, const Stopped()),

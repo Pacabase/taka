@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:taka/theme/taka_colors.dart';
 import 'package:taka/widgets/app_icon.dart';
+import 'package:taka/widgets/fill_or_scroll.dart';
 
 const _legalese = 'Copyright © 2026 the Taka project authors.';
 
@@ -33,8 +34,11 @@ Iterable<LicenseEntry> agentLicences(String json) => [
       LicenseEntryWithLineBreaks([package], licence),
 ];
 
-class const AboutPage({super.key, required final String version})
-    extends StatelessWidget {
+class const AboutPage({
+  super.key,
+  required final String version,
+  final String name = 'Taka',
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = TakaColors.of(context);
@@ -66,44 +70,53 @@ class const AboutPage({super.key, required final String version})
             ),
           ),
           Expanded(
-            child: Center(
+            child: FillOrScroll(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 4,
                 children: [
-                  Image.asset('assets/icon/icon.png', width: 64, height: 64),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Taka',
-                    style: TextStyle(fontWeight: FontWeight.w500),
+                  const Spacer(),
+                  Column(
+                    spacing: 4,
+                    children: [
+                      Image.asset(
+                        'assets/icon/icon.png',
+                        width: 64,
+                        height: 64,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        name,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      Text('Version $version', style: secondary),
+                      Text(
+                        'SSH tunnels and SOCKS proxies, through your own ssh.',
+                        style: secondary,
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () => showLicensePage(
+                          context: context,
+                          applicationName: name,
+                          applicationVersion: version,
+                          applicationLegalese: _legalese,
+                        ),
+                        child: const Text('Open-source licenses'),
+                      ),
+                    ],
                   ),
-                  Text('Version $version', style: secondary),
-                  Text(
-                    'SSH tunnels and SOCKS proxies, through your own ssh.',
-                    style: secondary,
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () => showLicensePage(
-                      context: context,
-                      applicationName: 'Taka',
-                      applicationVersion: version,
-                      applicationLegalese: _legalese,
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Icons by Lucide. Fonts: Inter and JetBrains Mono. Colors from '
+                      "base16 One Light and OneDark, after Atom's One themes.\n"
+                      '$_legalese',
+                      textAlign: TextAlign.center,
+                      style: secondary.copyWith(fontSize: 12, height: 18 / 12),
                     ),
-                    child: const Text('Open-source licenses'),
                   ),
                 ],
               ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Text(
-              'Icons by Lucide. Fonts: Inter and JetBrains Mono. Colors from '
-              "base16 One Light and OneDark, after Atom's One themes.\n"
-              '$_legalese',
-              textAlign: TextAlign.center,
-              style: secondary.copyWith(fontSize: 12, height: 18 / 12),
             ),
           ),
         ],

@@ -51,8 +51,14 @@ void main() {
       statuses: {
         'a1': Connected(),
         'b2': Connecting(),
-        'c3': Failed('127.0.0.1:8080 is already in use'),
-        'd4': Reconnecting('Connection to bastion closed by remote host.'),
+        'c3': Failed(
+          '127.0.0.1:8080 is already in use',
+          failure: TunnelFailure.portInUse,
+        ),
+        'd4': Reconnecting(
+          'Connection to bastion closed by remote host.',
+          failure: TunnelFailure.dropped,
+        ),
       },
     );
 
@@ -181,8 +187,14 @@ void main() {
     const snapshot = TunnelsSnapshot(
       tunnels: [database, web, other],
       statuses: {
-        'c3': Failed('127.0.0.1:8080 is already in use'),
-        'd4': Reconnecting('Connection to bastion closed by remote host.'),
+        'c3': Failed(
+          '127.0.0.1:8080 is already in use',
+          failure: TunnelFailure.portInUse,
+        ),
+        'd4': Reconnecting(
+          'Connection to bastion closed by remote host.',
+          failure: TunnelFailure.dropped,
+        ),
       },
     );
 
@@ -213,7 +225,7 @@ void main() {
   test('names the destination of a forward the server could not make', () {
     const refused = Failed(
       'channel 2: open failed: connect failed: Connection refused',
-      isForward: true,
+      failure: TunnelFailure.forwardRefused,
     );
     final snapshot = TunnelsSnapshot(
       tunnels: [database],
@@ -259,10 +271,13 @@ void main() {
       ),
     );
     expect(
-      actionsWhen(const Reconnecting('Timeout, server web not responding.')),
-      startsWith(
-        'Tunnel Actions ▸ Web ▸ The server stopped answering. | --- | Copy',
+      actionsWhen(
+        const Reconnecting(
+          'Timeout, server web not responding.',
+          failure: TunnelFailure.dropped,
+        ),
       ),
+      startsWith('Tunnel Actions ▸ Web ▸ The connection dropped. | --- | Copy'),
     );
   });
 
@@ -328,6 +343,33 @@ void main() {
     );
   });
 
+  test("a dev build's menu names it, to quit and to check a key", () {
+    final empty = trayEntries(const TunnelsSnapshot(), name: 'Taka Dev');
+    final asking = [
+      for (final entry in trayEntries(
+        TunnelsSnapshot(
+          tunnels: [web],
+          statuses: {
+            'c3': const UnknownHostKey(
+              host: 'web',
+              type: 'ED25519',
+              fingerprint: 'SHA256:4Q0Hx2v6PZ9dW1yYk0r6hN1m1bGq9cY',
+            ),
+          },
+        ),
+        name: 'Taka Dev',
+      ))
+        '$entry',
+    ];
+
+    expect('${empty.last}', 'Quit Taka Dev ⌘q');
+    expect(asking.last, 'Quit Taka Dev ⌘q');
+    expect(
+      asking.firstWhere((line) => line.startsWith('Tunnel Actions')),
+      contains("Open Taka Dev to check web's key."),
+    );
+  });
+
   test('the tooltip counts connected tunnels', () {
     expect(trayTooltip(const TunnelsSnapshot()), 'Taka');
     expect(
@@ -339,6 +381,7 @@ void main() {
       ),
       'Taka · 1 connected',
     );
+    expect(trayTooltip(const TunnelsSnapshot(), name: 'Taka Dev'), 'Taka Dev');
   });
 
   test('each tunnel line toggles its own tunnel', () {
