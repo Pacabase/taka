@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:core/src/agent_channel.dart';
 import 'package:core/src/agent_command.dart';
 import 'package:core/src/agent_message.dart';
 import 'package:core/src/agent_settings.dart';
-import 'package:core/src/agent_socket.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 import 'package:fimber/fimber.dart';
 
@@ -35,27 +35,25 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
   this {
     _socket.done.ignore();
     // A socket error is always followed by done.
-    utf8.decoder
-        .bind(_socket)
-        .transform(const LineSplitter())
-        .listen(
-          _receive,
-          onError: (Object exception) =>
-              _log.w('Ignoring a broken message', ex: exception),
-          onDone: () {
-            _identify('');
-            unawaited(_snapshots.close());
-            unawaited(_tunnelRequests.close());
-            unawaited(_settings.close());
-          },
-        );
+    linesOf(_socket).listen(
+      _receive,
+      onError: (Object exception) =>
+          _log.w('Ignoring a broken message', ex: exception),
+      onDone: () {
+        _identify('');
+        unawaited(_snapshots.close());
+        unawaited(_tunnelRequests.close());
+        unawaited(_settings.close());
+      },
+    );
   }
 
   static Future<SocketAgentClient> connect(
     String path, {
     bool? loopback,
-  }) async =>
-      SocketAgentClient(await connectAgentSocket(path, loopback: loopback));
+  }) async => SocketAgentClient(
+    await AgentChannel.at(path, loopback: loopback).connect(),
+  );
 
   @override
   Future<String> get identity => _identity.future;

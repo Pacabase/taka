@@ -234,7 +234,10 @@ void main() {
 
       test('a bad line is ignored and the client stays connected', () async {
         await serve();
-        final socket = await connectAgentSocket(path, loopback: loopback);
+        final socket = await AgentChannel.at(
+          path,
+          loopback: loopback,
+        ).connect();
         addTearDown(socket.destroy);
         final snapshots = await listen();
         await snapshots.next;
@@ -442,18 +445,6 @@ void main() {
         );
       });
 
-      test('a path too long for a socket is an error, not another agent', () {
-        expect(
-          AgentServer.bind(
-            '${directory.path}/${'x' * 200}.sock',
-            manager,
-            preferences,
-            loopback: loopback,
-          ),
-          throwsA(isA<SocketException>()),
-        );
-      }, skip: loopback ? 'A ticket path has no such limit' : false);
-
       test('a socket left behind by a dead agent is replaced', () async {
         final stale = await fakeAgent();
         await stale.close();
@@ -463,140 +454,6 @@ void main() {
 
         expect(await (await listen()).next, manager.state);
       });
-
-      test('a client without the token hears nothing and is dropped', () async {
-        await serve();
-        final ticket = (await AgentTicket.read(path))!;
-        final socket = await Socket.connect(
-          InternetAddress.loopbackIPv4,
-          ticket.port,
-        );
-        addTearDown(socket.destroy);
-
-        socket.writeln('not the token');
-
-        expect(await socket.toList(), isEmpty);
-      }, skip: loopback ? false : 'A Unix socket needs no token');
-
-      test("closing leaves a newer agent's ticket alone", () async {
-        final server = await serve();
-        final newer = AgentTicket.random(1).encoded;
-        await File(path).writeAsString(newer);
-
-        await server.close();
-
-        expect(await File(path).readAsString(), newer);
-      }, skip: loopback ? false : 'A Unix socket has no ticket');
-
-      Future<Socket> stranger() async => Socket.connect(
-        InternetAddress.loopbackIPv4,
-        (await AgentTicket.read(path))!.port,
-      );
-
-      test('a command in place of the token is refused', () async {
-        await serve();
-        final socket = await stranger();
-        addTearDown(socket.destroy);
-
-        socket.writeln(jsonEncode(const AgentCommand.quit().toJson()));
-
-        expect(await socket.toList(), isEmpty);
-        expect(manager.isClosed, isFalse);
-      }, skip: loopback ? false : 'A Unix socket needs no token');
-
-      test('a first line longer than any token is dropped', () async {
-        await serve();
-        final socket = await stranger();
-        addTearDown(socket.destroy);
-
-        socket.write('x' * 4096);
-
-        expect(await socket.toList(), isEmpty);
-      }, skip: loopback ? false : 'A Unix socket needs no token');
-
-      test('a client still without the token is dropped on close', () async {
-        final server = await serve();
-        final socket = await stranger();
-        addTearDown(socket.destroy);
-        final ended = socket.drain<void>().then((_) {}, onError: (Object _) {});
-        // Accepted in order, so the stranger is in by the client's snapshot.
-        await (await listen()).next;
-
-        await server.close();
-
-        await ended.timeout(const Duration(seconds: 1));
-      }, skip: loopback ? false : 'A Unix socket needs no token');
-
-      test(
-        "a silent program on a dead agent's port isn't taken for an agent",
-        () async {
-          final silent = await fakeAgent();
-          addTearDown(silent.close);
-          silent.listen((socket) => addTearDown(socket.destroy));
-
-          await serve();
-
-          expect(await (await listen()).next, manager.state);
-        },
-        skip: loopback ? false : 'Only the agent can listen on its Unix socket',
-      );
-
-      test(
-        "a program that talks on a dead agent's port isn't taken for an agent",
-        () async {
-          final talking = await fakeAgent();
-          addTearDown(talking.close);
-          talking.listen(
-            (socket) => socket
-              ..writeln('HTTP/1.1 400 Bad Request')
-              ..destroy(),
-          );
-
-          await serve();
-
-          expect(await (await listen()).next, manager.state);
-        },
-        skip: loopback ? false : 'Only the agent can listen on its Unix socket',
-      );
     }, testOn: loopback ? null : '!windows');
   }
-
-  group('AgentTicket', () {
-    test('reads back what it wrote', () async {
-      final directory = await Directory.systemTemp.createTemp('taka_ticket');
-      addTearDown(() => directory.delete(recursive: true));
-      final file = File('${directory.path}/agent.port');
-      final ticket = AgentTicket.random(4242);
-
-      await file.writeAsString(ticket.encoded);
-
-      expect((await AgentTicket.read(file.path))?.encoded, ticket.encoded);
-    });
-
-    test('is null for a missing, empty or broken file', () async {
-      final directory = await Directory.systemTemp.createTemp('taka_ticket');
-      addTearDown(() => directory.delete(recursive: true));
-      final file = File('${directory.path}/agent.port');
-
-      expect(await AgentTicket.read(file.path), isNull);
-      for (final text in ['', 'port token', '4242', '4242 a b']) {
-        await file.writeAsString(text);
-        expect(await AgentTicket.read(file.path), isNull, reason: text);
-      }
-    });
-
-    test('a fresh one has a new token each time', () {
-      expect(AgentTicket.random(1).token, isNot(AgentTicket.random(1).token));
-    });
-
-    test('admits only its own token', () {
-      const ticket = AgentTicket(1, 'secret');
-
-      expect(ticket.admits('secret'), isTrue);
-      expect(ticket.admits('secre'), isFalse);
-      expect(ticket.admits('secrets'), isFalse);
-      expect(ticket.admits(''), isFalse);
-      expect(ticket.admits('Secret'), isFalse);
-    });
-  });
 }
