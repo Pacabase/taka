@@ -65,7 +65,8 @@ sealed class const Phase._() with _$Phase {
   };
 }
 
-/// [isWatched] isn't [hasConnected]: a trust after a reconnect comes forward.
+/// [isWatched] isn't [hasConnected]: a trust after a reconnect comes forward,
+/// and so does the first try after the screen unlocks.
 @freezed
 sealed class const SessionState._() with _$SessionState {
   const factory({
@@ -208,7 +209,11 @@ class TunnelSession({
     on<RetryDue>((event, emit) async {
       final locked = await _isLocked();
       if (state.phase case final Waiting waiting) {
-        if (!locked) return add(SessionEvent.connect(Completer()));
+        if (!locked) {
+          // Whoever unlocked it is at the screen for a login prompt.
+          if (waiting.forUnlock) emit(state.copyWith(isWatched: true));
+          return add(SessionEvent.connect(Completer()));
+        }
 
         if (!waiting.forUnlock) {
           _log.i('${tunnel.title}: waiting for the screen to unlock');

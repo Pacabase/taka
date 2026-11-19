@@ -1486,6 +1486,37 @@ void main() {
       });
     });
 
+    test('comes forward for the first try after the screen unlocks', () {
+      final calls = <String>[];
+      var locked = true;
+      dropped(comeForward: recordedIn(calls), isLocked: () async => locked, (
+        manager,
+        time,
+      ) {
+        calls.clear();
+        when(openAnyTunnel).thenAnswer(
+          logsLogin(() async {
+            if (failures.isNotEmpty) throw failures.removeAt(0);
+            return (opened..add(FakeTunnel(15432))).last;
+          }),
+        );
+        failures = [timedOut];
+        drop(time, closed);
+        time.elapse(const Duration(minutes: 5));
+        expect(calls, isEmpty);
+
+        locked = false;
+        time.elapse(const Duration(seconds: 5));
+        expect(failures, isEmpty);
+        expect(calls, ['forward', 'forward', 'back', 'back']);
+
+        calls.clear();
+        time.elapse(const Duration(seconds: 2));
+        expect(manager.state.statusOf('a1'), const Connected());
+        expect(calls, isEmpty);
+      });
+    });
+
     test('uses no tries while the screen is locked', () {
       var locked = true;
       dropped(isLocked: () async => locked, (manager, time) {
