@@ -78,7 +78,7 @@ Future<void> _start() async {
   final AgentServer server;
   try {
     final bound = await AgentServer.bind(
-      agentSocketPath(),
+      AgentChannel.at(agentSocketPath()),
       manager,
       preferences,
       identity: identity,
@@ -89,7 +89,7 @@ Future<void> _start() async {
       return;
     }
     server = bound;
-  } on SocketException catch (exception) {
+  } on IOException catch (exception) {
     Fimber.e('Could not listen on ${agentSocketPath()}', ex: exception);
     Application.instance.quit(1);
     return;
@@ -119,8 +119,8 @@ Future<void> _start() async {
     onManageTunnels: () => unawaited(_open(app)),
     onOpenTunnel: (id) {
       // Opening the app again presents its window; Wayland may only flag it.
-      final isOpen = server.show(AgentMessage.openTunnel(id));
-      if (!isOpen || !Platform.isWindows) unawaited(_open(app));
+      server.show(AgentMessage.openTunnel(id));
+      unawaited(_open(app));
     },
     onQuit: manager.close,
   ).show();

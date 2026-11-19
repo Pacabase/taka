@@ -3,17 +3,21 @@ import 'dart:math';
 
 import 'package:image/image.dart';
 
-const sourcePath = 'assets/icon/icon.png';
-const devIconPath = 'assets/icon/icon-dev.png';
-const releaseIconSet = 'macos/Runner/Assets.xcassets/AppIcon.appiconset';
-const devIconSet = 'macos/Runner/Assets.xcassets/AppIcon-Dev.appiconset';
-const linuxIconPath = 'assets/icon/icon-linux.png';
+const _sourcePath = 'assets/icon/icon.png';
+const _devIconPath = 'assets/icon/icon-dev.png';
+const _releaseIconSet = 'macos/Runner/Assets.xcassets/AppIcon.appiconset';
+const _devIconSet = 'macos/Runner/Assets.xcassets/AppIcon-Dev.appiconset';
+const _tileIconPath = 'assets/icon/icon-tile.png';
+const _windowsDevIcon = 'windows/runner/resources/app_icon_dev.ico';
+
+/// `flutter_launcher_icons`' `windows.icon_size` in pubspec.yaml.
+const _windowsIconSize = 256;
 
 final _red = ColorRgb8(0xC6, 0x28, 0x28);
 
 /// Taka's icon with its darkest colour turned red and the white kept, so a
-/// debug build's Dock icon tells it from a release's.
-Image devIcon(Image source) {
+/// debug build's Dock and taskbar icon tells it from a release's.
+Image _devIcon(Image source) {
   final darkest = source
       .map((pixel) => pixel.luminanceNormalized)
       .reduce((least, luminance) => luminance < least ? luminance : least);
@@ -32,43 +36,44 @@ Image devIcon(Image source) {
   return icon;
 }
 
-Map<int, String> iconSetFiles() => {
-  for (final file in Directory(releaseIconSet).listSync().whereType<File>())
+Map<int, String> _iconSetFiles() => {
+  for (final file in Directory(_releaseIconSet).listSync().whereType<File>())
     if (RegExp(r'app_icon_(\d+)\.png$').firstMatch(file.path) case final match?)
       int.parse(match.group(1)!): file.uri.pathSegments.last,
 };
 
-/// [icon] on a rounded tile with a margin, since Linux shows an icon as it is
-/// drawn, where macOS gives it its own shape.
-Image linuxIcon(Image icon) {
+/// [icon] with rounded corners, for Linux and Windows, which show an icon as
+/// it is drawn, where macOS gives it its own shape.
+Image _tileIcon(Image icon) {
   final size = icon.width;
-  final margin = (size * 0.06).round();
-  final side = size - 2 * margin;
-  final radius = side * 0.2;
+  final radius = size * 0.2;
   double inside(double x, double y) {
-    final dx = max(max(radius - x, x - (side - radius)), 0.0);
-    final dy = max(max(radius - y, y - (side - radius)), 0.0);
+    final dx = max(max(radius - x, x - (size - radius)), 0.0);
+    final dy = max(max(radius - y, y - (size - radius)), 0.0);
     return (radius + 0.5 - sqrt(dx * dx + dy * dy)).clamp(0.0, 1.0);
   }
 
-  final linux = Image(width: size, height: size, numChannels: 4);
-  for (final pixel in iconAt(icon, side)) {
-    final coverage = inside(pixel.x + 0.5, pixel.y + 0.5);
-    if (coverage == 0) continue;
-    linux.setPixelRgba(
-      pixel.x + margin,
-      pixel.y + margin,
+  final tile = Image(width: size, height: size, numChannels: 4);
+  for (final pixel in icon) {
+    tile.setPixelRgba(
+      pixel.x,
+      pixel.y,
       pixel.r,
       pixel.g,
       pixel.b,
-      pixel.a * coverage,
+      pixel.a * inside(pixel.x + 0.5, pixel.y + 0.5),
     );
   }
-  return linux;
+  return tile;
 }
 
+/// The red tile, as `flutter_launcher_icons` makes the release `.ico` from
+/// [_tileIconPath].
+List<int> _windowsDevIco(Image source) =>
+    encodeIco(_iconAt(_devIcon(_tileIcon(source)), _windowsIconSize));
+
 /// Resized the way `flutter_launcher_icons` resizes the release set.
-Image iconAt(Image icon, int size) => copyResize(
+Image _iconAt(Image icon, int size) => copyResize(
   icon,
   width: size,
   height: size,
@@ -78,17 +83,20 @@ Image iconAt(Image icon, int size) => copyResize(
 );
 
 void main() {
-  final source = decodePng(File(sourcePath).readAsBytesSync())!;
-  File(linuxIconPath).writeAsBytesSync(encodePng(linuxIcon(source)));
-  final icon = devIcon(source);
-  File(devIconPath).writeAsBytesSync(encodePng(icon));
+  final source = decodePng(File(_sourcePath).readAsBytesSync())!;
+  File(_tileIconPath).writeAsBytesSync(encodePng(_tileIcon(source)));
+  final icon = _devIcon(source);
+  File(_devIconPath).writeAsBytesSync(encodePng(icon));
 
-  Directory(devIconSet).createSync();
-  File('$releaseIconSet/Contents.json').copySync('$devIconSet/Contents.json');
-  iconSetFiles().forEach(
+  Directory(_devIconSet).createSync();
+  File('$_releaseIconSet/Contents.json').copySync('$_devIconSet/Contents.json');
+  _iconSetFiles().forEach(
     (size, name) =>
-        File('$devIconSet/$name')
-            .writeAsBytesSync(encodePng(iconAt(icon, size))),
+        File('$_devIconSet/$name')
+            .writeAsBytesSync(encodePng(_iconAt(icon, size))),
   );
-  stdout.writeln('Wrote $linuxIconPath, $devIconPath and $devIconSet');
+  File(_windowsDevIcon).writeAsBytesSync(_windowsDevIco(source));
+  stdout.writeln(
+    'Wrote $_tileIconPath, $_devIconPath, $_devIconSet and $_windowsDevIcon',
+  );
 }

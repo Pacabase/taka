@@ -1,43 +1,69 @@
 import 'dart:io';
 
 import 'package:core/src/taka_build.dart';
+import 'package:path/path.dart' as p;
 
-Directory takaDirectory({Map<String, String>? environment, TakaBuild? build}) {
+Directory takaDirectory({
+  Map<String, String>? environment,
+  TakaBuild? build,
+  String? operatingSystem,
+}) {
   final variables = environment ?? Platform.environment;
   final home = variables['HOME'] ?? '';
-  final appId = (build ?? takaBuild).appId;
+  final TakaBuild(:appId, :name) = build ?? takaBuild;
 
-  if (Platform.isMacOS) {
-    return Directory('$home/Library/Application Support/$appId');
-  }
-  if (Platform.isLinux) {
-    final data = switch (variables['XDG_DATA_HOME']) {
-      final String data when data.isNotEmpty => data,
-      _ => '$home/.local/share',
-    };
-    return Directory('$data/$appId');
-  }
-  throw UnsupportedError('Taka runs on macOS and Linux so far');
+  return switch (operatingSystem ?? Platform.operatingSystem) {
+    'macos' => Directory('$home/Library/Application Support/$appId'),
+    'linux' => Directory(
+      '${_xdg(variables, 'XDG_DATA_HOME', '.local/share')}/$appId',
+    ),
+    'windows' => Directory(p.windows.join(variables['APPDATA'] ?? '', name)),
+    _ => throw UnsupportedError('Taka runs on macOS, Linux and Windows'),
+  };
 }
 
-String agentSocketPath({Map<String, String>? environment, TakaBuild? build}) =>
-    '${takaDirectory(environment: environment, build: build).path}/agent.sock';
+/// On Windows, where Dart has no Unix sockets, the file holds an
+/// `AgentTicket` instead.
+String agentSocketPath({
+  Map<String, String>? environment,
+  TakaBuild? build,
+  String? operatingSystem,
+}) => switch (operatingSystem ?? Platform.operatingSystem) {
+  'windows' => p.windows.join(
+    (environment ?? Platform.environment)['LOCALAPPDATA'] ?? '',
+    (build ?? takaBuild).name,
+    'agent.port',
+  ),
+  final system =>
+    '${takaDirectory(environment: environment, build: build, operatingSystem: system).path}/agent.sock',
+};
 
 String agentIdentity(String executable) {
   final file = File(File(executable).resolveSymbolicLinksSync());
   return '${file.path}@${file.statSync().modified.millisecondsSinceEpoch}';
 }
 
-Directory logDirectory({Map<String, String>? environment, TakaBuild? build}) {
+Directory logDirectory({
+  Map<String, String>? environment,
+  TakaBuild? build,
+  String? operatingSystem,
+}) {
   final variables = environment ?? Platform.environment;
-  final home = variables['HOME'] ?? '';
   final TakaBuild(:name, :folderName) = build ?? takaBuild;
 
-  if (Platform.isMacOS) return Directory('$home/Library/Logs/$name');
-
-  final state = switch (variables['XDG_STATE_HOME']) {
-    final String state when state.isNotEmpty => state,
-    _ => '$home/.local/state',
+  return switch (operatingSystem ?? Platform.operatingSystem) {
+    'macos' => Directory('${variables['HOME'] ?? ''}/Library/Logs/$name'),
+    'windows' => Directory(
+      p.windows.join(variables['LOCALAPPDATA'] ?? '', name, 'logs'),
+    ),
+    _ => Directory(
+      '${_xdg(variables, 'XDG_STATE_HOME', '.local/state')}/$folderName/logs',
+    ),
   };
-  return Directory('$state/$folderName/logs');
 }
+
+String _xdg(Map<String, String> variables, String name, String fallback) =>
+    switch (variables[name]) {
+      final String folder when folder.isNotEmpty => folder,
+      _ => '${variables['HOME'] ?? ''}/$fallback',
+    };

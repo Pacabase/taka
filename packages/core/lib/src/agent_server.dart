@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:core/src/agent_channel.dart';
 import 'package:core/src/agent_command.dart';
 import 'package:core/src/agent_message.dart';
 import 'package:core/src/agent_settings.dart';
@@ -13,13 +14,14 @@ import 'package:fimber/fimber.dart';
 final _log = FimberLog('Socket');
 
 class AgentServer(
-  final ServerSocket _server,
+  final AgentListener _listener,
   final TunnelManager _manager,
   final AgentPreferences _preferences,
   final String _identity,
 ) {
-  final Set<Socket> _clients = {};
+  final Set<AgentLink> _clients = {};
   AgentMessage? _pending;
+  bool _isClosed = false;
   late final StreamSubscription<TunnelsSnapshot> _changes;
   late final StreamSubscription<AgentSettings> _settingsChanges;
 
@@ -30,44 +32,19 @@ class AgentServer(
     _settingsChanges = _preferences.changes.listen(
       (settings) => _sendAll(AgentMessage.settings(settings)),
     );
-    _server.listen(_accept);
+    _listener.links.listen(_accept);
   }
 
   static Future<AgentServer?> bind(
-    String path,
+    AgentChannel channel,
     TunnelManager manager,
     AgentPreferences preferences, {
     String identity = '',
   }) async {
-    final address = InternetAddress(path, type: InternetAddressType.unix);
-    final file = File(path);
-    Future<bool> isAnswered() async {
-      try {
-        (await Socket.connect(address, 0)).destroy();
-        return true;
-      } on SocketException {
-        return false;
-      }
-    }
-
-    if (await file.exists()) {
-      if (await isAnswered()) return null;
-      await file.delete();
-    }
-
-    await file.parent.create(recursive: true);
-    try {
-      return AgentServer(
-        await ServerSocket.bind(address, 0),
-        manager,
-        preferences,
-        identity,
-      );
-    } on SocketException {
-      // Another agent may have bound it a moment ago.
-      if (await isAnswered()) return null;
-      rethrow;
-    }
+    final listener = await channel.listen();
+    return listener == null
+        ? null
+        : AgentServer(listener, manager, preferences, identity);
   }
 
   bool show(AgentMessage request) {
@@ -80,9 +57,18 @@ class AgentServer(
     return true;
   }
 
-  void _accept(Socket client) {
+  void _accept(AgentLink client) {
+    _admit(client);
+    client.lines.listen(
+      (line) => unawaited(_handle(line)),
+      onDone: () => _drop(client),
+      onError: (Object _) => _drop(client),
+      cancelOnError: true,
+    );
+  }
+
+  void _admit(AgentLink client) {
     _clients.add(client);
-    client.done.ignore();
     _send(client, AgentMessage.identity(_identity));
     _send(client, AgentMessage.snapshot(_manager.state));
     _send(client, AgentMessage.settings(_preferences.settings));
@@ -90,16 +76,6 @@ class AgentServer(
       _pending = null;
       _send(client, request);
     }
-
-    utf8.decoder
-        .bind(client)
-        .transform(const LineSplitter())
-        .listen(
-          _handle,
-          onDone: () => _drop(client),
-          onError: (Object _) => _drop(client),
-          cancelOnError: true,
-        );
   }
 
   Future<void> _handle(String line) async {
@@ -148,18 +124,20 @@ class AgentServer(
     }
   }
 
-  void _send(Socket client, AgentMessage message) =>
-      client.writeln(jsonEncode(message.toJson()));
+  void _send(AgentLink client, AgentMessage message) =>
+      client.send(jsonEncode(message.toJson()));
 
-  void _drop(Socket client) {
+  void _drop(AgentLink client) {
     _clients.remove(client);
-    client.destroy();
+    client.close();
   }
 
   Future<void> close() async {
+    if (_isClosed) return;
+    _isClosed = true;
     await _changes.cancel();
     await _settingsChanges.cancel();
-    await _server.close();
     [..._clients].forEach(_drop);
+    await _listener.close();
   }
 }

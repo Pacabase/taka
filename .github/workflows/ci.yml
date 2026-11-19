@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -44,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -84,6 +84,7 @@ jobs:
     with:
       macos-targets: '["macos-apple-silicon"]'
       linux-targets: '["linux-x64"]'
+      windows-targets: '["windows-x64"]'
 
   # The one required check, so jobs can be added without touching branch rules.
   ci:

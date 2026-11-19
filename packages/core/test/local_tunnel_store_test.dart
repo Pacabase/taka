@@ -155,7 +155,9 @@ void main() {
   test('save leaves no temporary file behind', () async {
     await store().save(const TunnelBook(tunnels: [proxy]), on: const {});
 
-    expect(file.parent.listSync().map((entry) => entry.path), [file.path]);
+    expect(file.parent.listSync().map((entry) => entry.uri.pathSegments.last), [
+      'tunnels.json',
+    ]);
   });
 
   test('save keeps which tunnels were on, and load reads them back', () async {

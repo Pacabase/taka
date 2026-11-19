@@ -45,7 +45,12 @@ class DebugLogging(
 
   Future<void> reveal() async {
     _logs.createSync(recursive: true);
-    await Process.run(Platform.isMacOS ? 'open' : 'xdg-open', [_logs.path]);
+    final opener = Platform.isMacOS
+        ? 'open'
+        : Platform.isWindows
+        ? 'explorer.exe'
+        : 'xdg-open';
+    await Process.run(opener, [_logs.path]);
   }
 
   void _startWriting() {
