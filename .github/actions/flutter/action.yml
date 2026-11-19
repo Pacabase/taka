@@ -4,54 +4,15 @@ description: 'The Flutter in .fvmrc, and the app and agent packages from their l
 runs:
   using: 'composite'
   steps:
-    # Bumping FVM_VERSION means updating every checksum.
-    - name: Install FVM
-      if: runner.os != 'Windows'
-      shell: bash
-      working-directory: ${{ runner.temp }}
-      env:
-        FVM_VERSION: 4.0.5
-        PLATFORM: ${{ runner.os }}-${{ runner.arch }}
-      run: |
-        case "$PLATFORM" in
-          Linux-X64) asset=linux-x64 sum=8f8baeb018a9bb10f196d3f1d86b77998959662048d6cd909887e2527b5575ca ;;
-          Linux-ARM64) asset=linux-arm64 sum=759b82533b85fea4bc0b75b80885de2ea62668fc773750154f2cc690a36a9c35 ;;
-          macOS-ARM64) asset=macos-arm64 sum=d15c2f616cc521a947a99d8fc90d942a68150211f465fd2595c52f731e98d053 ;;
-          macOS-X64) asset=macos-x64 sum=492ce608b1d62148231e19fe30d9146e9b52699ab860c0afa8136c13c0a8bc4b ;;
-          *) echo "No FVM checksum for $PLATFORM" >&2; exit 1 ;;
-        esac
-        curl -fsSLo fvm.tar.gz "https://github.com/leoafarias/fvm/releases/download/$FVM_VERSION/fvm-$FVM_VERSION-$asset.tar.gz"
-        echo "$sum  fvm.tar.gz" | shasum -a 256 --check --strict
-        tar -xzf fvm.tar.gz
-        echo "$PWD/fvm" >> "$GITHUB_PATH"
-
-    - name: Install FVM on Windows
-      if: runner.os == 'Windows'
-      shell: pwsh
-      env:
-        FVM_VERSION: 4.0.5
-      run: |
-        $zip = "$env:RUNNER_TEMP\fvm.zip"
-        Invoke-WebRequest "https://github.com/leoafarias/fvm/releases/download/$env:FVM_VERSION/fvm-$env:FVM_VERSION-windows-x64.zip" -OutFile $zip
-        if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne '51040562aca33e96867e43f5b71ce9b6d626736ec1435322e151624a086a56a2') {
-          throw "fvm-$env:FVM_VERSION-windows-x64.zip doesn't match its checksum"
-        }
-        Expand-Archive $zip -DestinationPath $env:RUNNER_TEMP
-        "$env:RUNNER_TEMP\fvm" >> $env:GITHUB_PATH
-
-    - name: Cache Flutter SDK
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+    - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
       with:
-        key: ${{ runner.os }}-${{ runner.arch }}-flutter-${{ hashFiles('.fvmrc') }}
-        restore-keys: ${{ runner.os }}-${{ runner.arch }}-flutter-
-        path: .fvm/cache
-
-    - name: Install Flutter SDK
-      shell: bash
-      run: fvm config --cache-path .fvm/cache && fvm install
+        flutter-version-file: .fvmrc
+        # Flutter publishes no Linux arm64 archive, so there it checks out the release tag from git.
+        channel: ${{ runner.os == 'Linux' && runner.arch == 'ARM64' && 'main' || 'stable' }}
+        cache: true
 
     - name: Get the packages
       shell: bash
       run: |
-        fvm flutter pub get --enforce-lockfile
-        fvm dart pub get --enforce-lockfile -C packages/agent
+        flutter pub get --enforce-lockfile
+        dart pub get --enforce-lockfile -C packages/agent
