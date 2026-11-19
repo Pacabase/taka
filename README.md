@@ -68,35 +68,35 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Ordered roughly by priority; each line is about one pull request.
 
-### First preview (0.1, macOS)
+### Signed macOS releases
 
 - [ ] **Signed and notarized builds**, so macOS opens Taka without a warning.
 - [ ] **Homebrew tap** — `brew install --cask taka`, from the release `.dmg`.
 - [ ] **Signed auto-updates**.
 
-### Daily driver (0.2, Linux)
+### Daily driver
 
 - [ ] **Activity log** per tunnel.
 - [ ] **Tags**, several per tunnel, to filter the list by.
 - [ ] **Import** hosts from `~/.ssh/config`.
 - [ ] **More Linux packages** — AppImage and the AUR.
 
-### Windows (0.3)
+### Signed Windows releases
 
 - [ ] **Signed Windows builds**, so Smart App Control lets Taka run and SmartScreen opens it without a warning.
 - [ ] **`winget`** — `winget install Taka`, from the release installer.
 
-### Logins (0.4)
+### Logins
 
 - [ ] **Passwords, passphrases and 2FA** through `SSH_ASKPASS`, with 1Password `op://` references.
 
-### Power users (0.5)
+### Power users
 
 - [ ] **Every action is a command**, with shortcuts and a command palette.
 - [ ] **A `taka` command line** — `up`, `down`, `status --json`, and `run <tunnel> -- <command>`.
 - [ ] **A shareable tunnels file** that Taka keeps in sync, safe to commit since Taka stores no secrets.
 
-### Beyond (0.6 and 1.0)
+### Beyond
 
 - [ ] **Notifications** when a tunnel drops or gives up, saying why, and opening it in the window when clicked. nativeapi has no notifications on macOS or Linux yet, so it means Apple's UserNotifications through `objective_c` and D-Bus's `org.freedesktop.Notifications`, or adding them to nativeapi.
 - [ ] **Health checks** that show a tunnel as connected only once the service behind it answers.
