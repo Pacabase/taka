@@ -66,9 +66,7 @@ sealed class const Phase._() with _$Phase {
 }
 
 /// [isWatched] isn't [hasConnected]: a trust after a reconnect comes forward,
-/// and so does the first try after the screen unlocks. [wasAway]: the screen
-/// locked or the Mac slept while it was up, so the first try after a drop
-/// comes forward too, since ssh may notice the drop only after an unlock.
+/// and so does the first try after the screen unlocks or after [wasAway].
 @freezed
 sealed class const SessionState._() with _$SessionState {
   const factory({
@@ -123,7 +121,7 @@ class TunnelSession({
   final DateTime Function() clock = DateTime.now,
 }) extends Bloc<SessionEvent, SessionState> {
   final _abort = Completer<void>();
-  DateTime? _lastAwayCheck;
+  late DateTime _lastAwayCheck;
   final _timers = <Type, Timer>{};
   final List<Future<HandBack?>> _cameForward = [];
   // Handles that aren't values a state can hold: the attempt of Opening or
@@ -198,8 +196,10 @@ class TunnelSession({
         ),
       );
       _after(stableAfter, const SessionEvent.stable());
-      _lastAwayCheck = clock();
-      _after(lockedRecheck, const SessionEvent.awayCheckDue());
+      if (comeForward != null) {
+        _lastAwayCheck = clock();
+        _after(lockedRecheck, const SessionEvent.awayCheckDue());
+      }
       _log.i('Connected ${tunnel.title}');
       unawaited(
         opened.done.then(
@@ -233,14 +233,14 @@ class TunnelSession({
       }
     });
 
-    // A timer can't fire while the Mac sleeps, so a long gap means it slept.
+    // A timer can't fire during sleep, so a long gap means the computer slept.
     on<AwayCheckDue>((event, emit) async {
       final now = clock();
-      final last = _lastAwayCheck ?? now;
+      final slept = now.difference(_lastAwayCheck) > lockedRecheck * 3;
       _lastAwayCheck = now;
-      final slept = now.difference(last) > lockedRecheck * 3;
       final locked = !slept && await _isLocked();
-      if (state.phase is! Up) return;
+      // A reconnect while it waited started checks of its own.
+      if (state.phase is! Up || _lastAwayCheck != now) return;
 
       if (slept || locked) return emit(state.copyWith(wasAway: true));
       _after(lockedRecheck, const SessionEvent.awayCheckDue());
@@ -399,7 +399,8 @@ class TunnelSession({
       state.copyWith(
         phase: Waiting(Reconnecting(message, failure: failure)),
         attempts: state.attempts + 1,
-        isWatched: state.wasAway,
+        // A watched try that failed before ssh logged in never came forward.
+        isWatched: state.wasAway || (state.isWatched && _cameForward.isEmpty),
         wasAway: false,
       ),
     );
