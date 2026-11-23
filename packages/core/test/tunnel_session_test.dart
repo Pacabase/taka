@@ -47,6 +47,7 @@ void main() {
     bool isRestored = false,
     bool Function()? locked,
     Future<HandBack> Function()? comeForward,
+    DateTime Function()? clock,
   }) {
     final session = TunnelSession(
       tunnel: database,
@@ -60,6 +61,7 @@ void main() {
       lockedRecheck: const Duration(seconds: 5),
       stableAfter: const Duration(minutes: 1),
       isRestored: isRestored,
+      clock: clock ?? DateTime.now,
     );
     var last = session.status;
     session.stream.map((state) => state.status).listen((status) {
@@ -189,6 +191,109 @@ void main() {
 
       expect(up.state.phase, isA<Up>());
       verify(openAnyTunnel).called(2);
+    });
+  });
+
+  test('comes forward on the first try after a drop, once it was locked', () {
+    fakeAsync((time) {
+      var isLocked = false;
+      var checks = 0;
+      final tunnel = FakeTunnel(15432);
+      when(openAnyTunnel).thenAnswer((_) async => tunnel);
+      final up = session(
+        locked: () {
+          checks++;
+          return isLocked;
+        },
+      );
+      unawaited(up.connect());
+      time
+        ..flushMicrotasks()
+        ..elapse(const Duration(seconds: 5));
+      expect(up.state.wasAway, isFalse);
+      isLocked = true;
+      time.elapse(const Duration(seconds: 5));
+      isLocked = false;
+      time.elapse(const Duration(minutes: 1));
+      expect(up.state.wasAway, isTrue);
+      expect(checks, 2);
+
+      when(openAnyTunnel).thenAnswer((_) => Future.error(dropped));
+      tunnel.dropWith(dropped);
+      time.flushMicrotasks();
+      expect(up.state.isWatched, isTrue);
+      expect(up.state.wasAway, isFalse);
+
+      time.elapse(retryDelays.first);
+      expect(up.state.phase, isA<Waiting>());
+      expect(up.state.isWatched, isFalse);
+    });
+  });
+
+  test('comes forward on the first try after a drop, once the Mac slept', () {
+    fakeAsync((time) {
+      var now = DateTime(2026, 11, 24);
+      final tunnel = FakeTunnel(15432);
+      when(openAnyTunnel).thenAnswer((_) async => tunnel);
+      final up = session(locked: () => false, clock: () => now);
+      unawaited(up.connect());
+      time.flushMicrotasks();
+
+      now = now.add(const Duration(hours: 2));
+      time.elapse(const Duration(seconds: 5));
+      expect(up.state.wasAway, isTrue);
+
+      tunnel.dropWith(dropped);
+      time.flushMicrotasks();
+      expect(up.state.isWatched, isTrue);
+    });
+  });
+
+  test('retries without coming forward when it was never away', () {
+    fakeAsync((time) {
+      var now = DateTime(2026, 11, 24);
+      final tunnel = FakeTunnel(15432);
+      when(openAnyTunnel).thenAnswer((_) async => tunnel);
+      final up = session(locked: () => false, clock: () => now);
+      unawaited(up.connect());
+      time.flushMicrotasks();
+
+      for (var check = 0; check < 3; check++) {
+        now = now.add(const Duration(seconds: 5));
+        time.elapse(const Duration(seconds: 5));
+      }
+      tunnel.dropWith(dropped);
+      time.flushMicrotasks();
+
+      expect(up.state.phase, isA<Waiting>());
+      expect(up.state.isWatched, isFalse);
+    });
+  });
+
+  test('a reconnect forgets that it was away before', () {
+    fakeAsync((time) {
+      var isLocked = true;
+      final tunnel = FakeTunnel(15432);
+      when(openAnyTunnel).thenAnswer((_) async => tunnel);
+      final up = session(locked: () => isLocked);
+      unawaited(up.connect());
+      time
+        ..flushMicrotasks()
+        ..elapse(const Duration(seconds: 5));
+      expect(up.state.wasAway, isTrue);
+
+      isLocked = false;
+      final again = FakeTunnel(15432);
+      when(openAnyTunnel).thenAnswer((_) async => again);
+      tunnel.dropWith(dropped);
+      time
+        ..flushMicrotasks()
+        ..elapse(retryDelays.first);
+      expect(up.state.phase, isA<Up>());
+
+      again.dropWith(dropped);
+      time.flushMicrotasks();
+      expect(up.state.isWatched, isFalse);
     });
   });
 

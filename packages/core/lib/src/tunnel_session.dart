@@ -66,7 +66,9 @@ sealed class const Phase._() with _$Phase {
 }
 
 /// [isWatched] isn't [hasConnected]: a trust after a reconnect comes forward,
-/// and so does the first try after the screen unlocks.
+/// and so does the first try after the screen unlocks. [wasAway]: the screen
+/// locked or the Mac slept while it was up, so the first try after a drop
+/// comes forward too, since ssh may notice the drop only after an unlock.
 @freezed
 sealed class const SessionState._() with _$SessionState {
   const factory({
@@ -74,6 +76,7 @@ sealed class const SessionState._() with _$SessionState {
     @Default(0) int attempts,
     @Default(false) bool hasConnected,
     @Default(true) bool isWatched,
+    @Default(false) bool wasAway,
   }) = _SessionState;
 
   TunnelStatus get status => phase.status;
@@ -86,6 +89,8 @@ sealed class const SessionEvent._() with _$SessionEvent {
   const factory dropped(Object? error) = Dropped;
 
   const factory retryDue() = RetryDue;
+
+  const factory awayCheckDue() = AwayCheckDue;
 
   const factory stable() = Stable;
 
@@ -115,8 +120,10 @@ class TunnelSession({
   required final Duration lockedRecheck,
   required final Duration stableAfter,
   final bool isRestored = false,
+  final DateTime Function() clock = DateTime.now,
 }) extends Bloc<SessionEvent, SessionState> {
   final _abort = Completer<void>();
+  DateTime? _lastAwayCheck;
   final _timers = <Type, Timer>{};
   final List<Future<HandBack?>> _cameForward = [];
   // Handles that aren't values a state can hold: the attempt of Opening or
@@ -187,9 +194,12 @@ class TunnelSession({
           phase: Up(isVerifying: checks),
           hasConnected: true,
           isWatched: false,
+          wasAway: false,
         ),
       );
       _after(stableAfter, const SessionEvent.stable());
+      _lastAwayCheck = clock();
+      _after(lockedRecheck, const SessionEvent.awayCheckDue());
       _log.i('Connected ${tunnel.title}');
       unawaited(
         opened.done.then(
@@ -221,6 +231,19 @@ class TunnelSession({
         emit(state.copyWith(phase: waiting.copyWith(forUnlock: true)));
         _after(lockedRecheck, const SessionEvent.retryDue());
       }
+    });
+
+    // A timer can't fire while the Mac sleeps, so a long gap means it slept.
+    on<AwayCheckDue>((event, emit) async {
+      final now = clock();
+      final last = _lastAwayCheck ?? now;
+      _lastAwayCheck = now;
+      final slept = now.difference(last) > lockedRecheck * 3;
+      final locked = !slept && await _isLocked();
+      if (state.phase is! Up) return;
+
+      if (slept || locked) return emit(state.copyWith(wasAway: true));
+      _after(lockedRecheck, const SessionEvent.awayCheckDue());
     });
 
     on<Stable>((event, emit) {
@@ -376,7 +399,8 @@ class TunnelSession({
       state.copyWith(
         phase: Waiting(Reconnecting(message, failure: failure)),
         attempts: state.attempts + 1,
-        isWatched: false,
+        isWatched: state.wasAway,
+        wasAway: false,
       ),
     );
     _after(delay, const SessionEvent.retryDue());
