@@ -45,8 +45,9 @@ void main() {
   // [shown] gets each status the window would see, once per change.
   TunnelSession session({
     bool isRestored = false,
-    bool Function()? locked,
+    FutureOr<bool> Function()? locked,
     Future<HandBack> Function()? comeForward,
+    DateTime Function()? clock,
   }) {
     final session = TunnelSession(
       tunnel: database,
@@ -60,6 +61,7 @@ void main() {
       lockedRecheck: const Duration(seconds: 5),
       stableAfter: const Duration(minutes: 1),
       isRestored: isRestored,
+      clock: clock ?? DateTime.now,
     );
     var last = session.status;
     session.stream.map((state) => state.status).listen((status) {
@@ -189,6 +191,208 @@ void main() {
 
       expect(up.state.phase, isA<Up>());
       verify(openAnyTunnel).called(2);
+    });
+  });
+
+  group('after the screen locked or the computer slept while up', () {
+    late List<String> calls;
+    late FakeTunnel tunnel;
+    late DateTime now;
+
+    Future<HandBack> comeForward() async {
+      calls.add('forward');
+      return () async => calls.add('back');
+    }
+
+    setUp(() {
+      calls = [];
+      now = DateTime(2026, 11, 24);
+      when(openAnyTunnel).thenAnswer((_) async => tunnel);
+    });
+
+    TunnelSession away(
+      FakeAsync time, {
+      required FutureOr<bool> Function() locked,
+    }) {
+      tunnel = FakeTunnel(15432);
+      final up = session(
+        locked: locked,
+        comeForward: comeForward,
+        clock: () => now,
+      );
+      unawaited(up.connect());
+      time.flushMicrotasks();
+      return up;
+    }
+
+    void elapse(FakeAsync time, Duration duration) {
+      now = now.add(duration);
+      time.elapse(duration);
+    }
+
+    test('comes forward on the first try after a drop, and only then', () {
+      fakeAsync((time) {
+        var isLocked = false;
+        var checks = 0;
+        final up = away(
+          time,
+          locked: () {
+            checks++;
+            return isLocked;
+          },
+        );
+        elapse(time, const Duration(seconds: 5));
+        expect(up.state.wasAway, isFalse);
+        isLocked = true;
+        elapse(time, const Duration(seconds: 5));
+        isLocked = false;
+        elapse(time, const Duration(minutes: 1));
+        expect(up.state.wasAway, isTrue);
+        expect(checks, 2);
+
+        late void Function(SshLog log) sshSays;
+        var redial = Completer<SshTunnel>();
+        when(openAnyTunnel).thenAnswer((invocation) {
+          sshSays =
+              invocation.namedArguments[#onLog]! as void Function(SshLog log);
+          return redial.future;
+        });
+        tunnel.dropWith(dropped);
+        time.flushMicrotasks();
+        elapse(time, retryDelays.first);
+        sshSays(const SshLoginStarted('debug1: Connecting to bastion.'));
+        redial.completeError(dropped);
+        redial = Completer();
+        time.flushMicrotasks();
+        elapse(time, retryDelays[1]);
+        sshSays(const SshLoginStarted('debug1: Connecting to bastion.'));
+        time.flushMicrotasks();
+
+        expect(calls, ['forward', 'back']);
+        expect(up.state.wasAway, isFalse);
+      });
+    });
+
+    test('stays watched while a try fails before ssh logs in', () {
+      fakeAsync((time) {
+        var isLocked = true;
+        final up = away(time, locked: () => isLocked);
+        elapse(time, const Duration(seconds: 5));
+        isLocked = false;
+
+        late void Function(SshLog log) sshSays;
+        var redial = Completer<SshTunnel>();
+        when(openAnyTunnel).thenAnswer((invocation) {
+          sshSays =
+              invocation.namedArguments[#onLog]! as void Function(SshLog log);
+          return redial.future;
+        });
+        tunnel.dropWith(dropped);
+        time.flushMicrotasks();
+        elapse(time, retryDelays.first);
+        redial.completeError(
+          const SshHostNotFoundException('Could not resolve hostname'),
+        );
+        redial = Completer();
+        time.flushMicrotasks();
+        elapse(time, retryDelays[1]);
+        sshSays(const SshLoginStarted('debug1: Connecting to bastion.'));
+        time.flushMicrotasks();
+
+        expect(calls, ['forward']);
+        expect(up.state.isWatched, isTrue);
+      });
+    });
+
+    test('counts a gap of over three checks as a sleep, and stops', () {
+      fakeAsync((time) {
+        var checks = 0;
+        final up = away(
+          time,
+          locked: () {
+            checks++;
+            return false;
+          },
+        );
+        now = now.add(const Duration(seconds: 11));
+        elapse(time, const Duration(seconds: 5));
+        expect(up.state.wasAway, isTrue);
+        elapse(time, const Duration(minutes: 1));
+        expect(checks, 0);
+
+        tunnel.dropWith(dropped);
+        time.flushMicrotasks();
+        expect(up.state.isWatched, isTrue);
+      });
+    });
+
+    test('a gap of three checks is not a sleep', () {
+      fakeAsync((time) {
+        final up = away(time, locked: () => false);
+        for (var check = 0; check < 3; check++) {
+          now = now.add(const Duration(seconds: 10));
+          elapse(time, const Duration(seconds: 5));
+        }
+        tunnel.dropWith(dropped);
+        time.flushMicrotasks();
+
+        expect(up.state.phase, isA<Waiting>());
+        expect(up.state.isWatched, isFalse);
+      });
+    });
+
+    test('checks again after a reconnect', () {
+      fakeAsync((time) {
+        var isLocked = true;
+        final up = away(time, locked: () => isLocked);
+        elapse(time, const Duration(seconds: 5));
+        isLocked = false;
+        tunnel.dropWith(dropped);
+        tunnel = FakeTunnel(15432);
+        time.flushMicrotasks();
+        elapse(time, retryDelays.first);
+        expect(up.state.phase, isA<Up>());
+        expect(up.state.wasAway, isFalse);
+
+        isLocked = true;
+        elapse(time, const Duration(seconds: 5));
+        expect(up.state.wasAway, isTrue);
+      });
+    });
+
+    test('never checks where it cannot come forward', () {
+      fakeAsync((time) {
+        var checks = 0;
+        final up = session(
+          locked: () {
+            checks++;
+            return true;
+          },
+        );
+        unawaited(up.connect());
+        time
+          ..flushMicrotasks()
+          ..elapse(const Duration(minutes: 1));
+
+        expect(up.state.phase, isA<Up>());
+        expect(checks, 0);
+      });
+    });
+
+    test('ignores a check that finishes once it has stopped', () {
+      fakeAsync((time) {
+        final answer = Completer<bool>();
+        final up = away(time, locked: () => answer.future);
+        elapse(time, const Duration(seconds: 5));
+        unawaited(up.stop());
+        time.flushMicrotasks();
+
+        answer.complete(true);
+        time.flushMicrotasks();
+
+        expect(up.state.phase, isA<Ended>());
+        expect(up.state.wasAway, isFalse);
+      });
     });
   });
 
