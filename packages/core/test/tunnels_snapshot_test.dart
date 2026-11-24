@@ -15,6 +15,7 @@ void main() {
     for (final status in const [
       Stopped(),
       Connecting(),
+      Cancelled(),
       Connected(),
       Connected(warning: 'Connection refused'),
       Reconnecting('Connection to bastion closed by remote host.'),

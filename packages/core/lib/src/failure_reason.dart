@@ -12,6 +12,7 @@ String failureShort(Tunnel tunnel, Failed failed) => switch (failed.failure) {
   TunnelFailure.hostNotFound => 'server not found',
   TunnelFailure.unreachable => "can't reach the server",
   TunnelFailure.loginRefused => 'login refused',
+  TunnelFailure.oldSsh => 'ssh too old',
   TunnelFailure.hostKey => 'host key changed',
   TunnelFailure.dropped => 'disconnected',
   TunnelFailure.remotePortRefused =>
@@ -38,6 +39,9 @@ String failureSentence(Tunnel tunnel, TunnelFailure failure) =>
       TunnelFailure.hostNotFound => "Can't find the server.",
       TunnelFailure.unreachable => "Can't reach the server.",
       TunnelFailure.loginRefused => 'The server refused the login.',
+      TunnelFailure.oldSsh =>
+        "This computer's ssh is too old to ask for a password or "
+            'passphrase. It needs OpenSSH 8.5 or newer.',
       TunnelFailure.hostKey => "The server's host key changed.",
       TunnelFailure.dropped => 'The connection dropped.',
       TunnelFailure.remotePortRefused =>

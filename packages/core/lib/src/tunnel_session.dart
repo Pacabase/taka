@@ -18,6 +18,13 @@ typedef _Opened = ({Future<void> done, Future<void> Function() close});
 /// Hands focus back to the app that had it before Taka came forward.
 typedef HandBack = Future<void> Function();
 
+/// Answers [prompt], or cancels it with null; [finished] completes once the
+/// open call that asked returns, answered or not.
+typedef LoginPrompter = Future<String?> Function(
+  SshPrompt prompt,
+  Future<void> finished,
+);
+
 @freezed
 sealed class const Phase._() with _$Phase {
   const factory opening() = Opening;
@@ -41,6 +48,8 @@ sealed class const Phase._() with _$Phase {
 
   const factory gaveUp(Failed failed) = GaveUp;
 
+  const factory cancelledLogin() = CancelledLogin;
+
   const factory ended(TunnelStatus last) = Ended;
 
   /// A new session, a wait to redial or a trusted key opens ssh; no other.
@@ -61,6 +70,7 @@ sealed class const Phase._() with _$Phase {
     ),
     Trusting() => const Connecting(),
     GaveUp(:final failed) => failed,
+    CancelledLogin() => const Cancelled(),
     Ended(:final last) => last,
   };
 }
@@ -106,6 +116,7 @@ class TunnelSession({
   required final Tunnel tunnel,
   required final SshClient client,
   required final Future<HandBack> Function()? comeForward,
+  required final LoginPrompter? onPrompt,
   required final Future<bool> Function()? isLocked,
   required final Future<void> Function(String address, int localPort)?
   checkDestination,
@@ -353,6 +364,10 @@ class TunnelSession({
       _log.w('${tunnel.title}: waiting for the user to check $hostKey');
       return emit(state.copyWith(phase: AwaitingTrust(hostKey)));
     }
+    if (exception is SshLoginCancelledException) {
+      _log.i('${tunnel.title}: the login was cancelled');
+      return emit(state.copyWith(phase: const CancelledLogin()));
+    }
     final message = exception == null ? 'Disconnected' : _messageOf(exception);
     final failure = _failureOf(exception);
     final isPermanent = switch (exception) {
@@ -442,6 +457,18 @@ class TunnelSession({
   }
 
   Future<_Opened> _open() async {
+    final finished = Completer<void>();
+    final ask = onPrompt;
+    try {
+      return await _openSsh(
+        ask == null ? null : (prompt) => ask(prompt, finished.future),
+      );
+    } finally {
+      finished.complete();
+    }
+  }
+
+  Future<_Opened> _openSsh(SshPromptHandler? onPrompt) async {
     final abortTrigger = _abort.future;
     // ssh's lines, named since tunnels connect at once.
     void onLog(SshLog log) {
@@ -467,6 +494,7 @@ class TunnelSession({
           bindAddress: bindAddress,
           localPort: tunnel.localPort,
           onLog: onLog,
+          onPrompt: onPrompt,
           abortTrigger: abortTrigger,
         );
       case Tunnel(kind: TunnelKind.remote, :final remotePort?):
@@ -476,6 +504,7 @@ class TunnelSession({
           localPort: tunnel.localPort,
           remotePort: remotePort,
           onLog: onLog,
+          onPrompt: onPrompt,
           abortTrigger: abortTrigger,
         );
         return (done: remote.done, close: remote.close);
@@ -488,6 +517,7 @@ class TunnelSession({
           bindAddress: bindAddress,
           localPort: tunnel.localPort,
           onLog: onLog,
+          onPrompt: onPrompt,
           abortTrigger: abortTrigger,
         );
       case Tunnel(:final remoteHost?, :final remotePort?):
@@ -498,6 +528,7 @@ class TunnelSession({
           bindAddress: bindAddress,
           localPort: tunnel.localPort,
           onLog: onLog,
+          onPrompt: onPrompt,
           abortTrigger: abortTrigger,
         );
       case _:
@@ -515,6 +546,9 @@ class TunnelSession({
   TunnelFailure _failureOf(Object? exception) => switch (exception) {
     null || SshDroppedException() => TunnelFailure.dropped,
     SshNotFoundException() => TunnelFailure.sshNotFound,
+    SshConfigException(:final message)
+        when message.startsWith('OpenSSH ') && message.contains('too old') =>
+      TunnelFailure.oldSsh,
     SshConfigException() => TunnelFailure.config,
     SshPortInUseException() => TunnelFailure.portInUse,
     SshDuplicateForwardException() => TunnelFailure.duplicateForward,

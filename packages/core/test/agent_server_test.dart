@@ -132,6 +132,7 @@ void main() {
             bindAddress: any(named: 'bindAddress'),
             localPort: any(named: 'localPort'),
             onLog: any(named: 'onLog'),
+            onPrompt: any(named: 'onPrompt'),
             abortTrigger: any(named: 'abortTrigger'),
           ),
         ).thenAnswer((_) async => throw SshUnknownHostKeyException(hostKey));
@@ -352,6 +353,123 @@ void main() {
         await next.close();
 
         expect(await next.tunnelRequests.length, 0);
+      });
+
+      group('a login prompt', () {
+        const password = SshPasswordPrompt("me@db's password: ");
+        final asked = LoginPrompt(
+          id: 1,
+          tunnel: database.title,
+          prompt: password,
+        );
+
+        test('reaches every window, and the first answer wins', () async {
+          final server = await serve();
+          final mine = await connect();
+          final other = await connect();
+          final myPrompts = StreamQueue(mine.prompts);
+          final theirs = StreamQueue(other.prompts);
+          await (mine.identity, other.identity).wait;
+
+          final answer = server.ask(
+            database,
+            password,
+            Completer<void>().future,
+          );
+
+          expect(await myPrompts.next, [asked]);
+          expect(await theirs.next, [asked]);
+          mine
+            ..send(const AgentCommand.answer(1, 'hunter2'))
+            ..send(const AgentCommand.answer(1, 'other'));
+          expect(await answer, 'hunter2');
+          expect(await myPrompts.next, isEmpty);
+          expect(await theirs.next, isEmpty);
+        });
+
+        test('waits for a window that connects later', () async {
+          final server = await serve();
+
+          final answer = server.ask(
+            database,
+            password,
+            Completer<void>().future,
+          );
+          final agent = await connect();
+
+          expect(await agent.prompts.first, [asked]);
+          agent.send(const AgentCommand.answer(1, ''));
+          expect(await answer, '');
+        });
+
+        test('is cancelled once the open call finishes', () async {
+          final server = await serve();
+          final agent = await connect();
+          final prompts = StreamQueue(agent.prompts);
+          await agent.identity;
+          final finished = Completer<void>();
+
+          final answer = server.ask(database, password, finished.future);
+          expect(await prompts.next, [asked]);
+          finished.complete();
+
+          expect(await answer, isNull);
+          expect(await prompts.next, isEmpty);
+        });
+
+        test('is cancelled when the last window closes', () async {
+          final server = await serve();
+          final agent = await connect();
+          final answer = server.ask(
+            database,
+            password,
+            Completer<void>().future,
+          );
+          await agent.prompts.first;
+
+          await agent.close();
+
+          expect(await answer, isNull);
+        });
+
+        test('is cancelled when the agent closes', () async {
+          final server = await serve();
+
+          final answer = server.ask(
+            database,
+            password,
+            Completer<void>().future,
+          );
+          await server.close();
+
+          expect(await answer, isNull);
+          expect(
+            await server.ask(database, password, Completer<void>().future),
+            isNull,
+          );
+        });
+
+        test('an answer to a prompt that is gone is ignored', () async {
+          final server = await serve();
+          final agent = await connect();
+          final prompts = StreamQueue(agent.prompts);
+          await agent.identity;
+          final first = server.ask(database, password, Future.value());
+          expect(await first, isNull);
+
+          agent.send(const AgentCommand.answer(1, 'late'));
+          final second = server.ask(
+            database,
+            password,
+            Completer<void>().future,
+          );
+          expect(await prompts.next, [asked]);
+          expect(await prompts.next, isEmpty);
+          expect(await prompts.next, [asked.copyWith(id: 2)]);
+          agent.send(const AgentCommand.answer(2, 'hunter2'));
+
+          expect(await second, 'hunter2');
+        });
       });
 
       test('the client ignores bad lines and stays connected', () async {

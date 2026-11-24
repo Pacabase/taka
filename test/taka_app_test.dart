@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/agent/agent_launcher.dart';
 import 'package:taka/pages/about/about_page.dart';
+import 'package:taka/pages/login_prompt/login_prompt_dialog.dart';
 import 'package:taka/pages/settings/settings_page.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/taka_app.dart';
@@ -140,6 +141,33 @@ void main() {
       expect(agent.settingsController.hasListener, isFalse);
     },
   );
+
+  testWidgets('a login prompt shows over the window and stays over About', (
+    tester,
+  ) async {
+    final agent = FakeAgent();
+    await _pumpApp(tester, const Text('Tunnels'), agent: agent);
+
+    agent.promptsController.add(const [
+      LoginPrompt(
+        id: 1,
+        tunnel: 'Database',
+        prompt: SshPasswordPrompt("me@bastion's password: "),
+      ),
+    ]);
+    await tester.pump();
+    await _menuCall(tester, 'about');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AboutPage), findsOneWidget);
+    expect(find.byType(LoginPromptDialog), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pump();
+
+    expect(agent.sent, const [AgentCommand.answer(1, null)]);
+    expect(find.byType(LoginPromptDialog), findsNothing);
+  });
 
   testWidgets('About opened while it connects stays open once it connects', (
     tester,

@@ -88,7 +88,8 @@ Ordered roughly by priority; each line is about one pull request.
 
 ### Logins
 
-- [ ] **Passwords, passphrases and 2FA** through `SSH_ASKPASS`, with 1Password `op://` references.
+- [ ] **1Password `op://` references** for passwords and passphrases.
+- [ ] **2FA on Windows**, where Taka asks only for passphrases and passwords, and none through a `ProxyJump` or `ProxyCommand`.
 
 ### Power users
 

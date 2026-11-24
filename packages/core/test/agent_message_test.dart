@@ -24,6 +24,27 @@ void main() {
       AgentMessage.openTunnel(),
       AgentMessage.settings(AgentSettings(launchesAtLogin: true)),
       AgentMessage.settings(AgentSettings(isLogging: true)),
+      AgentMessage.prompts([]),
+      AgentMessage.prompts([
+        LoginPrompt(
+          id: 1,
+          tunnel: 'Database',
+          prompt: SshPassphrasePrompt(
+            "Enter passphrase for key '/home/me/.ssh/id_ed25519': ",
+            keyPath: '/home/me/.ssh/id_ed25519',
+          ),
+        ),
+        LoginPrompt(
+          id: 2,
+          tunnel: 'Proxy',
+          prompt: SshPasswordPrompt("me@bastion's password: "),
+        ),
+        LoginPrompt(
+          id: 3,
+          tunnel: 'Web',
+          prompt: SshCodePrompt('(me@web) Verification code: '),
+        ),
+      ]),
     ]) {
       test('$message round-trips', () {
         expect(
@@ -32,6 +53,65 @@ void main() {
         );
       });
     }
+
+    test('a login prompt says its kind, and a passphrase its key', () {
+      expect(
+        const LoginPrompt(
+          id: 1,
+          tunnel: 'Database',
+          prompt: SshPassphrasePrompt(
+            "Enter passphrase for key '/k': ",
+            keyPath: '/k',
+          ),
+        ).toJson(),
+        {
+          'id': 1,
+          'tunnel': 'Database',
+          'kind': 'passphrase',
+          'keyPath': '/k',
+          'text': "Enter passphrase for key '/k': ",
+        },
+      );
+    });
+
+    test('a prompt of a kind this build does not know is a code', () {
+      expect(
+        LoginPrompt.fromJson({
+          'id': 1,
+          'tunnel': 'Web',
+          'kind': 'fingerprint',
+          'text': 'Touch the key',
+        }),
+        const LoginPrompt(
+          id: 1,
+          tunnel: 'Web',
+          prompt: SshCodePrompt('Touch the key'),
+        ),
+      );
+    });
+
+    test('a passphrase prompt without its key is a code', () {
+      expect(
+        LoginPrompt.fromJson({
+          'id': 1,
+          'tunnel': 'Web',
+          'kind': 'passphrase',
+          'text': 'Enter passphrase',
+        }).prompt,
+        const SshCodePrompt('Enter passphrase'),
+      );
+    });
+
+    test('a malformed login prompt is a FormatException', () {
+      expect(
+        () => AgentMessage.fromJson({
+          'prompts': [
+            {'id': '1', 'tunnel': 'Web', 'kind': 'code', 'text': 'Code'},
+          ],
+        }),
+        throwsFormatException,
+      );
+    });
 
     test('the identity is under agent', () {
       expect(const AgentMessage.identity('1.2.0+7').toJson(), {

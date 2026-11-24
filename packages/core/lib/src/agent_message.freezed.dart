@@ -56,14 +56,15 @@ extension AgentMessagePatterns on AgentMessage {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AgentIdentity value)?  identity,TResult Function( AgentSnapshot value)?  snapshot,TResult Function( OpenTunnel value)?  openTunnel,TResult Function( SettingsChanged value)?  settings,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( AgentIdentity value)?  identity,TResult Function( AgentSnapshot value)?  snapshot,TResult Function( OpenTunnel value)?  openTunnel,TResult Function( SettingsChanged value)?  settings,TResult Function( PromptsChanged value)?  prompts,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that);case AgentSnapshot() when snapshot != null:
 return snapshot(_that);case OpenTunnel() when openTunnel != null:
 return openTunnel(_that);case SettingsChanged() when settings != null:
-return settings(_that);case _:
+return settings(_that);case PromptsChanged() when prompts != null:
+return prompts(_that);case _:
   return orElse();
 
 }
@@ -81,14 +82,15 @@ return settings(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AgentIdentity value)  identity,required TResult Function( AgentSnapshot value)  snapshot,required TResult Function( OpenTunnel value)  openTunnel,required TResult Function( SettingsChanged value)  settings,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( AgentIdentity value)  identity,required TResult Function( AgentSnapshot value)  snapshot,required TResult Function( OpenTunnel value)  openTunnel,required TResult Function( SettingsChanged value)  settings,required TResult Function( PromptsChanged value)  prompts,}){
 final _that = this;
 switch (_that) {
 case AgentIdentity():
 return identity(_that);case AgentSnapshot():
 return snapshot(_that);case OpenTunnel():
 return openTunnel(_that);case SettingsChanged():
-return settings(_that);}
+return settings(_that);case PromptsChanged():
+return prompts(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -102,14 +104,15 @@ return settings(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AgentIdentity value)?  identity,TResult? Function( AgentSnapshot value)?  snapshot,TResult? Function( OpenTunnel value)?  openTunnel,TResult? Function( SettingsChanged value)?  settings,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( AgentIdentity value)?  identity,TResult? Function( AgentSnapshot value)?  snapshot,TResult? Function( OpenTunnel value)?  openTunnel,TResult? Function( SettingsChanged value)?  settings,TResult? Function( PromptsChanged value)?  prompts,}){
 final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that);case AgentSnapshot() when snapshot != null:
 return snapshot(_that);case OpenTunnel() when openTunnel != null:
 return openTunnel(_that);case SettingsChanged() when settings != null:
-return settings(_that);case _:
+return settings(_that);case PromptsChanged() when prompts != null:
+return prompts(_that);case _:
   return null;
 
 }
@@ -126,13 +129,14 @@ return settings(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String identity)?  identity,TResult Function( TunnelsSnapshot snapshot)?  snapshot,TResult Function( String? id)?  openTunnel,TResult Function( AgentSettings settings)?  settings,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String identity)?  identity,TResult Function( TunnelsSnapshot snapshot)?  snapshot,TResult Function( String? id)?  openTunnel,TResult Function( AgentSettings settings)?  settings,TResult Function( List<LoginPrompt> prompts)?  prompts,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that.identity);case AgentSnapshot() when snapshot != null:
 return snapshot(_that.snapshot);case OpenTunnel() when openTunnel != null:
 return openTunnel(_that.id);case SettingsChanged() when settings != null:
-return settings(_that.settings);case _:
+return settings(_that.settings);case PromptsChanged() when prompts != null:
+return prompts(_that.prompts);case _:
   return orElse();
 
 }
@@ -150,13 +154,14 @@ return settings(_that.settings);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String identity)  identity,required TResult Function( TunnelsSnapshot snapshot)  snapshot,required TResult Function( String? id)  openTunnel,required TResult Function( AgentSettings settings)  settings,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String identity)  identity,required TResult Function( TunnelsSnapshot snapshot)  snapshot,required TResult Function( String? id)  openTunnel,required TResult Function( AgentSettings settings)  settings,required TResult Function( List<LoginPrompt> prompts)  prompts,}) {final _that = this;
 switch (_that) {
 case AgentIdentity():
 return identity(_that.identity);case AgentSnapshot():
 return snapshot(_that.snapshot);case OpenTunnel():
 return openTunnel(_that.id);case SettingsChanged():
-return settings(_that.settings);}
+return settings(_that.settings);case PromptsChanged():
+return prompts(_that.prompts);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -170,13 +175,14 @@ return settings(_that.settings);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String identity)?  identity,TResult? Function( TunnelsSnapshot snapshot)?  snapshot,TResult? Function( String? id)?  openTunnel,TResult? Function( AgentSettings settings)?  settings,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String identity)?  identity,TResult? Function( TunnelsSnapshot snapshot)?  snapshot,TResult? Function( String? id)?  openTunnel,TResult? Function( AgentSettings settings)?  settings,TResult? Function( List<LoginPrompt> prompts)?  prompts,}) {final _that = this;
 switch (_that) {
 case AgentIdentity() when identity != null:
 return identity(_that.identity);case AgentSnapshot() when snapshot != null:
 return snapshot(_that.snapshot);case OpenTunnel() when openTunnel != null:
 return openTunnel(_that.id);case SettingsChanged() when settings != null:
-return settings(_that.settings);case _:
+return settings(_that.settings);case PromptsChanged() when prompts != null:
+return prompts(_that.prompts);case _:
   return null;
 
 }
@@ -472,6 +478,80 @@ $AgentSettingsCopyWith<$Res> get settings {
     return _then(_self.copyWith(settings: value));
   });
 }
+}
+
+/// @nodoc
+
+
+class PromptsChanged extends AgentMessage {
+  const PromptsChanged( List<LoginPrompt> prompts): _prompts = prompts,super._();
+  
+
+ final  List<LoginPrompt> _prompts;
+ List<LoginPrompt> get prompts {
+  if (_prompts is EqualUnmodifiableListView) return _prompts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_prompts);
+}
+
+
+/// Create a copy of AgentMessage
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$PromptsChangedCopyWith<PromptsChanged> get copyWith => _$PromptsChangedCopyWithImpl<PromptsChanged>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is PromptsChanged&&const DeepCollectionEquality().equals(other.prompts, _prompts));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_prompts));
+}
+
+@override
+String toString() {
+    return 'AgentMessage.prompts(prompts: $prompts)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $PromptsChangedCopyWith<$Res> implements $AgentMessageCopyWith<$Res> {
+  factory $PromptsChangedCopyWith(PromptsChanged value, $Res Function(PromptsChanged) _then) = _$PromptsChangedCopyWithImpl;
+@useResult
+$Res call({
+ List<LoginPrompt> prompts
+});
+
+
+
+
+}
+/// @nodoc
+class _$PromptsChangedCopyWithImpl<$Res>
+    implements $PromptsChangedCopyWith<$Res> {
+  _$PromptsChangedCopyWithImpl(this._self, this._then);
+
+  final PromptsChanged _self;
+  final $Res Function(PromptsChanged) _then;
+
+/// Create a copy of AgentMessage
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? prompts = null,}) {
+  return _then(PromptsChanged(
+null == prompts ? _self._prompts : prompts // ignore: cast_nullable_to_non_nullable
+as List<LoginPrompt>,
+  ));
+}
+
+
 }
 
 // dart format on

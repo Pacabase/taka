@@ -13,7 +13,10 @@ dependencies:
   fimber: 0.7.0
   nativeapi: 0.5.8
   objective_c: 9.6.3
-  system_ssh: 0.11.0
+  system_ssh:
+    git:
+      url: https://github.com/Pacabase/system_ssh.git
+      ref: cd1a0e888f0d530fc828453c504d851c4bcacc22
 
 dev_dependencies:
   ffigen: 23.0.0

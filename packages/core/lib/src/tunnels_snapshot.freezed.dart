@@ -56,12 +56,13 @@ extension TunnelStatusPatterns on TunnelStatus {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Stopped value)?  stopped,TResult Function( Connecting value)?  connecting,TResult Function( Connected value)?  connected,TResult Function( Failed value)?  failed,TResult Function( Reconnecting value)?  reconnecting,TResult Function( UnknownHostKey value)?  unknownHostKey,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Stopped value)?  stopped,TResult Function( Connecting value)?  connecting,TResult Function( Cancelled value)?  cancelled,TResult Function( Connected value)?  connected,TResult Function( Failed value)?  failed,TResult Function( Reconnecting value)?  reconnecting,TResult Function( UnknownHostKey value)?  unknownHostKey,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped(_that);case Connecting() when connecting != null:
-return connecting(_that);case Connected() when connected != null:
+return connecting(_that);case Cancelled() when cancelled != null:
+return cancelled(_that);case Connected() when connected != null:
 return connected(_that);case Failed() when failed != null:
 return failed(_that);case Reconnecting() when reconnecting != null:
 return reconnecting(_that);case UnknownHostKey() when unknownHostKey != null:
@@ -83,12 +84,13 @@ return unknownHostKey(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Stopped value)  stopped,required TResult Function( Connecting value)  connecting,required TResult Function( Connected value)  connected,required TResult Function( Failed value)  failed,required TResult Function( Reconnecting value)  reconnecting,required TResult Function( UnknownHostKey value)  unknownHostKey,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Stopped value)  stopped,required TResult Function( Connecting value)  connecting,required TResult Function( Cancelled value)  cancelled,required TResult Function( Connected value)  connected,required TResult Function( Failed value)  failed,required TResult Function( Reconnecting value)  reconnecting,required TResult Function( UnknownHostKey value)  unknownHostKey,}){
 final _that = this;
 switch (_that) {
 case Stopped():
 return stopped(_that);case Connecting():
-return connecting(_that);case Connected():
+return connecting(_that);case Cancelled():
+return cancelled(_that);case Connected():
 return connected(_that);case Failed():
 return failed(_that);case Reconnecting():
 return reconnecting(_that);case UnknownHostKey():
@@ -106,12 +108,13 @@ return unknownHostKey(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Stopped value)?  stopped,TResult? Function( Connecting value)?  connecting,TResult? Function( Connected value)?  connected,TResult? Function( Failed value)?  failed,TResult? Function( Reconnecting value)?  reconnecting,TResult? Function( UnknownHostKey value)?  unknownHostKey,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Stopped value)?  stopped,TResult? Function( Connecting value)?  connecting,TResult? Function( Cancelled value)?  cancelled,TResult? Function( Connected value)?  connected,TResult? Function( Failed value)?  failed,TResult? Function( Reconnecting value)?  reconnecting,TResult? Function( UnknownHostKey value)?  unknownHostKey,}){
 final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped(_that);case Connecting() when connecting != null:
-return connecting(_that);case Connected() when connected != null:
+return connecting(_that);case Cancelled() when cancelled != null:
+return cancelled(_that);case Connected() when connected != null:
 return connected(_that);case Failed() when failed != null:
 return failed(_that);case Reconnecting() when reconnecting != null:
 return reconnecting(_that);case UnknownHostKey() when unknownHostKey != null:
@@ -132,11 +135,12 @@ return unknownHostKey(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  stopped,TResult Function()?  connecting,TResult Function( String warning)?  connected,TResult Function( String message,  TunnelFailure failure)?  failed,TResult Function( String message,  TunnelFailure failure)?  reconnecting,TResult Function( String host,  String type,  String fingerprint)?  unknownHostKey,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  stopped,TResult Function()?  connecting,TResult Function()?  cancelled,TResult Function( String warning)?  connected,TResult Function( String message,  TunnelFailure failure)?  failed,TResult Function( String message,  TunnelFailure failure)?  reconnecting,TResult Function( String host,  String type,  String fingerprint)?  unknownHostKey,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped();case Connecting() when connecting != null:
-return connecting();case Connected() when connected != null:
+return connecting();case Cancelled() when cancelled != null:
+return cancelled();case Connected() when connected != null:
 return connected(_that.warning);case Failed() when failed != null:
 return failed(_that.message,_that.failure);case Reconnecting() when reconnecting != null:
 return reconnecting(_that.message,_that.failure);case UnknownHostKey() when unknownHostKey != null:
@@ -158,11 +162,12 @@ return unknownHostKey(_that.host,_that.type,_that.fingerprint);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  stopped,required TResult Function()  connecting,required TResult Function( String warning)  connected,required TResult Function( String message,  TunnelFailure failure)  failed,required TResult Function( String message,  TunnelFailure failure)  reconnecting,required TResult Function( String host,  String type,  String fingerprint)  unknownHostKey,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  stopped,required TResult Function()  connecting,required TResult Function()  cancelled,required TResult Function( String warning)  connected,required TResult Function( String message,  TunnelFailure failure)  failed,required TResult Function( String message,  TunnelFailure failure)  reconnecting,required TResult Function( String host,  String type,  String fingerprint)  unknownHostKey,}) {final _that = this;
 switch (_that) {
 case Stopped():
 return stopped();case Connecting():
-return connecting();case Connected():
+return connecting();case Cancelled():
+return cancelled();case Connected():
 return connected(_that.warning);case Failed():
 return failed(_that.message,_that.failure);case Reconnecting():
 return reconnecting(_that.message,_that.failure);case UnknownHostKey():
@@ -180,11 +185,12 @@ return unknownHostKey(_that.host,_that.type,_that.fingerprint);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  stopped,TResult? Function()?  connecting,TResult? Function( String warning)?  connected,TResult? Function( String message,  TunnelFailure failure)?  failed,TResult? Function( String message,  TunnelFailure failure)?  reconnecting,TResult? Function( String host,  String type,  String fingerprint)?  unknownHostKey,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  stopped,TResult? Function()?  connecting,TResult? Function()?  cancelled,TResult? Function( String warning)?  connected,TResult? Function( String message,  TunnelFailure failure)?  failed,TResult? Function( String message,  TunnelFailure failure)?  reconnecting,TResult? Function( String host,  String type,  String fingerprint)?  unknownHostKey,}) {final _that = this;
 switch (_that) {
 case Stopped() when stopped != null:
 return stopped();case Connecting() when connecting != null:
-return connecting();case Connected() when connected != null:
+return connecting();case Cancelled() when cancelled != null:
+return cancelled();case Connected() when connected != null:
 return connected(_that.warning);case Failed() when failed != null:
 return failed(_that.message,_that.failure);case Reconnecting() when reconnecting != null:
 return reconnecting(_that.message,_that.failure);case UnknownHostKey() when unknownHostKey != null:
@@ -252,6 +258,38 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
     return 'TunnelStatus.connecting()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class Cancelled extends TunnelStatus {
+  const Cancelled(): super._();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is Cancelled);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'TunnelStatus.cancelled()';
 }
 
 

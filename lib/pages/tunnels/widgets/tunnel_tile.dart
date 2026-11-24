@@ -63,6 +63,7 @@ class _TunnelTileState extends State<TunnelTile> {
         details: message,
       ),
       Connecting() => _Caption('Connecting…', colors.orange),
+      Cancelled() => _Caption('Login cancelled', colors.textSecondary),
       UnknownHostKey() => null,
       Reconnecting(:final failure, :final message) => _Caption(
         'Reconnecting — ${failureSentence(tunnel, failure)}',

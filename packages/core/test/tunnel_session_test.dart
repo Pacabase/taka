@@ -32,6 +32,7 @@ void main() {
     bindAddress: any(named: 'bindAddress'),
     localPort: any(named: 'localPort'),
     onLog: any(named: 'onLog'),
+    onPrompt: any(named: 'onPrompt'),
     abortTrigger: any(named: 'abortTrigger'),
   );
 
@@ -47,11 +48,13 @@ void main() {
     bool isRestored = false,
     bool Function()? locked,
     Future<HandBack> Function()? comeForward,
+    LoginPrompter? onPrompt,
   }) {
     final session = TunnelSession(
       tunnel: database,
       client: client,
       comeForward: comeForward,
+      onPrompt: onPrompt,
       isLocked: locked == null ? null : () async => locked(),
       checkDestination: null,
       warningLifetime: const Duration(seconds: 30),
@@ -102,6 +105,112 @@ void main() {
       );
       verify(openAnyTunnel).called(1);
     });
+  });
+
+  test('passes each prompt on until the open call finishes', () async {
+    const passphrase = SshPassphrasePrompt(
+      "Enter passphrase for key '/k': ",
+      keyPath: '/k',
+    );
+    final opened = Completer<SshTunnel>();
+    String? answered;
+    when(openAnyTunnel).thenAnswer((invocation) async {
+      final ask = invocation.namedArguments[#onPrompt]! as SshPromptHandler;
+      answered = await ask(passphrase);
+      return opened.future;
+    });
+    final asked = <SshPrompt>[];
+    Future<void>? finished;
+    var isFinished = false;
+    final up = session(
+      onPrompt: (prompt, done) async {
+        asked.add(prompt);
+        finished = done.whenComplete(() => isFinished = true);
+        return 'hunter2';
+      },
+    );
+
+    final connecting = up.connect();
+    await pumpEventQueue();
+    expect(asked, [passphrase]);
+    expect(answered, 'hunter2');
+    expect(isFinished, isFalse);
+
+    opened.complete(FakeTunnel(15432));
+    await connecting;
+    await finished;
+    expect(up.state.phase, isA<Up>());
+  });
+
+  test('a failed open call also finishes its prompts', () async {
+    Future<void>? finished;
+    when(openAnyTunnel).thenAnswer((invocation) async {
+      final ask = invocation.namedArguments[#onPrompt]! as SshPromptHandler;
+      await ask(const SshPasswordPrompt("me@bastion's password: "));
+      throw dropped;
+    });
+    final failing = session(
+      onPrompt: (prompt, done) async {
+        finished = done;
+        return null;
+      },
+    );
+
+    await failing.connect();
+
+    await expectLater(finished, completes);
+  });
+
+  test('without a prompter, ssh is asked to prompt for nothing', () async {
+    when(openAnyTunnel).thenAnswer((invocation) async {
+      expect(invocation.namedArguments[#onPrompt], isNull);
+      return FakeTunnel(15432);
+    });
+
+    await session().connect();
+
+    verify(openAnyTunnel).called(1);
+  });
+
+  test('a cancelled login stops, neither failed nor retried', () {
+    fakeAsync((time) {
+      when(openAnyTunnel)
+          .thenAnswer((_) => Future.error(const SshLoginCancelledException()));
+      final cancelled = session(isRestored: true);
+
+      unawaited(cancelled.connect());
+      time
+        ..flushMicrotasks()
+        ..elapse(const Duration(minutes: 1));
+
+      expect(cancelled.status, const Cancelled());
+      expect(cancelled.status.isOn, isFalse);
+      verify(openAnyTunnel).called(1);
+    });
+  });
+
+  test('an ssh too old to ask fails saying so', () async {
+    const tooOld =
+        'OpenSSH 8.2 is too old to ask for a password or passphrase; '
+        'it needs 8.5 or newer';
+    when(openAnyTunnel)
+        .thenAnswer((_) => Future.error(const SshConfigException(tooOld)));
+    final old = session();
+
+    await old.connect();
+
+    expect(old.status, const Failed(tooOld, failure: TunnelFailure.oldSsh));
+  });
+
+  test('another config error stays a config error', () async {
+    const message = 'ClearAllForwardings drops the tunnel';
+    when(openAnyTunnel)
+        .thenAnswer((_) => Future.error(const SshConfigException(message)));
+    final config = session();
+
+    await config.connect();
+
+    expect(config.status, const Failed(message, failure: TunnelFailure.config));
   });
 
   test('a restored tunnel retries its first try, counting the attempt', () {

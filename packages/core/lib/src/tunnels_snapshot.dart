@@ -14,6 +14,9 @@ enum TunnelFailure {
   hostNotFound,
   unreachable,
   loginRefused,
+
+  /// The installed ssh is too old to ask for a password or passphrase.
+  oldSsh,
   hostKey,
   dropped,
   remotePortRefused,
@@ -35,6 +38,9 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
   const factory stopped() = Stopped;
 
   const factory connecting() = Connecting;
+
+  /// The user cancelled a login prompt.
+  const factory cancelled() = Cancelled;
 
   /// [warning] is ssh's reason, such as `Connection refused`; the tunnel stays up.
   const factory connected({@Default('') String warning}) = Connected;
@@ -59,6 +65,7 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
 
   static TunnelStatus fromJson(Object? json) => switch (json) {
     {'status': 'connecting'} => const Connecting(),
+    {'status': 'cancelled'} => const Cancelled(),
     {'status': 'connected', 'warning': final String warning} => Connected(
       warning: warning,
     ),
@@ -86,6 +93,7 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
   Map<String, Object?> toJson() => switch (this) {
     Stopped() => {'status': 'stopped'},
     Connecting() => {'status': 'connecting'},
+    Cancelled() => {'status': 'cancelled'},
     Connected(:final warning) => {
       'status': 'connected',
       if (warning.isNotEmpty) 'warning': warning,
@@ -110,7 +118,7 @@ sealed class const TunnelStatus._() with _$TunnelStatus {
 
   bool get isOn => switch (this) {
     Connecting() || Connected() || Reconnecting() => true,
-    Stopped() || Failed() || UnknownHostKey() => false,
+    Stopped() || Cancelled() || Failed() || UnknownHostKey() => false,
   };
 }
 

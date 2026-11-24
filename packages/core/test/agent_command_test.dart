@@ -31,6 +31,24 @@ void main() {
     );
   });
 
+  test('a cancel is an answer without one', () {
+    expect(const AgentCommand.answer(3, null).toJson(), {
+      'command': 'answer',
+      'prompt': 3,
+    });
+    expect(
+      AgentCommand.fromJson({'command': 'answer', 'prompt': 3, 'answer': 7}),
+      const AgentCommand.answer(3, null),
+    );
+  });
+
+  test('an answer never shows in its description', () {
+    expect(
+      '${const AgentCommand.answer(1, 'hunter2')}',
+      isNot(contains('hunter2')),
+    );
+  });
+
   group('AgentCommand', () {
     for (final command in const [
       AgentCommand.save(database),
@@ -53,6 +71,9 @@ void main() {
       ),
       AgentCommand.exportTunnels('/Users/me/tunnels.json'),
       AgentCommand.quit(),
+      AgentCommand.answer(1, 'hunter2'),
+      AgentCommand.answer(2, ''),
+      AgentCommand.answer(3, null),
     ]) {
       test('$command round-trips', () {
         expect(

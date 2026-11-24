@@ -73,6 +73,20 @@ void main() {
     ]);
   });
 
+  test('says a cancelled login is off, and not failed', () {
+    const snapshot = TunnelsSnapshot(
+      tunnels: [database, web],
+      statuses: {'c3': Cancelled()},
+    );
+
+    expect(menu(snapshot).take(4), [
+      '0 of 2 connected',
+      '---',
+      '☐ Production database',
+      '☐ Web — login cancelled',
+    ]);
+  });
+
   test("says which tunnel waits for its server's key to be checked", () {
     const waiting = UnknownHostKey(
       host: 'web',

@@ -118,6 +118,16 @@ void main() {
     expect(find.byType(ColourDot), findsNothing);
   });
 
+  testWidgets('a cancelled login says so, and is off', (tester) async {
+    await pumpTile(tester, status: const Cancelled());
+
+    expect(find.text('Login cancelled'), findsOneWidget);
+    expect(
+      tester.widget<NativeSwitch>(find.byType(NativeSwitch)).value,
+      isFalse,
+    );
+  });
+
   testWidgets('an unnamed tunnel shows its summary once', (tester) async {
     await pumpTile(tester);
     expect(find.text(unnamed.summary), findsOneWidget);

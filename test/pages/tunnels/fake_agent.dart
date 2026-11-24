@@ -6,6 +6,7 @@ class FakeAgent implements AgentClient {
   final controller = StreamController<TunnelsSnapshot>();
   final settingsController = StreamController<AgentSettings>();
   final tunnelRequestsController = StreamController<OpenTunnel>();
+  final promptsController = StreamController<List<LoginPrompt>>();
   final sent = <AgentCommand>[];
 
   @override
@@ -18,6 +19,9 @@ class FakeAgent implements AgentClient {
   Stream<OpenTunnel> get tunnelRequests => tunnelRequestsController.stream;
 
   @override
+  Stream<List<LoginPrompt>> get prompts => promptsController.stream;
+
+  @override
   Future<String> get identity => Future.value('');
 
   @override
@@ -28,6 +32,7 @@ class FakeAgent implements AgentClient {
   Future<void> close() async {
     unawaited(settingsController.close());
     unawaited(tunnelRequestsController.close());
+    unawaited(promptsController.close());
     unawaited(controller.close());
   }
 }

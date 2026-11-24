@@ -6,10 +6,13 @@ import 'package:core/src/agent_channel.dart';
 import 'package:core/src/agent_command.dart';
 import 'package:core/src/agent_message.dart';
 import 'package:core/src/agent_settings.dart';
+import 'package:core/src/login_prompt.dart';
+import 'package:core/src/tunnel.dart';
 import 'package:core/src/tunnel_manager.dart';
 import 'package:core/src/tunnels_file.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 import 'package:fimber/fimber.dart';
+import 'package:system_ssh/system_ssh.dart';
 
 final _log = FimberLog('Socket');
 
@@ -21,6 +24,9 @@ class AgentServer(
 ) {
   final Set<AgentLink> _clients = {};
   AgentMessage? _pending;
+  final Map<int, ({LoginPrompt prompt, Completer<String?> answer})> _prompts =
+      {};
+  var _lastPrompt = 0;
   bool _isClosed = false;
   late final StreamSubscription<TunnelsSnapshot> _changes;
   late final StreamSubscription<AgentSettings> _settingsChanges;
@@ -57,6 +63,41 @@ class AgentServer(
     return true;
   }
 
+  /// Asks the windows [prompt] for [tunnel], until one answers, the last one
+  /// closes or [finished] completes; null cancels.
+  Future<String?> ask(Tunnel tunnel, SshPrompt prompt, Future<void> finished) {
+    if (_isClosed) return Future.value();
+
+    final id = ++_lastPrompt;
+    final answer = Completer<String?>();
+    _prompts[id] = (
+      prompt: LoginPrompt(id: id, tunnel: tunnel.title, prompt: prompt),
+      answer: answer,
+    );
+    _sendPrompts();
+    unawaited(finished.whenComplete(() => _settle(id, null)));
+    return answer.future;
+  }
+
+  void _settle(int id, String? answer) {
+    if (_prompts.remove(id) case (prompt: _, answer: final waiting)?) {
+      waiting.complete(answer);
+      _sendPrompts();
+    }
+  }
+
+  void _cancelPrompts() {
+    for (final id in [..._prompts.keys]) {
+      _settle(id, null);
+    }
+  }
+
+  void _sendPrompts() => _sendAll(
+    AgentMessage.prompts([
+      for (final (:prompt, answer: _) in _prompts.values) prompt,
+    ]),
+  );
+
   void _accept(AgentLink client) {
     _admit(client);
     client.lines.listen(
@@ -72,6 +113,14 @@ class AgentServer(
     _send(client, AgentMessage.identity(_identity));
     _send(client, AgentMessage.snapshot(_manager.state));
     _send(client, AgentMessage.settings(_preferences.settings));
+    if (_prompts.isNotEmpty) {
+      _send(
+        client,
+        AgentMessage.prompts([
+          for (final (:prompt, answer: _) in _prompts.values) prompt,
+        ]),
+      );
+    }
     if (_pending case final request?) {
       _pending = null;
       _send(client, request);
@@ -82,15 +131,16 @@ class AgentServer(
     final AgentCommand command;
     try {
       command = AgentCommand.fromJson(jsonDecode(line));
-    } on FormatException catch (exception) {
-      _log.w('Ignoring $line', ex: exception);
+    } on FormatException {
+      // Not the line itself, which may hold an answer.
+      _log.w("Ignoring a line that isn't a command");
       return;
     }
 
     try {
       await _run(command);
     } on Object catch (exception) {
-      _log.e('Could not run $line', ex: exception);
+      _log.e('Could not run $command', ex: exception);
     }
   }
 
@@ -116,6 +166,7 @@ class AgentServer(
     SetLaunchAtLogin(:final on) => _preferences.setLaunchAtLogin(on: on),
     SetDebugLogging(:final on) => _preferences.setDebugLogging(on: on),
     ShowLogs() => await _preferences.showLogs(),
+    AnswerPrompt(:final prompt, :final answer) => _settle(prompt, answer),
   };
 
   void _sendAll(AgentMessage message) {
@@ -127,9 +178,11 @@ class AgentServer(
   void _send(AgentLink client, AgentMessage message) =>
       client.send(jsonEncode(message.toJson()));
 
+  // With no window left, nobody can answer.
   void _drop(AgentLink client) {
     _clients.remove(client);
     client.close();
+    if (_clients.isEmpty) _cancelPrompts();
   }
 
   Future<void> close() async {
@@ -138,6 +191,7 @@ class AgentServer(
     await _changes.cancel();
     await _settingsChanges.cancel();
     [..._clients].forEach(_drop);
+    _cancelPrompts();
     await _listener.close();
   }
 }
