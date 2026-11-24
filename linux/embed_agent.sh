@@ -1,10 +1,11 @@
 #!/bin/sh
-# Usage: embed_agent.sh <flutter root> <target platform> <destination>
+# Usage: embed_agent.sh <flutter root> <target platform> <destination> <application id>
 set -eu
 
 dart="$1/bin/dart"
 platform=$(echo "$2" | tr - _)
 destination="$3"
+app_id="$4"
 agent="$(dirname "$0")/../packages/agent"
 bundle="$agent/build/cli/$platform/bundle"
 
@@ -20,3 +21,4 @@ rm -rf "$destination"
 mkdir -p "$destination"
 cp -R "$bundle/bin" "$bundle/lib" "$destination/"
 cp "$agent"/assets/*.png "$destination/"
+echo "$app_id" > "$destination/app_id"

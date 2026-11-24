@@ -8,26 +8,27 @@ Taka is a menu bar app for SSH tunnels (`ssh -L`) and SOCKS proxies (`ssh -D`), 
 
 - **It runs the system's own `ssh`.** Never add an SSH implementation. `~/.ssh/config`, `ProxyJump`, certificates and agents (1Password and others) must work exactly as in a terminal. That is also why Taka isn't sandboxed and isn't on the Mac App Store (#10).
 - **It stores no secrets.** The tunnels file holds names, hosts and ports only, so an export is safe to commit. Keys, passwords and passphrases stay with ssh and the user's agent.
-- **Idle Taka stays small.** The background agent idles near 17 MB, and the Flutter window (50–60 MB) runs only while it's open. Tray and tunnel work belongs in the agent, never in the window.
+- **Idle Taka stays small.** Tray and tunnel work belongs in the agent, never in the window, which runs only while it's open.
 - **Saved tunnels survive upgrades.** The tunnels file is versioned (`tunnels_file.dart`). A new optional field that older builds ignore keeps the version. Any other change in shape needs a new version that still reads every old one.
 
 ## How it fits together
 
 Two processes, one app bundle:
 
-- **`packages/core`**: pure Dart, shared by both processes. It holds the `Tunnel` model and its store, `TunnelManager` (opens and stops tunnels, and emits a `TunnelsSnapshot` on every change) with one `TunnelSession` per tunnel, and the protocol. `AgentServer` and `SocketAgentClient` exchange one JSON object per line over `agentSocketPath()`: `AgentMessage`s from the agent, `AgentCommand`s from the window. Paths are worked out in plain Dart, because the agent has no Flutter plugins.
-- **`packages/agent`**: the background agent (plain Dart, nativeapi's `runNativeApp`). It owns the tray, the saved tunnels and every `ssh`, and keeps running. A second copy exits when it can't bind the socket. Menu decisions live in the pure, tested `trayEntries(snapshot)`. The native side keeps menus and listeners alive by itself, so only the tray icon must stay referenced from Dart. An uncaught error ends the process, so catch at the edges.
-- **The window** (this package, `lib/`): started on demand, it starts the agent if needed (`lib/agent/agent_launcher.dart`), mirrors its snapshots in `TunnelsBloc` and sends it what the user does. It quits when its window closes or the agent goes away.
-- **Builds:** every macOS build, `flutter run` included, runs `macos/embed_agent.sh` from an Xcode build phase. The script builds the agent with `dart build cli` and puts it inside the app as `Contents/Library/LoginItems/Taka.app`, signed like the app. Every Linux build does the same from CMake with `linux/embed_agent.sh`, which puts the agent beside the window as `agent/`. In development, `TAKA_AGENT` and `TAKA_APP` point to another build. `build.yml` also packages the Linux bundle as a `.deb` and `.rpm` from `linux/packaging/nfpm.yaml`, installed in `/opt/taka`. Its `linux-packages` jobs run `linux/packaging/check_install.sh` in clean Ubuntu, Debian and Fedora containers to check that the declared dependencies bring every library.
+- **`packages/core`**: pure Dart, shared by both processes. It holds the `Tunnel` model and its store, `TunnelManager` with one `TunnelSession` per tunnel, and the protocol: one JSON object per line between the window and the agent. `AgentChannel` decides how they reach each other, a Unix socket on macOS and Linux and a loopback port with a token on Windows, where Dart has no Unix sockets. Paths are worked out in plain Dart, because the agent has no Flutter plugins.
+- **`packages/agent`**: the background agent (plain Dart, nativeapi's `runNativeApp`). It owns the tray, the saved tunnels and every `ssh`, and keeps running; only one runs per build. Menu decisions live in the pure, tested `trayEntries(snapshot)`. The native side keeps menus and listeners alive by itself, so only the tray icon must stay referenced from Dart. An uncaught error ends the process, so catch at the edges.
+- **The window** (this package, `lib/`): started on demand, it starts the agent if needed, mirrors its snapshots in `TunnelsBloc` and sends it what the user does. It quits when its window closes or the agent goes away.
+- **Builds:** every build, `flutter run` included, builds the agent with `dart build cli` and puts it inside the app, through each system's `embed_agent` script. Debug and profile builds are Taka Dev, with their own folders, socket, logs and red icon, so they never touch an installed release. `TakaBuild` holds each build's names, and `taka_build_test.dart` checks every system's build files agree with it. In development, `TAKA_AGENT` and `TAKA_APP` point to another build. `build.yml` makes the release packages and checks that they install.
 
 A tunnel bug or a missing ssh option belongs in [`system_ssh`](https://github.com/Pacabase/system_ssh), with its own tests, not in a workaround here. Taka depends on a released version. system_ssh is never a path dependency in a commit.
 
 ## Code
 
-Keep it simple. Build only what the current change needs, and prefer the straightforward over the clever. No abstractions in advance.
+**Simple means easy to read and change, not the smallest diff.** Build only what the current change needs, and don't abstract for a case that doesn't exist yet. But when a change is the second or third of its kind, or a file is collecting unrelated jobs, give it the right shape: its own class or file. If the better structure is bigger than the change, say so and propose it first.
 
-- **State:** BLoC (`flutter_bloc`) with Freezed. Short state names, inline handlers in the constructor, and every state and event `@freezed`. Every `Bloc` overrides `toString()` to its class name.
+- **State:** BLoC (`flutter_bloc`) with Freezed. A Cubit fits state changed by methods with no events worth naming, such as `TunnelManager` and `TunnelsScreenCubit`; its state is still `@freezed`. Short state names, inline handlers in the constructor, and every state and event `@freezed`. Every `Bloc` overrides `toString()` to its class name.
 - **Constructors:** declare fields in a primary constructor, like `class const TunnelTile({super.key, required final Tunnel tunnel}) extends StatelessWidget`. Write freezed factories without the class name (`const factory connected() = Connected;`).
+- **Widgets:** a piece of UI is a widget class, not a method or local function returning a widget, so it gets its own element and rebuilds on its own.
 - **Naming:** no abbreviations (`index`, not `idx`; `tunnel`, not `t`). Write `catch (exception)`.
 - **Collections:** prefer `.where()`, `.map()`, collection-`for`/`if` and `package:collection` over loops that build up a result.
 - **Comments:** none by default. Write one only when the code, names and tests can't give the reason (a hidden constraint, an outside quirk, a workaround) and one short line is enough. "Could add X later" goes in the README's Roadmap, not in a comment.

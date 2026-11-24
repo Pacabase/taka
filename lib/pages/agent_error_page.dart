@@ -7,6 +7,7 @@ import 'package:taka/agent/agent_launcher.dart';
 import 'package:taka/theme/app_theme.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
+import 'package:taka/widgets/fill_or_scroll.dart';
 
 String agentFailure(Object error) => switch (error) {
   ProcessException(executable: 'open') => "macOS couldn't open it.",
@@ -40,59 +41,62 @@ class _AgentErrorPageState extends State<AgentErrorPage> {
     final colors = context.theme;
 
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 4,
-            children: [
-              AppIcon(AppIcons.triangleAlert, color: colors.red, size: 24),
-              const SizedBox(height: 4),
-              const Text(
-                "Taka's background helper didn't start",
-                style: TextStyle(fontWeight: FontWeight.w500),
-              ),
-              Text(
-                agentFailure(widget.error),
-                style: TextStyle(fontSize: 12, color: colors.textSecondary),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  FilledButton(
-                    onPressed: widget.onTryAgain,
-                    child: const Text('Try Again'),
-                  ),
-                  TextButton(
-                    onPressed: () => DebugLogging('window').reveal(),
-                    child: const Text('Show Logs'),
-                  ),
-                  TextButton(
-                    onPressed: () =>
-                        Clipboard.setData(ClipboardData(text: _details)),
-                    child: const Text('Copy Details'),
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: () => setState(() => _showsDetails = !_showsDetails),
-                child: Text(_showsDetails ? 'Hide Details' : 'Show Details'),
-              ),
-              if (_showsDetails)
-                SelectableText(
-                  _details,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: monoFont,
-                    fontSize: 12,
-                    color: colors.textSecondary,
-                  ),
+      body: FillOrScroll(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 4,
+              children: [
+                AppIcon(AppIcons.triangleAlert, color: colors.red, size: 24),
+                const SizedBox(height: 4),
+                const Text(
+                  "Taka's background helper didn't start",
+                  style: TextStyle(fontWeight: FontWeight.w500),
                 ),
-            ],
+                Text(
+                  agentFailure(widget.error),
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    FilledButton(
+                      onPressed: widget.onTryAgain,
+                      child: const Text('Try Again'),
+                    ),
+                    TextButton(
+                      onPressed: () => DebugLogging('window').reveal(),
+                      child: const Text('Show Logs'),
+                    ),
+                    TextButton(
+                      onPressed: () =>
+                          Clipboard.setData(ClipboardData(text: _details)),
+                      child: const Text('Copy Details'),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () =>
+                      setState(() => _showsDetails = !_showsDetails),
+                  child: Text(_showsDetails ? 'Hide Details' : 'Show Details'),
+                ),
+                if (_showsDetails)
+                  SelectableText(
+                    _details,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: monoFont,
+                      fontSize: 12,
+                      color: colors.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

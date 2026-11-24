@@ -56,6 +56,13 @@ Future<AgentClient> connectToAgent({
     if (result.exitCode != 0) {
       throw ProcessException('open', [bundle], '${result.stderr}'.trim());
     }
+  } else if (Platform.isWindows) {
+    await Process.start(
+      agent,
+      [],
+      mode: ProcessStartMode.detached,
+      environment: {'TAKA_APP': app},
+    );
   } else {
     await Process.start(
       '/bin/sh',
@@ -83,7 +90,7 @@ String _lastLines(File file, {int count = 20}) {
 
 Future<SocketAgentClient?> _connect(String path) async {
   try {
-    return await SocketAgentClient.connect(path);
+    return await SocketAgentClient.connect(AgentChannel.at(path));
   } on SocketException {
     return null;
   }

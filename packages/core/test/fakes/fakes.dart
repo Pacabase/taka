@@ -17,18 +17,14 @@ class FakeStore([
 
   @override
   Future<SavedTunnels> load() async =>
-      (tunnels: tunnels, on: on, groupColours: groupColours);
+      (book: TunnelBook(tunnels: tunnels, groupColours: groupColours), on: on);
 
   @override
-  Future<void> save(
-    List<Tunnel> tunnels, {
-    required Set<String> on,
-    Map<String, TunnelColour> groupColours = const {},
-  }) async {
+  Future<void> save(TunnelBook book, {required Set<String> on}) async {
     if (saveError case final error?) throw error;
-    this.tunnels = tunnels;
+    tunnels = book.tunnels;
     this.on = on;
-    this.groupColours = groupColours;
+    groupColours = book.groupColours;
     saveCount++;
   }
 }
@@ -36,6 +32,7 @@ class FakeStore([
 class FakeTunnel(@override final int localPort) implements SshTunnel {
   final _done = Completer<void>();
   int closeCount = 0;
+  Exception? closeError;
 
   void drop() => _done.complete();
 
@@ -48,6 +45,7 @@ class FakeTunnel(@override final int localPort) implements SshTunnel {
   Future<void> close() async {
     closeCount++;
     if (!_done.isCompleted) _done.complete();
+    if (closeError case final error?) throw error;
   }
 }
 

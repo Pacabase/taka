@@ -34,6 +34,13 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "Debug" "Profile" "Release")
 endif()
 
+# Must match TakaBuild.
+set(WINDOW_NAME "Taka Settings")
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+  set(APPLICATION_ID "${APPLICATION_ID}.dev")
+  set(WINDOW_NAME "Taka Settings Dev")
+endif()
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
@@ -131,7 +138,7 @@ install(CODE "
   execute_process(
     COMMAND sh \"${CMAKE_CURRENT_SOURCE_DIR}/embed_agent.sh\"
       \"${FLUTTER_ROOT}\" \"${FLUTTER_TARGET_PLATFORM}\"
-      \"${CMAKE_INSTALL_PREFIX}/agent\"
+      \"${CMAKE_INSTALL_PREFIX}/agent\" \"${APPLICATION_ID}\"
     RESULT_VARIABLE result)
   if(NOT result EQUAL 0)
     message(FATAL_ERROR \"Could not build the agent\")

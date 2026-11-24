@@ -10,6 +10,7 @@ Get the latest build from [Releases](https://github.com/Pacabase/taka/releases):
 - **Debian, Ubuntu:** `sudo apt install ./Taka-<version>-linux-x64.deb` (or `-linux-arm64.deb`), which brings the libraries Taka needs. Then open Taka from your applications, or run `taka`.
 - **Fedora:** `sudo dnf install ./Taka-<version>-linux-x64.rpm` (or `-linux-arm64.rpm`).
 - **Other Linux:** `Taka-<version>-linux-x64.tar.gz` or `Taka-<version>-linux-arm64.tar.gz`. Extract it and run `taka/taka`.
+- **Windows:** `Taka-<version>-windows-x64-setup.exe` installs Taka for your user, with no administrator rights needed. Or extract `Taka-<version>-windows-x64.zip` and run `Taka\taka.exe`. The builds aren't signed yet, so SmartScreen may say it protected your PC: click **More info**, then **Run anyway**. With Smart App Control on, Windows blocks unsigned apps outright, so Taka won't open there until the builds are signed.
 
 Each release lists the files' checksums in `SHA256SUMS`.
 
@@ -41,8 +42,19 @@ An error such as `libgtk-3.so.0: cannot open shared object file` means GTK 3 is 
 
 - **macOS** 14 (Sonoma) or later, on Apple Silicon or Intel.
 - **Linux** on x64 or arm64 with glibc 2.35 or later (Ubuntu 22.04, Debian 12, Fedora 36 or newer) and GTK 3. The tray icon needs StatusNotifierItem support, which KDE, Xfce, Cinnamon and Ubuntu have; on other GNOME desktops, install the [AppIndicator extension](https://extensions.gnome.org/extension/615/appindicator-support/).
+- **Windows** 10 or 11 on x64, with the OpenSSH Client that Windows includes (Settings → System → Optional features). Taka runs the `ssh` a terminal would. Click the tray icon to open Taka and right-click it for the menu.
 
-Windows is on the [roadmap](#roadmap).
+## Memory
+
+Taka is two programs. A small background helper owns the tray icon and runs your tunnels all day. The window starts when you open it and quits when you close it, so it uses no memory the rest of the time.
+
+|             | Background helper | Window, while open |
+| ----------- | ----------------- | ------------------ |
+| **macOS**   | about 20–30 MB    | about 50 MB        |
+| **Windows** | about 20 MB       | about 80 MB        |
+| **Linux**   | about 25 MB       | depends on the graphics driver; about 150 MB without a GPU |
+
+Each tunnel's `ssh` adds 1–3 MB. On macOS and Linux, tunnels to the same server share one `ssh`. The figures are each system's own measure of memory the program holds for itself (macOS: memory in Activity Monitor; Windows: committed memory; Linux: private memory), with four tunnels open.
 
 ## Mac App Store
 
@@ -56,34 +68,35 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Ordered roughly by priority; each line is about one pull request.
 
-### First preview (0.1, macOS)
+### Signed macOS releases
 
 - [ ] **Signed and notarized builds**, so macOS opens Taka without a warning.
 - [ ] **Homebrew tap** — `brew install --cask taka`, from the release `.dmg`.
 - [ ] **Signed auto-updates**.
 
-### Daily driver (0.2, Linux)
+### Daily driver
 
 - [ ] **Activity log** per tunnel.
 - [ ] **Tags**, several per tunnel, to filter the list by.
 - [ ] **Import** hosts from `~/.ssh/config`.
 - [ ] **More Linux packages** — AppImage and the AUR.
 
-### Windows (0.3)
+### Signed Windows releases
 
-- [ ] **Windows support** — the agent's transport, paths, an installer and `winget`.
+- [ ] **Signed Windows builds**, so Smart App Control lets Taka run and SmartScreen opens it without a warning.
+- [ ] **`winget`** — `winget install Taka`, from the release installer.
 
-### Logins (0.4)
+### Logins
 
 - [ ] **Passwords, passphrases and 2FA** through `SSH_ASKPASS`, with 1Password `op://` references.
 
-### Power users (0.5)
+### Power users
 
 - [ ] **Every action is a command**, with shortcuts and a command palette.
 - [ ] **A `taka` command line** — `up`, `down`, `status --json`, and `run <tunnel> -- <command>`.
 - [ ] **A shareable tunnels file** that Taka keeps in sync, safe to commit since Taka stores no secrets.
 
-### Beyond (0.6 and 1.0)
+### Beyond
 
 - [ ] **Notifications** when a tunnel drops or gives up, saying why, and opening it in the window when clicked. nativeapi has no notifications on macOS or Linux yet, so it means Apple's UserNotifications through `objective_c` and D-Bus's `org.freedesktop.Notifications`, or adding them to nativeapi.
 - [ ] **Health checks** that show a tunnel as connected only once the service behind it answers.

@@ -31,7 +31,7 @@ class const Input({
   required final TextEditingController controller,
   final FocusNode? focusNode,
   required final String hint,
-  required final TextStyle style,
+  final TextStyle style = const TextStyle(),
   final bool autofocus = false,
   required final void Function() onSubmitted,
 }) extends StatefulWidget {

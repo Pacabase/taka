@@ -4,11 +4,27 @@
 // future. If not, the values below would default to using the project name when this becomes a
 // 'flutter create' template.
 
-// The application's name. By default this is also the title of the Flutter window.
+// A red icon in Debug and Profile, from tool/dev_icon.dart, tells the Dock's two apart.
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+ASSETCATALOG_COMPILER_APPICON_NAME[config=Debug] = AppIcon-Dev
+ASSETCATALOG_COMPILER_APPICON_NAME[config=Profile] = AppIcon-Dev
+
+// The bundle's file name, which Finder and the Dock show, and the executable's.
+// Must match TakaBuild.
 PRODUCT_NAME = Taka
+PRODUCT_NAME[config=Debug] = Taka Dev
+PRODUCT_NAME[config=Profile] = Taka Dev
 
 // The application's bundle identifier
 PRODUCT_BUNDLE_IDENTIFIER = com.pacabase.taka
+
+PRODUCT_BUNDLE_IDENTIFIER[config=Debug] = com.pacabase.taka.dev
+PRODUCT_BUNDLE_IDENTIFIER[config=Profile] = com.pacabase.taka.dev
+
+// The window's name in the menu bar and Activity Monitor.
+WINDOW_NAME = Taka Settings
+WINDOW_NAME[config=Debug] = Taka Settings Dev
+WINDOW_NAME[config=Profile] = Taka Settings Dev
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 the Taka project authors.
