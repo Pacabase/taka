@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 
 class const NativeSwitch({
   super.key,
@@ -118,7 +118,7 @@ class _NativeSwitchState extends State<NativeSwitch> {
             ),
             foregroundDecoration: _showsFocus
                 ? BoxDecoration(
-                    border: Border.all(color: TakaColors.of(context).accent),
+                    border: Border.all(color: context.theme.focusRing),
                     borderRadius: BorderRadius.circular(height / 2),
                   )
                 : null,

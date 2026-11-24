@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/pages/login_prompt/login_prompt_cubit.dart';
-import 'package:taka/theme/taka_colors.dart';
-import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/theme/app_theme.dart';
 
 /// [child] with the login prompt over it while the agent waits on one.
 ///
@@ -75,7 +74,7 @@ class _LoginPromptDialogState extends State<LoginPromptDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
     final LoginPrompt(:tunnel, :prompt) = widget.prompt;
     final secondary = TextStyle(fontSize: 12, color: colors.textSecondary);
 
@@ -103,7 +102,7 @@ class _LoginPromptDialogState extends State<LoginPromptDialog> {
                   }),
                   Text(
                     keyPath,
-                    style: secondary.copyWith(fontFamily: monoFont),
+                    style: secondary.copyWith(fontFamily: fontMono),
                   ),
                 ],
                 SshPasswordPrompt(:final text) => [Text(text.trim())],

@@ -734,7 +734,7 @@ $TunnelStatusCopyWith<$Res> get last {
 /// @nodoc
 mixin _$SessionState {
 
- Phase get phase; int get attempts; bool get hasConnected; bool get isWatched;
+ Phase get phase; int get attempts; bool get hasConnected; bool get isWatched; bool get wasAway;
 /// Create a copy of SessionState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -746,20 +746,20 @@ $SessionStateCopyWith<SessionState> get copyWith => _$SessionStateCopyWithImpl<S
 @override
 bool operator ==(Object other) {
   final _this = this as SessionState;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SessionState&&(identical(other.phase, _this.phase) || other.phase == _this.phase)&&(identical(other.attempts, _this.attempts) || other.attempts == _this.attempts)&&(identical(other.hasConnected, _this.hasConnected) || other.hasConnected == _this.hasConnected)&&(identical(other.isWatched, _this.isWatched) || other.isWatched == _this.isWatched));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SessionState&&(identical(other.phase, _this.phase) || other.phase == _this.phase)&&(identical(other.attempts, _this.attempts) || other.attempts == _this.attempts)&&(identical(other.hasConnected, _this.hasConnected) || other.hasConnected == _this.hasConnected)&&(identical(other.isWatched, _this.isWatched) || other.isWatched == _this.isWatched)&&(identical(other.wasAway, _this.wasAway) || other.wasAway == _this.wasAway));
 }
 
 
 @override
 int get hashCode {
   final _this = this as SessionState;
-  return Object.hash(runtimeType,_this.phase,_this.attempts,_this.hasConnected,_this.isWatched);
+  return Object.hash(runtimeType,_this.phase,_this.attempts,_this.hasConnected,_this.isWatched,_this.wasAway);
 }
 
 @override
 String toString() {
   final _this = this as SessionState;
-  return 'SessionState(phase: ${_this.phase}, attempts: ${_this.attempts}, hasConnected: ${_this.hasConnected}, isWatched: ${_this.isWatched})';
+  return 'SessionState(phase: ${_this.phase}, attempts: ${_this.attempts}, hasConnected: ${_this.hasConnected}, isWatched: ${_this.isWatched}, wasAway: ${_this.wasAway})';
 }
 
 
@@ -770,7 +770,7 @@ abstract mixin class $SessionStateCopyWith<$Res>  {
   factory $SessionStateCopyWith(SessionState value, $Res Function(SessionState) _then) = _$SessionStateCopyWithImpl;
 @useResult
 $Res call({
- Phase phase, int attempts, bool hasConnected, bool isWatched
+ Phase phase, int attempts, bool hasConnected, bool isWatched, bool wasAway
 });
 
 
@@ -787,12 +787,13 @@ class _$SessionStateCopyWithImpl<$Res>
 
 /// Create a copy of SessionState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? phase = null,Object? attempts = null,Object? hasConnected = null,Object? isWatched = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? phase = null,Object? attempts = null,Object? hasConnected = null,Object? isWatched = null,Object? wasAway = null,}) {
   return _then(SessionState(
 phase: null == phase ? _self.phase : phase // ignore: cast_nullable_to_non_nullable
 as Phase,attempts: null == attempts ? _self.attempts : attempts // ignore: cast_nullable_to_non_nullable
 as int,hasConnected: null == hasConnected ? _self.hasConnected : hasConnected // ignore: cast_nullable_to_non_nullable
 as bool,isWatched: null == isWatched ? _self.isWatched : isWatched // ignore: cast_nullable_to_non_nullable
+as bool,wasAway: null == wasAway ? _self.wasAway : wasAway // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -884,10 +885,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Phase phase,  int attempts,  bool hasConnected,  bool isWatched)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Phase phase,  int attempts,  bool hasConnected,  bool isWatched,  bool wasAway)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SessionState() when $default != null:
-return $default(_that.phase,_that.attempts,_that.hasConnected,_that.isWatched);case _:
+return $default(_that.phase,_that.attempts,_that.hasConnected,_that.isWatched,_that.wasAway);case _:
   return orElse();
 
 }
@@ -905,10 +906,10 @@ return $default(_that.phase,_that.attempts,_that.hasConnected,_that.isWatched);c
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Phase phase,  int attempts,  bool hasConnected,  bool isWatched)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Phase phase,  int attempts,  bool hasConnected,  bool isWatched,  bool wasAway)  $default,) {final _that = this;
 switch (_that) {
 case _SessionState():
-return $default(_that.phase,_that.attempts,_that.hasConnected,_that.isWatched);}
+return $default(_that.phase,_that.attempts,_that.hasConnected,_that.isWatched,_that.wasAway);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -922,10 +923,10 @@ return $default(_that.phase,_that.attempts,_that.hasConnected,_that.isWatched);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Phase phase,  int attempts,  bool hasConnected,  bool isWatched)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Phase phase,  int attempts,  bool hasConnected,  bool isWatched,  bool wasAway)?  $default,) {final _that = this;
 switch (_that) {
 case _SessionState() when $default != null:
-return $default(_that.phase,_that.attempts,_that.hasConnected,_that.isWatched);case _:
+return $default(_that.phase,_that.attempts,_that.hasConnected,_that.isWatched,_that.wasAway);case _:
   return null;
 
 }
@@ -937,13 +938,14 @@ return $default(_that.phase,_that.attempts,_that.hasConnected,_that.isWatched);c
 
 
 class _SessionState extends SessionState {
-  const _SessionState({required this.phase, this.attempts = 0, this.hasConnected = false, this.isWatched = true}): super._();
+  const _SessionState({required this.phase, this.attempts = 0, this.hasConnected = false, this.isWatched = true, this.wasAway = false}): super._();
   
 
 @override final  Phase phase;
 @override@JsonKey() final  int attempts;
 @override@JsonKey() final  bool hasConnected;
 @override@JsonKey() final  bool isWatched;
+@override@JsonKey() final  bool wasAway;
 
 /// Create a copy of SessionState
 /// with the given fields replaced by the non-null parameter values.
@@ -955,18 +957,18 @@ _$SessionStateCopyWith<_SessionState> get copyWith => __$SessionStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _SessionState&&(identical(other.phase, phase) || other.phase == phase)&&(identical(other.attempts, attempts) || other.attempts == attempts)&&(identical(other.hasConnected, hasConnected) || other.hasConnected == hasConnected)&&(identical(other.isWatched, isWatched) || other.isWatched == isWatched));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _SessionState&&(identical(other.phase, phase) || other.phase == phase)&&(identical(other.attempts, attempts) || other.attempts == attempts)&&(identical(other.hasConnected, hasConnected) || other.hasConnected == hasConnected)&&(identical(other.isWatched, isWatched) || other.isWatched == isWatched)&&(identical(other.wasAway, wasAway) || other.wasAway == wasAway));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,phase,attempts,hasConnected,isWatched);
+    return Object.hash(runtimeType,phase,attempts,hasConnected,isWatched,wasAway);
 }
 
 @override
 String toString() {
-    return 'SessionState(phase: $phase, attempts: $attempts, hasConnected: $hasConnected, isWatched: $isWatched)';
+    return 'SessionState(phase: $phase, attempts: $attempts, hasConnected: $hasConnected, isWatched: $isWatched, wasAway: $wasAway)';
 }
 
 
@@ -977,7 +979,7 @@ abstract mixin class _$SessionStateCopyWith<$Res> implements $SessionStateCopyWi
   factory _$SessionStateCopyWith(_SessionState value, $Res Function(_SessionState) _then) = __$SessionStateCopyWithImpl;
 @override @useResult
 $Res call({
- Phase phase, int attempts, bool hasConnected, bool isWatched
+ Phase phase, int attempts, bool hasConnected, bool isWatched, bool wasAway
 });
 
 
@@ -994,12 +996,13 @@ class __$SessionStateCopyWithImpl<$Res>
 
 /// Create a copy of SessionState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? phase = null,Object? attempts = null,Object? hasConnected = null,Object? isWatched = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? phase = null,Object? attempts = null,Object? hasConnected = null,Object? isWatched = null,Object? wasAway = null,}) {
   return _then(_SessionState(
 phase: null == phase ? _self.phase : phase // ignore: cast_nullable_to_non_nullable
 as Phase,attempts: null == attempts ? _self.attempts : attempts // ignore: cast_nullable_to_non_nullable
 as int,hasConnected: null == hasConnected ? _self.hasConnected : hasConnected // ignore: cast_nullable_to_non_nullable
 as bool,isWatched: null == isWatched ? _self.isWatched : isWatched // ignore: cast_nullable_to_non_nullable
+as bool,wasAway: null == wasAway ? _self.wasAway : wasAway // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -1060,13 +1063,14 @@ extension SessionEventPatterns on SessionEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Connect value)?  connect,TResult Function( Dropped value)?  dropped,TResult Function( RetryDue value)?  retryDue,TResult Function( Stable value)?  stable,TResult Function( Checked value)?  checked,TResult Function( Warned value)?  warned,TResult Function( WarningExpired value)?  warningExpired,TResult Function( Refused value)?  refused,TResult Function( Trust value)?  trust,TResult Function( Stop value)?  stop,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Connect value)?  connect,TResult Function( Dropped value)?  dropped,TResult Function( RetryDue value)?  retryDue,TResult Function( AwayCheckDue value)?  awayCheckDue,TResult Function( Stable value)?  stable,TResult Function( Checked value)?  checked,TResult Function( Warned value)?  warned,TResult Function( WarningExpired value)?  warningExpired,TResult Function( Refused value)?  refused,TResult Function( Trust value)?  trust,TResult Function( Stop value)?  stop,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Connect() when connect != null:
 return connect(_that);case Dropped() when dropped != null:
 return dropped(_that);case RetryDue() when retryDue != null:
-return retryDue(_that);case Stable() when stable != null:
+return retryDue(_that);case AwayCheckDue() when awayCheckDue != null:
+return awayCheckDue(_that);case Stable() when stable != null:
 return stable(_that);case Checked() when checked != null:
 return checked(_that);case Warned() when warned != null:
 return warned(_that);case WarningExpired() when warningExpired != null:
@@ -1091,13 +1095,14 @@ return stop(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Connect value)  connect,required TResult Function( Dropped value)  dropped,required TResult Function( RetryDue value)  retryDue,required TResult Function( Stable value)  stable,required TResult Function( Checked value)  checked,required TResult Function( Warned value)  warned,required TResult Function( WarningExpired value)  warningExpired,required TResult Function( Refused value)  refused,required TResult Function( Trust value)  trust,required TResult Function( Stop value)  stop,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Connect value)  connect,required TResult Function( Dropped value)  dropped,required TResult Function( RetryDue value)  retryDue,required TResult Function( AwayCheckDue value)  awayCheckDue,required TResult Function( Stable value)  stable,required TResult Function( Checked value)  checked,required TResult Function( Warned value)  warned,required TResult Function( WarningExpired value)  warningExpired,required TResult Function( Refused value)  refused,required TResult Function( Trust value)  trust,required TResult Function( Stop value)  stop,}){
 final _that = this;
 switch (_that) {
 case Connect():
 return connect(_that);case Dropped():
 return dropped(_that);case RetryDue():
-return retryDue(_that);case Stable():
+return retryDue(_that);case AwayCheckDue():
+return awayCheckDue(_that);case Stable():
 return stable(_that);case Checked():
 return checked(_that);case Warned():
 return warned(_that);case WarningExpired():
@@ -1118,13 +1123,14 @@ return stop(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Connect value)?  connect,TResult? Function( Dropped value)?  dropped,TResult? Function( RetryDue value)?  retryDue,TResult? Function( Stable value)?  stable,TResult? Function( Checked value)?  checked,TResult? Function( Warned value)?  warned,TResult? Function( WarningExpired value)?  warningExpired,TResult? Function( Refused value)?  refused,TResult? Function( Trust value)?  trust,TResult? Function( Stop value)?  stop,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Connect value)?  connect,TResult? Function( Dropped value)?  dropped,TResult? Function( RetryDue value)?  retryDue,TResult? Function( AwayCheckDue value)?  awayCheckDue,TResult? Function( Stable value)?  stable,TResult? Function( Checked value)?  checked,TResult? Function( Warned value)?  warned,TResult? Function( WarningExpired value)?  warningExpired,TResult? Function( Refused value)?  refused,TResult? Function( Trust value)?  trust,TResult? Function( Stop value)?  stop,}){
 final _that = this;
 switch (_that) {
 case Connect() when connect != null:
 return connect(_that);case Dropped() when dropped != null:
 return dropped(_that);case RetryDue() when retryDue != null:
-return retryDue(_that);case Stable() when stable != null:
+return retryDue(_that);case AwayCheckDue() when awayCheckDue != null:
+return awayCheckDue(_that);case Stable() when stable != null:
 return stable(_that);case Checked() when checked != null:
 return checked(_that);case Warned() when warned != null:
 return warned(_that);case WarningExpired() when warningExpired != null:
@@ -1148,12 +1154,13 @@ return stop(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Completer<void> settled)?  connect,TResult Function( Object? error)?  dropped,TResult Function()?  retryDue,TResult Function()?  stable,TResult Function()?  checked,TResult Function( String reason)?  warned,TResult Function()?  warningExpired,TResult Function( SshForwardFailed log)?  refused,TResult Function( Completer<bool> trusted)?  trust,TResult Function( Completer<void> closed)?  stop,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Completer<void> settled)?  connect,TResult Function( Object? error)?  dropped,TResult Function()?  retryDue,TResult Function()?  awayCheckDue,TResult Function()?  stable,TResult Function()?  checked,TResult Function( String reason)?  warned,TResult Function()?  warningExpired,TResult Function( SshForwardFailed log)?  refused,TResult Function( Completer<bool> trusted)?  trust,TResult Function( Completer<void> closed)?  stop,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Connect() when connect != null:
 return connect(_that.settled);case Dropped() when dropped != null:
 return dropped(_that.error);case RetryDue() when retryDue != null:
-return retryDue();case Stable() when stable != null:
+return retryDue();case AwayCheckDue() when awayCheckDue != null:
+return awayCheckDue();case Stable() when stable != null:
 return stable();case Checked() when checked != null:
 return checked();case Warned() when warned != null:
 return warned(_that.reason);case WarningExpired() when warningExpired != null:
@@ -1178,12 +1185,13 @@ return stop(_that.closed);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Completer<void> settled)  connect,required TResult Function( Object? error)  dropped,required TResult Function()  retryDue,required TResult Function()  stable,required TResult Function()  checked,required TResult Function( String reason)  warned,required TResult Function()  warningExpired,required TResult Function( SshForwardFailed log)  refused,required TResult Function( Completer<bool> trusted)  trust,required TResult Function( Completer<void> closed)  stop,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Completer<void> settled)  connect,required TResult Function( Object? error)  dropped,required TResult Function()  retryDue,required TResult Function()  awayCheckDue,required TResult Function()  stable,required TResult Function()  checked,required TResult Function( String reason)  warned,required TResult Function()  warningExpired,required TResult Function( SshForwardFailed log)  refused,required TResult Function( Completer<bool> trusted)  trust,required TResult Function( Completer<void> closed)  stop,}) {final _that = this;
 switch (_that) {
 case Connect():
 return connect(_that.settled);case Dropped():
 return dropped(_that.error);case RetryDue():
-return retryDue();case Stable():
+return retryDue();case AwayCheckDue():
+return awayCheckDue();case Stable():
 return stable();case Checked():
 return checked();case Warned():
 return warned(_that.reason);case WarningExpired():
@@ -1204,12 +1212,13 @@ return stop(_that.closed);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Completer<void> settled)?  connect,TResult? Function( Object? error)?  dropped,TResult? Function()?  retryDue,TResult? Function()?  stable,TResult? Function()?  checked,TResult? Function( String reason)?  warned,TResult? Function()?  warningExpired,TResult? Function( SshForwardFailed log)?  refused,TResult? Function( Completer<bool> trusted)?  trust,TResult? Function( Completer<void> closed)?  stop,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Completer<void> settled)?  connect,TResult? Function( Object? error)?  dropped,TResult? Function()?  retryDue,TResult? Function()?  awayCheckDue,TResult? Function()?  stable,TResult? Function()?  checked,TResult? Function( String reason)?  warned,TResult? Function()?  warningExpired,TResult? Function( SshForwardFailed log)?  refused,TResult? Function( Completer<bool> trusted)?  trust,TResult? Function( Completer<void> closed)?  stop,}) {final _that = this;
 switch (_that) {
 case Connect() when connect != null:
 return connect(_that.settled);case Dropped() when dropped != null:
 return dropped(_that.error);case RetryDue() when retryDue != null:
-return retryDue();case Stable() when stable != null:
+return retryDue();case AwayCheckDue() when awayCheckDue != null:
+return awayCheckDue();case Stable() when stable != null:
 return stable();case Checked() when checked != null:
 return checked();case Warned() when warned != null:
 return warned(_that.reason);case WarningExpired() when warningExpired != null:
@@ -1383,6 +1392,38 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
     return 'SessionEvent.retryDue()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class AwayCheckDue extends SessionEvent {
+  const AwayCheckDue(): super._();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is AwayCheckDue);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'SessionEvent.awayCheckDue()';
 }
 
 

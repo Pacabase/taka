@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/agent/agent_launcher.dart';
 import 'package:taka/pages/agent_error_page.dart';
+import 'package:taka/theme/taka_theme.dart';
 
 void main() {
   test('says in plain words why the helper did not start', () {
@@ -47,6 +48,7 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        theme: takaTheme(Brightness.light),
         home: AgentErrorPage(
           error: Exception('boom'),
           version: '1.2.3',

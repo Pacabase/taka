@@ -4,8 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:taka/pages/tunnels/widgets/form_fields.dart';
 import 'package:taka/pages/tunnels/widgets/host_input.dart';
 import 'package:taka/pages/tunnels/widgets/route_step.dart';
-import 'package:taka/theme/taka_colors.dart';
-import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/theme/app_theme.dart';
 import 'package:taka/widgets/colour_picker.dart';
 import 'package:taka/widgets/fill_or_scroll.dart';
 
@@ -105,8 +104,8 @@ class _TunnelFormState extends State<TunnelForm> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
-    const mono = TextStyle(fontFamily: monoFont, fontSize: 13);
+    final colors = context.theme;
+    const mono = TextStyle(fontFamily: fontMono, fontSize: 13);
 
     // As DismissIntent, Esc first closes the host suggestions.
     return Shortcuts(
@@ -449,7 +448,7 @@ class _KindTabState extends State<_KindTab> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
     final _KindTab(:label, :isSelected, :onTap) = widget;
 
     return Semantics(
@@ -481,7 +480,7 @@ class _KindTabState extends State<_KindTab> {
               ),
             ),
             foregroundDecoration: _showsFocus
-                ? BoxDecoration(border: Border.all(color: colors.accent))
+                ? BoxDecoration(border: Border.all(color: colors.focusRing))
                 : null,
             child: Text(
               label,
@@ -505,7 +504,7 @@ class const _Colon() extends StatelessWidget {
       width: 3,
       height: 3,
       decoration: BoxDecoration(
-        color: TakaColors.of(context).textSecondary,
+        color: context.theme.textSecondary,
         shape: BoxShape.circle,
       ),
     );

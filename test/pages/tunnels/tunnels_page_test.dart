@@ -15,8 +15,9 @@ import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_page.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/theme/tunnel_colours.dart';
 import 'package:taka/widgets/colour_dot.dart';
 
 void main() {
@@ -413,7 +414,7 @@ void main() {
         find.ancestor(of: find.text(name), matching: find.byType(TunnelTile));
     TunnelTile lifted() => tester.widget<TunnelTile>(tile('Proxy').last);
     bool liftedIsInGroup() => lifted().guide != null;
-    final colors = TakaColors.of(tester.element(find.byType(TunnelTile).first));
+    final colors = tester.element(find.byType(TunnelTile).first).theme;
     final into =
         tester.getCenter(find.byKey(const ValueKey('end Prod')).last).dy -
         1 -

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 
 class const FieldBox({
   super.key,
@@ -8,7 +8,7 @@ class const FieldBox({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
 
     return Container(
       height: 28,
@@ -68,9 +68,7 @@ class _InputState extends State<Input> {
         style: widget.style,
         decoration: InputDecoration.collapsed(
           hintText: widget.hint,
-          hintStyle: widget.style.copyWith(
-            color: TakaColors.of(context).textSecondary,
-          ),
+          hintStyle: widget.style.copyWith(color: context.theme.textSecondary),
         ),
         onSubmitted: (_) => widget.onSubmitted(),
       ),

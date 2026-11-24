@@ -13,7 +13,8 @@ import 'package:taka/pages/tunnels/widgets/tunnel_form.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
 import 'package:taka/pages/tunnels/widgets/tunnels_header.dart';
 import 'package:taka/taka_app.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
+import 'package:taka/theme/tunnel_colours.dart';
 import 'package:taka/widgets/app_icon.dart';
 import 'package:taka/widgets/colour_dot.dart';
 import 'package:taka/widgets/fill_or_scroll.dart';
@@ -173,7 +174,7 @@ class const _TunnelList({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
 
     return BlocBuilder<TunnelsBloc, TunnelsState>(
       builder: (context, state) => switch (state) {
@@ -228,7 +229,7 @@ class const _TunnelRows({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
     final rows = snapshot.tunnels.rows;
 
     return ReorderableRows(
@@ -354,7 +355,7 @@ class _GroupHeaderState extends State<_GroupHeader> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
 
     return Focus(
       canRequestFocus: false,

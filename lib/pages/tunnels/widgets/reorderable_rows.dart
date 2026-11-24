@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 
 /// ReorderableListView's fixed 250ms animations feel slow for a short list.
 /// [onReorder]'s `to` is the row's index among the others. [spanOf] is how
@@ -251,10 +251,8 @@ class const _Raised(final Widget child) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: TakaColors.of(context).surface,
-      boxShadow: [
-        BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 8),
-      ],
+      color: context.theme.surface,
+      boxShadow: [BoxShadow(color: context.theme.shadowOverlay, blurRadius: 8)],
     ),
     child: child,
   );

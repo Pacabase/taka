@@ -1,6 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 import 'package:taka/widgets/colour_dot.dart';
 
 class const ColourPicker({
@@ -33,7 +33,7 @@ class const _Swatch({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
 
     // The tooltip names it to screen readers too.
     return Tooltip(
