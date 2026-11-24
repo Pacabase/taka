@@ -64,10 +64,7 @@ class _HostInputState extends State<HostInput> {
               color: colors.selection,
               borderRadius: BorderRadius.circular(4),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 8,
-                ),
+                BoxShadow(color: context.theme.shadowOverlay, blurRadius: 8),
               ],
             ),
             child: ListView(

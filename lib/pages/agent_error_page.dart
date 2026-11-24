@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:taka/agent/agent_launcher.dart';
 import 'package:taka/theme/app_theme.dart';
-import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
 import 'package:taka/widgets/fill_or_scroll.dart';
 
@@ -90,7 +89,7 @@ class _AgentErrorPageState extends State<AgentErrorPage> {
                     _details,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontFamily: monoFont,
+                      fontFamily: fontMono,
                       fontSize: 12,
                       color: colors.textSecondary,
                     ),

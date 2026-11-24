@@ -1,6 +1,3 @@
-import 'dart:math' as math;
-
-import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
 /// A base16 scheme. Every other colour is a rule over these 16, so any scheme
@@ -89,11 +86,8 @@ class const Base16Palette({
   /// the lightest.
   Color get background => _isBase00Darker ? base00 : base01;
 
-  /// The content, a step lighter than the chrome.
   Color get surface => _isBase00Darker ? base01 : base00;
 
-  bool get _isBase00Darker =>
-      base00.computeLuminance() <= base01.computeLuminance();
   Color get selection => base02;
   Color get subtle => base03;
   Color get muted => base04;
@@ -111,38 +105,53 @@ class const Base16Palette({
   Color get purple => base0E;
   Color get brown => base0F;
 
-  Color get textSecondary => text.withValues(alpha: 0.75);
+  Color get danger => red;
+  Color get warning => yellow;
+  Color get success => green;
 
-  Color onFill(Color fill) {
-    final fillLuminance = fill.computeLuminance();
-    double contrast(Color color) {
-      final luminance = color.computeLuminance();
-      return (math.max(luminance, fillLuminance) + 0.05) /
-          (math.min(luminance, fillLuminance) + 0.05);
-    }
+  bool get isDark =>
+      background.computeLuminance() < textBrilliant.computeLuminance();
 
-    return contrast(background) >= contrast(textBrilliant)
-        ? background
-        : textBrilliant;
-  }
+  /// 80% so it still reads at 4.5:1 on a hovered selection.
+  Color get textSecondary => text.withValues(alpha: 0.8);
+
+  Color get focusRing => accent;
+
+  /// Lines on a [selection] fill, where a `selection` outline wouldn't show.
+  Color get divider => subtle.withValues(alpha: 0.5);
+
+  /// The darkest slot: background in a dark scheme, textBrilliant in a light one.
+  Color get shadowOverlay => (isDark ? background : textBrilliant).withValues(
+    alpha: isDark ? 0.4 : 0.15,
+  );
+
+  Color get backdrop => (isDark ? background : textBrilliant).withValues(
+    alpha: isDark ? 0.6 : 0.3,
+  );
+
+  Color get overlayHover =>
+      textBrilliant.withValues(alpha: isDark ? 0.06 : 0.04);
+
+  Color disabled(Color color) => color.withValues(alpha: 0.6);
+
+  Color hovered(Color fill) => Color.alphaBlend(overlayHover, fill);
+
+  /// Whichever end of the ramp, base00 or base07, reads better on [fill].
+  Color onFill(Color fill) =>
+      contrast(base00, fill) >= contrast(base07, fill) ? base00 : base07;
+
+  bool get _isBase00Darker =>
+      base00.computeLuminance() <= base01.computeLuminance();
 }
 
-extension TunnelColours on Base16Palette {
-  /// The line down the side of a group's tunnels.
-  Color get guide => text.withValues(alpha: 0.25);
-
-  Color guideOf(TunnelColour? colour) =>
-      colour == null ? guide : tunnel(colour);
-
-  Color tunnel(TunnelColour colour) => switch (colour) {
-    TunnelColour.red => red,
-    TunnelColour.orange => orange,
-    TunnelColour.yellow => yellow,
-    TunnelColour.green => green,
-    TunnelColour.blue => blue,
-    TunnelColour.purple => purple,
-  };
+/// The WCAG contrast ratio of [a] and [b], from 1 to 21.
+double contrast(Color a, Color b) {
+  final luminances = [a.computeLuminance(), b.computeLuminance()]..sort();
+  return (luminances[1] + 0.05) / (luminances[0] + 0.05);
 }
+
+const fontSans = 'Inter';
+const fontMono = 'JetBrainsMono';
 
 extension AppThemeContext on BuildContext {
   Base16Palette get theme => Theme.of(this).extension<Base16Palette>()!;

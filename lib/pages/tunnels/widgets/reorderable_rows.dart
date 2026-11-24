@@ -252,9 +252,7 @@ class const _Raised(final Widget child) extends StatelessWidget {
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
       color: context.theme.surface,
-      boxShadow: [
-        BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 8),
-      ],
+      boxShadow: [BoxShadow(color: context.theme.shadowOverlay, blurRadius: 8)],
     ),
     child: child,
   );

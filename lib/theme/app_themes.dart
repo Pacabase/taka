@@ -4,8 +4,8 @@ import 'package:taka/theme/app_theme.dart';
 class AppThemes {
   // Light: near-neutral greys with a hint of purple, the content on base00 and
   // the header on base01. Text is 10:1 on the header; base03 is 3:1 on the
-  // content; base08 to base0F are 3:1 on the header, and yellow 2.5:1 on the
-  // content, light enough to read as colours.
+  // content; the colours but the accent are 3:1 on the header, and yellow
+  // 2.5:1 on the content, light enough to read as colours.
   static const light = Base16Palette(
     base00: Color(0xfff9f6fa),
     base01: Color(0xffefecf0),
@@ -25,8 +25,8 @@ class AppThemes {
     base0F: Color(0xffb97961),
   );
 
-  // Dark: greys tinted towards the accent's violet, with the same
-  // contrast rules.
+  // Dark: greys tinted towards the accent's violet. Text is 10:1 on the
+  // header; base03 is 3:1 and the colours 4.5:1 on the content.
   static const dark = Base16Palette(
     base00: Color(0xff1f1b25),
     base01: Color(0xff2a2630),

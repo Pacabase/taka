@@ -5,7 +5,6 @@ import 'package:taka/pages/tunnels/widgets/form_fields.dart';
 import 'package:taka/pages/tunnels/widgets/host_input.dart';
 import 'package:taka/pages/tunnels/widgets/route_step.dart';
 import 'package:taka/theme/app_theme.dart';
-import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/widgets/colour_picker.dart';
 import 'package:taka/widgets/fill_or_scroll.dart';
 
@@ -106,7 +105,7 @@ class _TunnelFormState extends State<TunnelForm> {
   @override
   Widget build(BuildContext context) {
     final colors = context.theme;
-    const mono = TextStyle(fontFamily: monoFont, fontSize: 13);
+    const mono = TextStyle(fontFamily: fontMono, fontSize: 13);
 
     // As DismissIntent, Esc first closes the host suggestions.
     return Shortcuts(

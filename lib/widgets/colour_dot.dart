@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:taka/theme/app_theme.dart';
+import 'package:taka/theme/tunnel_colours.dart';
 
 extension TunnelColourLabel on TunnelColour {
   String get label => '${name[0].toUpperCase()}${name.substring(1)}';

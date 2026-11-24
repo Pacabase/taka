@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:taka/theme/app_theme.dart';
 import 'package:taka/theme/app_themes.dart';
-
-const monoFont = 'JetBrainsMono';
 
 ThemeData takaTheme(Brightness brightness) {
   final colors = brightness == Brightness.dark
@@ -9,7 +8,7 @@ ThemeData takaTheme(Brightness brightness) {
       : AppThemes.light;
   final onAccent = colors.onFill(colors.accent);
   final body = TextStyle(
-    fontFamily: 'Inter',
+    fontFamily: fontSans,
     fontSize: 14,
     fontWeight: FontWeight.w300,
     color: colors.text,
@@ -22,7 +21,7 @@ ThemeData takaTheme(Brightness brightness) {
   return ThemeData(
     extensions: [colors],
     visualDensity: VisualDensity.standard,
-    fontFamily: 'Inter',
+    fontFamily: fontSans,
     colorScheme: ColorScheme.fromSeed(
       seedColor: colors.accent,
       brightness: brightness,
@@ -37,7 +36,7 @@ ThemeData takaTheme(Brightness brightness) {
       style: FilledButton.styleFrom(
         backgroundColor: colors.accent,
         foregroundColor: onAccent,
-        disabledBackgroundColor: colors.accent.withValues(alpha: 0.6),
+        disabledBackgroundColor: colors.disabled(colors.accent),
         disabledForegroundColor: onAccent.withValues(alpha: 0.8),
         minimumSize: const Size(0, 28),
         padding: const EdgeInsets.symmetric(horizontal: 16),
