@@ -150,13 +150,8 @@ MyApplication* my_application_new() {
   // the application to be recognized beyond its binary name.
   g_set_prgname(APPLICATION_ID);
 
-  // Not single-instance in debug, so `flutter run` starts beside a release Taka.
-#ifdef NDEBUG
-  const GApplicationFlags flags = static_cast<GApplicationFlags>(0);
-#else
-  const GApplicationFlags flags = G_APPLICATION_NON_UNIQUE;
-#endif
+  // One window per build: Taka Dev has its own APPLICATION_ID.
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID, "flags",
-                                     flags, nullptr));
+                                     static_cast<GApplicationFlags>(0), nullptr));
 }
