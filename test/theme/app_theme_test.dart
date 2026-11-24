@@ -10,6 +10,16 @@ import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/theme/tunnel_colours.dart';
 
 void main() {
+  test('contrast runs from 1 to 21, either way round', () {
+    const black = Color(0xff000000);
+    const white = Color(0xffffffff);
+    const grey = Color(0xff777777);
+
+    expect(contrast(black, white), closeTo(21.0, 1e-9));
+    expect(contrast(white, black), closeTo(21.0, 1e-9));
+    expect(contrast(grey, grey), 1.0);
+  });
+
   for (final (brightness, palette) in [
     (Brightness.dark, AppThemes.dark),
     (Brightness.light, AppThemes.light),

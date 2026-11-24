@@ -118,7 +118,7 @@ class _NativeSwitchState extends State<NativeSwitch> {
             ),
             foregroundDecoration: _showsFocus
                 ? BoxDecoration(
-                    border: Border.all(color: context.theme.accent),
+                    border: Border.all(color: context.theme.focusRing),
                     borderRadius: BorderRadius.circular(height / 2),
                   )
                 : null,

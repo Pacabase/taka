@@ -109,8 +109,7 @@ class const Base16Palette({
   Color get warning => yellow;
   Color get success => green;
 
-  bool get isDark =>
-      background.computeLuminance() < textBrilliant.computeLuminance();
+  bool get isDark => base00.computeLuminance() < base07.computeLuminance();
 
   /// 80% so it still reads at 4.5:1 on a hovered selection.
   Color get textSecondary => text.withValues(alpha: 0.8);

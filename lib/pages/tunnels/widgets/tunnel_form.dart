@@ -480,7 +480,7 @@ class _KindTabState extends State<_KindTab> {
               ),
             ),
             foregroundDecoration: _showsFocus
-                ? BoxDecoration(border: Border.all(color: colors.accent))
+                ? BoxDecoration(border: Border.all(color: colors.focusRing))
                 : null,
             child: Text(
               label,
