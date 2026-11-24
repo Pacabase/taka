@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/pages/tunnels/widgets/reorderable_rows.dart';
-import 'package:taka/theme/taka_colors.dart';
-import 'package:taka/theme/taka_theme.dart';
+import 'package:taka/theme/app_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
 import 'package:taka/widgets/colour_dot.dart';
 
@@ -53,7 +52,7 @@ class _TunnelTileState extends State<TunnelTile> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
     final TunnelTile(:tunnel, :status) = widget;
     final isHovered = _hovered || ReorderableRows.isLifted(context);
     final caption = switch (status) {
@@ -80,7 +79,7 @@ class _TunnelTileState extends State<TunnelTile> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          fontFamily: monoFont,
+          fontFamily: fontMono,
           fontSize: 12,
           color: colors.textSecondary,
         ),
@@ -101,7 +100,7 @@ class _TunnelTileState extends State<TunnelTile> {
           Text(
             fingerprint,
             style: TextStyle(
-              fontFamily: monoFont,
+              fontFamily: fontMono,
               fontSize: 12,
               color: colors.textSecondary,
             ),

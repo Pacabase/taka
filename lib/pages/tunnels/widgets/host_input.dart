@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:taka/pages/tunnels/widgets/form_fields.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 
 class const HostInput({
   super.key,
@@ -29,7 +29,7 @@ class _HostInputState extends State<HostInput> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
 
     return RawAutocomplete<String>(
       textEditingController: widget.controller,
@@ -64,10 +64,7 @@ class _HostInputState extends State<HostInput> {
               color: colors.selection,
               borderRadius: BorderRadius.circular(4),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 8,
-                ),
+                BoxShadow(color: context.theme.shadowOverlay, blurRadius: 8),
               ],
             ),
             child: ListView(
@@ -114,9 +111,7 @@ class const Suggestion({
           height: 24,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           alignment: Alignment.centerLeft,
-          color: isHighlighted
-              ? TakaColors.of(context).surface
-              : Colors.transparent,
+          color: isHighlighted ? context.theme.surface : Colors.transparent,
           child: Text(host, style: style),
         ),
       ),

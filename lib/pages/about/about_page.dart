@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:taka/theme/taka_colors.dart';
+import 'package:taka/theme/app_theme.dart';
 import 'package:taka/widgets/app_icon.dart';
 import 'package:taka/widgets/fill_or_scroll.dart';
 
@@ -41,7 +41,7 @@ class const AboutPage({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colors = TakaColors.of(context);
+    final colors = context.theme;
     final secondary = TextStyle(color: colors.textSecondary);
 
     return Scaffold(
@@ -108,8 +108,7 @@ class const AboutPage({
                   Padding(
                     padding: const EdgeInsets.all(12),
                     child: Text(
-                      'Icons by Lucide. Fonts: Inter and JetBrains Mono. Colors from '
-                      "base16 One Light and OneDark, after Atom's One themes.\n"
+                      'Icons by Lucide. Fonts: Inter and JetBrains Mono.\n'
                       '$_legalese',
                       textAlign: TextAlign.center,
                       style: secondary.copyWith(fontSize: 12, height: 18 / 12),
