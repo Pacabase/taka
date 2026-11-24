@@ -96,9 +96,11 @@ class _LoginPromptDialogState extends State<LoginPromptDialog> {
             children: [
               ...switch (prompt) {
                 SshPassphrasePrompt(:final keyPath) => [
-                  Text(
-                    'Passphrase for ${keyPath.split(RegExp(r'[/\\]')).last}',
-                  ),
+                  Text(switch (keyPath.split(RegExp(r'[/\\]')).last) {
+                    // ssh cuts a long path short, maybe inside a folder.
+                    '' => 'Passphrase for the key',
+                    final file => 'Passphrase for $file',
+                  }),
                   Text(
                     keyPath,
                     style: secondary.copyWith(fontFamily: monoFont),

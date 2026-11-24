@@ -51,6 +51,24 @@ void main() {
     expect(find.text('/home/me/.ssh/id_ed25519'), findsOneWidget);
   });
 
+  testWidgets('a key path ssh cut short at a folder names no file', (
+    tester,
+  ) async {
+    await pumpDialog(
+      tester,
+      const LoginPrompt(
+        id: 4,
+        tunnel: 'Database',
+        prompt: SshPassphrasePrompt(
+          "Enter passphrase for key '/very/long/': ",
+          keyPath: '/very/long/',
+        ),
+      ),
+    );
+
+    expect(find.text('Passphrase for the key'), findsOneWidget);
+  });
+
   testWidgets("a password shows ssh's question", (tester) async {
     await pumpDialog(tester, password);
 
