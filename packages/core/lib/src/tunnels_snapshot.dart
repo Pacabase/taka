@@ -14,9 +14,6 @@ enum TunnelFailure {
   hostNotFound,
   unreachable,
   loginRefused,
-
-  /// The installed ssh is too old to ask for a password or passphrase.
-  oldSsh,
   hostKey,
   dropped,
   remotePortRefused,

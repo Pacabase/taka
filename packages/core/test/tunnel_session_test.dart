@@ -191,20 +191,7 @@ void main() {
     });
   });
 
-  test('an ssh too old to ask fails saying so', () async {
-    const tooOld =
-        'OpenSSH 8.2 is too old to ask for a password or passphrase; '
-        'it needs 8.5 or newer';
-    when(openAnyTunnel)
-        .thenAnswer((_) => Future.error(const SshConfigException(tooOld)));
-    final old = session();
-
-    await old.connect();
-
-    expect(old.status, const Failed(tooOld, failure: TunnelFailure.oldSsh));
-  });
-
-  test('another config error stays a config error', () async {
+  test('a config error is a config error', () async {
     const message = 'ClearAllForwardings drops the tunnel';
     when(openAnyTunnel)
         .thenAnswer((_) => Future.error(const SshConfigException(message)));

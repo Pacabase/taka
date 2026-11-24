@@ -107,13 +107,6 @@ void main() {
       "Can't reach db.internal:5432 through the server.",
     ),
     (
-      database,
-      TunnelFailure.oldSsh,
-      'ssh too old',
-      "This computer's ssh is too old to ask for a password or passphrase. "
-          'It needs OpenSSH 8.5 or newer.',
-    ),
-    (
       docker,
       TunnelFailure.forwardRefused,
       "can't open /var/run/docker.sock",

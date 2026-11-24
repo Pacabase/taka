@@ -571,9 +571,6 @@ class TunnelSession({
   TunnelFailure _failureOf(Object? exception) => switch (exception) {
     null || SshDroppedException() => TunnelFailure.dropped,
     SshNotFoundException() => TunnelFailure.sshNotFound,
-    SshConfigException(:final message)
-        when message.startsWith('OpenSSH ') && message.contains('too old') =>
-      TunnelFailure.oldSsh,
     SshConfigException() => TunnelFailure.config,
     SshPortInUseException() => TunnelFailure.portInUse,
     SshDuplicateForwardException() => TunnelFailure.duplicateForward,
