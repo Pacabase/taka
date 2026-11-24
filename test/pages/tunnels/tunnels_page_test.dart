@@ -11,6 +11,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:taka/pages/login_prompt/login_prompt_cubit.dart';
+import 'package:taka/pages/login_prompt/login_prompt_form.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_page.dart';
 import 'package:taka/pages/tunnels/widgets/tunnel_tile.dart';
@@ -19,6 +21,8 @@ import 'package:taka/theme/app_theme.dart';
 import 'package:taka/theme/taka_theme.dart';
 import 'package:taka/theme/tunnel_colours.dart';
 import 'package:taka/widgets/colour_dot.dart';
+
+import 'fake_agent.dart';
 
 void main() {
   const database = Tunnel(
@@ -44,20 +48,114 @@ void main() {
     ),
     Stream<TunnelsState> states = const Stream.empty(),
     Stream<OpenTunnel> tunnelRequests = const Stream.empty(),
+    FakeAgent? agent,
   }) async {
     final bloc = _MockTunnelsBloc();
     whenListen(bloc, states, initialState: initialState);
     await tester.pumpWidget(
       MaterialApp(
         theme: takaTheme(Brightness.light),
-        home: BlocProvider<TunnelsBloc>.value(
-          value: bloc,
+        home: MultiBlocProvider(
+          providers: [
+            BlocProvider<TunnelsBloc>.value(value: bloc),
+            BlocProvider(
+              create: (_) => LoginPromptCubit(agent: agent ?? FakeAgent()),
+            ),
+          ],
           child: TunnelsPage(tunnelRequests: tunnelRequests),
         ),
       ),
     );
     return bloc;
   }
+
+  group('a login prompt', () {
+    const passphrase = LoginPrompt(
+      id: 1,
+      tunnelId: 'b2',
+      prompt: SshPassphrasePrompt(
+        "Enter passphrase for key '/home/me/.ssh/id_ed25519': ",
+        keyPath: '/home/me/.ssh/id_ed25519',
+      ),
+    );
+
+    Finder formUnder(String tunnel) => find.descendant(
+      of: find.widgetWithText(TunnelTile, tunnel),
+      matching: find.byType(LoginPromptForm),
+    );
+
+    testWidgets('opens under its tunnel, and goes once answered', (
+      tester,
+    ) async {
+      final agent = FakeAgent();
+      await pumpPage(tester, agent: agent);
+
+      agent.promptsController.add(const [passphrase]);
+      await tester.pumpAndSettle();
+      expect(formUnder('Proxy'), findsOneWidget);
+      expect(formUnder('Database'), findsNothing);
+      expect(find.text('Passphrase for id_ed25519'), findsOneWidget);
+
+      await tester.enterText(
+        find.descendant(
+          of: formUnder('Proxy'),
+          matching: find.byType(TextField),
+        ),
+        'hunter2',
+      );
+      await tester.tap(find.text('Log In'));
+      await tester.pumpAndSettle();
+
+      expect(agent.sent, const [AgentCommand.answer(1, 'hunter2')]);
+      expect(find.byType(LoginPromptForm), findsNothing);
+    });
+
+    testWidgets('goes when the agent closes it', (tester) async {
+      final agent = FakeAgent();
+      await pumpPage(tester, agent: agent);
+      agent.promptsController.add(const [passphrase]);
+      await tester.pumpAndSettle();
+
+      agent.promptsController.add(const []);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LoginPromptForm), findsNothing);
+    });
+
+    testWidgets('shows under the header, naming the tunnel, while a form '
+        'is open, which stays as it was', (tester) async {
+      final agent = FakeAgent();
+      await pumpPage(tester, agent: agent);
+      await tester.tap(find.byTooltip('Add tunnel'));
+      await tester.pumpAndSettle();
+
+      agent.promptsController.add(const [passphrase]);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Log in to open Proxy'), findsOneWidget);
+      expect(find.text('New tunnel'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel').first);
+      await tester.pumpAndSettle();
+
+      expect(agent.sent, const [AgentCommand.answer(1, null)]);
+      expect(find.byType(LoginPromptForm), findsNothing);
+      expect(find.text('New tunnel'), findsOneWidget);
+    });
+
+    testWidgets('for a tunnel not in the list, shows under the header', (
+      tester,
+    ) async {
+      final agent = FakeAgent();
+      await pumpPage(tester, agent: agent);
+
+      agent.promptsController.add([passphrase.copyWith(tunnelId: 'gone')]);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Log in to open a tunnel'), findsOneWidget);
+      expect(formUnder('Proxy'), findsNothing);
+    });
+  });
 
   testWidgets('Trust sends the key the tunnel shows', (tester) async {
     final bloc = await pumpPage(

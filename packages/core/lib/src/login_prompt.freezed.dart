@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$LoginPrompt {
 
- int get id; String get tunnel; SshPrompt get prompt;
+ int get id; String get tunnelId; SshPrompt get prompt;
 /// Create a copy of LoginPrompt
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -27,20 +27,20 @@ $LoginPromptCopyWith<LoginPrompt> get copyWith => _$LoginPromptCopyWithImpl<Logi
 @override
 bool operator ==(Object other) {
   final _this = this as LoginPrompt;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoginPrompt&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.tunnel, _this.tunnel) || other.tunnel == _this.tunnel)&&(identical(other.prompt, _this.prompt) || other.prompt == _this.prompt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoginPrompt&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.tunnelId, _this.tunnelId) || other.tunnelId == _this.tunnelId)&&(identical(other.prompt, _this.prompt) || other.prompt == _this.prompt));
 }
 
 
 @override
 int get hashCode {
   final _this = this as LoginPrompt;
-  return Object.hash(runtimeType,_this.id,_this.tunnel,_this.prompt);
+  return Object.hash(runtimeType,_this.id,_this.tunnelId,_this.prompt);
 }
 
 @override
 String toString() {
   final _this = this as LoginPrompt;
-  return 'LoginPrompt(id: ${_this.id}, tunnel: ${_this.tunnel}, prompt: ${_this.prompt})';
+  return 'LoginPrompt(id: ${_this.id}, tunnelId: ${_this.tunnelId}, prompt: ${_this.prompt})';
 }
 
 
@@ -51,7 +51,7 @@ abstract mixin class $LoginPromptCopyWith<$Res>  {
   factory $LoginPromptCopyWith(LoginPrompt value, $Res Function(LoginPrompt) _then) = _$LoginPromptCopyWithImpl;
 @useResult
 $Res call({
- int id, String tunnel, SshPrompt prompt
+ int id, String tunnelId, SshPrompt prompt
 });
 
 
@@ -68,10 +68,10 @@ class _$LoginPromptCopyWithImpl<$Res>
 
 /// Create a copy of LoginPrompt
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? tunnel = null,Object? prompt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? tunnelId = null,Object? prompt = null,}) {
   return _then(LoginPrompt(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as int,tunnel: null == tunnel ? _self.tunnel : tunnel // ignore: cast_nullable_to_non_nullable
+as int,tunnelId: null == tunnelId ? _self.tunnelId : tunnelId // ignore: cast_nullable_to_non_nullable
 as String,prompt: null == prompt ? _self.prompt : prompt // ignore: cast_nullable_to_non_nullable
 as SshPrompt,
   ));
@@ -155,10 +155,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String tunnel,  SshPrompt prompt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id,  String tunnelId,  SshPrompt prompt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LoginPrompt() when $default != null:
-return $default(_that.id,_that.tunnel,_that.prompt);case _:
+return $default(_that.id,_that.tunnelId,_that.prompt);case _:
   return orElse();
 
 }
@@ -176,10 +176,10 @@ return $default(_that.id,_that.tunnel,_that.prompt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String tunnel,  SshPrompt prompt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id,  String tunnelId,  SshPrompt prompt)  $default,) {final _that = this;
 switch (_that) {
 case _LoginPrompt():
-return $default(_that.id,_that.tunnel,_that.prompt);}
+return $default(_that.id,_that.tunnelId,_that.prompt);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -193,10 +193,10 @@ return $default(_that.id,_that.tunnel,_that.prompt);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String tunnel,  SshPrompt prompt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id,  String tunnelId,  SshPrompt prompt)?  $default,) {final _that = this;
 switch (_that) {
 case _LoginPrompt() when $default != null:
-return $default(_that.id,_that.tunnel,_that.prompt);case _:
+return $default(_that.id,_that.tunnelId,_that.prompt);case _:
   return null;
 
 }
@@ -208,11 +208,11 @@ return $default(_that.id,_that.tunnel,_that.prompt);case _:
 
 
 class _LoginPrompt extends LoginPrompt {
-  const _LoginPrompt({required this.id, required this.tunnel, required this.prompt}): super._();
+  const _LoginPrompt({required this.id, required this.tunnelId, required this.prompt}): super._();
   
 
 @override final  int id;
-@override final  String tunnel;
+@override final  String tunnelId;
 @override final  SshPrompt prompt;
 
 /// Create a copy of LoginPrompt
@@ -225,18 +225,18 @@ _$LoginPromptCopyWith<_LoginPrompt> get copyWith => __$LoginPromptCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoginPrompt&&(identical(other.id, id) || other.id == id)&&(identical(other.tunnel, tunnel) || other.tunnel == tunnel)&&(identical(other.prompt, prompt) || other.prompt == prompt));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoginPrompt&&(identical(other.id, id) || other.id == id)&&(identical(other.tunnelId, tunnelId) || other.tunnelId == tunnelId)&&(identical(other.prompt, prompt) || other.prompt == prompt));
 }
 
 
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,tunnel,prompt);
+    return Object.hash(runtimeType,id,tunnelId,prompt);
 }
 
 @override
 String toString() {
-    return 'LoginPrompt(id: $id, tunnel: $tunnel, prompt: $prompt)';
+    return 'LoginPrompt(id: $id, tunnelId: $tunnelId, prompt: $prompt)';
 }
 
 
@@ -247,7 +247,7 @@ abstract mixin class _$LoginPromptCopyWith<$Res> implements $LoginPromptCopyWith
   factory _$LoginPromptCopyWith(_LoginPrompt value, $Res Function(_LoginPrompt) _then) = __$LoginPromptCopyWithImpl;
 @override @useResult
 $Res call({
- int id, String tunnel, SshPrompt prompt
+ int id, String tunnelId, SshPrompt prompt
 });
 
 
@@ -264,10 +264,10 @@ class __$LoginPromptCopyWithImpl<$Res>
 
 /// Create a copy of LoginPrompt
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? tunnel = null,Object? prompt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? tunnelId = null,Object? prompt = null,}) {
   return _then(_LoginPrompt(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as int,tunnel: null == tunnel ? _self.tunnel : tunnel // ignore: cast_nullable_to_non_nullable
+as int,tunnelId: null == tunnelId ? _self.tunnelId : tunnelId // ignore: cast_nullable_to_non_nullable
 as String,prompt: null == prompt ? _self.prompt : prompt // ignore: cast_nullable_to_non_nullable
 as SshPrompt,
   ));

@@ -359,7 +359,7 @@ void main() {
         const password = SshPasswordPrompt("me@db's password: ");
         final asked = LoginPrompt(
           id: 1,
-          tunnel: database.title,
+          tunnelId: database.id,
           prompt: password,
         );
 

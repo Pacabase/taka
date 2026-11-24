@@ -8,7 +8,6 @@ import 'package:taka/agent/agent_bloc.dart';
 import 'package:taka/pages/about/about_page.dart';
 import 'package:taka/pages/agent_error_page.dart';
 import 'package:taka/pages/login_prompt/login_prompt_cubit.dart';
-import 'package:taka/pages/login_prompt/login_prompt_dialog.dart';
 import 'package:taka/pages/settings/settings_bloc.dart';
 import 'package:taka/pages/settings/settings_page.dart';
 import 'package:taka/theme/taka_theme.dart';
@@ -79,7 +78,18 @@ class _TakaAppState extends State<TakaApp> {
                 ),
                 BlocProvider(create: (_) => LoginPromptCubit(agent: agent)),
               ],
-              child: LoginPromptLayer(child: child!),
+              // The prompt opens in the tunnels list, under its tunnel.
+              child: BlocListener<LoginPromptCubit, LoginPromptState>(
+                listenWhen: (previous, state) => switch ((previous, state)) {
+                  (Asking(prompt: final shown), Asking(:final prompt)) =>
+                    shown.id != prompt.id,
+                  (_, Asking()) => true,
+                  _ => false,
+                },
+                listener: (_, _) =>
+                    _navigator.currentState?.popUntil((route) => route.isFirst),
+                child: child!,
+              ),
             ),
             _ => child,
           },

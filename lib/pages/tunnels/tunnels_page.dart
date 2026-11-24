@@ -5,6 +5,8 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:taka/pages/login_prompt/login_prompt_cubit.dart';
+import 'package:taka/pages/login_prompt/login_prompt_form.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_screen_cubit.dart';
 import 'package:taka/pages/tunnels/widgets/group_form.dart';
@@ -71,6 +73,7 @@ class const _TunnelsView() extends StatelessWidget {
               onSettings: () =>
                   Navigator.pushNamed(context, TakaApp.settingsRoute),
             ),
+            _PromptStrip(isListShown: !isOpen),
             Expanded(
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 180),
@@ -231,6 +234,7 @@ class const _TunnelRows({
   Widget build(BuildContext context) {
     final colors = context.theme;
     final rows = snapshot.tunnels.rows;
+    final prompt = context.watch<LoginPromptCubit>().state;
 
     return ReorderableRows(
       spanOf: (index) => rows[index].span,
@@ -294,6 +298,16 @@ class const _TunnelRows({
                       onEdit: () => onEdit(tunnel),
                       onDelete: () =>
                           _send(context, AgentCommand.remove(tunnel.id)),
+                      prompt: switch (prompt) {
+                        Asking(:final prompt)
+                            when prompt.tunnelId == tunnel.id =>
+                          LoginPromptForm(
+                            key: ValueKey(prompt.id),
+                            prompt: prompt,
+                            onAnswer: context.read<LoginPromptCubit>().answer,
+                          ),
+                        _ => null,
+                      },
                     ),
                     if (rows.elementAtOrNull(index + 1)
                         case TunnelRow(tunnel: Tunnel(group: final next))
@@ -314,6 +328,41 @@ class const _TunnelRows({
           },
       ],
     );
+  }
+}
+
+/// The login prompt, under the header, while its tunnel's row isn't in the
+/// list on screen: a form is open, or the tunnel is gone.
+class const _PromptStrip({required final bool isListShown})
+    extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final tunnels = switch (context.watch<TunnelsBloc>().state) {
+      Ready(:final snapshot) => snapshot.tunnels,
+      _ => const <Tunnel>[],
+    };
+    final LoginPromptState state = context.watch<LoginPromptCubit>().state;
+    if (state case Asking(:final prompt)) {
+      final tunnel = tunnels
+          .where((tunnel) => tunnel.id == prompt.tunnelId)
+          .firstOrNull;
+      if (tunnel != null && isListShown) return const SizedBox.shrink();
+
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: context.theme.selection)),
+        ),
+        child: LoginPromptForm(
+          key: ValueKey(prompt.id),
+          prompt: prompt,
+          tunnel: tunnel?.title ?? 'a tunnel',
+          onAnswer: context.read<LoginPromptCubit>().answer,
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 }
 

@@ -28,7 +28,7 @@ void main() {
       AgentMessage.prompts([
         LoginPrompt(
           id: 1,
-          tunnel: 'Database',
+          tunnelId: 'database',
           prompt: SshPassphrasePrompt(
             "Enter passphrase for key '/home/me/.ssh/id_ed25519': ",
             keyPath: '/home/me/.ssh/id_ed25519',
@@ -36,12 +36,12 @@ void main() {
         ),
         LoginPrompt(
           id: 2,
-          tunnel: 'Proxy',
+          tunnelId: 'proxy',
           prompt: SshPasswordPrompt("me@bastion's password: "),
         ),
         LoginPrompt(
           id: 3,
-          tunnel: 'Web',
+          tunnelId: 'web',
           prompt: SshCodePrompt('(me@web) Verification code: '),
         ),
       ]),
@@ -58,7 +58,7 @@ void main() {
       expect(
         const LoginPrompt(
           id: 1,
-          tunnel: 'Database',
+          tunnelId: 'database',
           prompt: SshPassphrasePrompt(
             "Enter passphrase for key '/k': ",
             keyPath: '/k',
@@ -66,7 +66,7 @@ void main() {
         ).toJson(),
         {
           'id': 1,
-          'tunnel': 'Database',
+          'tunnel': 'database',
           'kind': 'passphrase',
           'keyPath': '/k',
           'text': "Enter passphrase for key '/k': ",
@@ -78,13 +78,13 @@ void main() {
       expect(
         LoginPrompt.fromJson({
           'id': 1,
-          'tunnel': 'Web',
+          'tunnel': 'web',
           'kind': 'fingerprint',
           'text': 'Touch the key',
         }),
         const LoginPrompt(
           id: 1,
-          tunnel: 'Web',
+          tunnelId: 'web',
           prompt: SshCodePrompt('Touch the key'),
         ),
       );
@@ -94,7 +94,7 @@ void main() {
       expect(
         LoginPrompt.fromJson({
           'id': 1,
-          'tunnel': 'Web',
+          'tunnel': 'web',
           'kind': 'passphrase',
           'text': 'Enter passphrase',
         }).prompt,
@@ -106,7 +106,7 @@ void main() {
       expect(
         () => AgentMessage.fromJson({
           'prompts': [
-            {'id': '1', 'tunnel': 'Web', 'kind': 'code', 'text': 'Code'},
+            {'id': '1', 'tunnel': 'web', 'kind': 'code', 'text': 'Code'},
           ],
         }),
         throwsFormatException,

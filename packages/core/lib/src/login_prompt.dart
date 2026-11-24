@@ -3,27 +3,27 @@ import 'package:system_ssh/system_ssh.dart';
 
 part 'login_prompt.freezed.dart';
 
-/// What ssh asks while [tunnel], a tunnel's title, logs in; [id] names it in
-/// the answer.
+/// What ssh asks while tunnel [tunnelId] logs in; [id] names it in the
+/// answer.
 @freezed
 sealed class const LoginPrompt._() with _$LoginPrompt {
   const factory({
     required int id,
-    required String tunnel,
+    required String tunnelId,
     required SshPrompt prompt,
   }) = _LoginPrompt;
 
   static LoginPrompt fromJson(Object? json) => switch (json) {
     {
           'id': final int id,
-          'tunnel': final String tunnel,
+          'tunnel': final String tunnelId,
           'kind': final String kind,
           'text': final String text,
         } &&
         final Map<Object?, Object?> fields =>
       LoginPrompt(
         id: id,
-        tunnel: tunnel,
+        tunnelId: tunnelId,
         prompt: switch ((kind, fields['keyPath'])) {
           ('passphrase', final String keyPath) => SshPassphrasePrompt(
             text,
@@ -38,7 +38,7 @@ sealed class const LoginPrompt._() with _$LoginPrompt {
 
   Map<String, Object?> toJson() => {
     'id': id,
-    'tunnel': tunnel,
+    'tunnel': tunnelId,
     ...switch (prompt) {
       SshPassphrasePrompt(:final keyPath) => {
         'kind': 'passphrase',

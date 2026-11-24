@@ -33,6 +33,9 @@ class const Input({
   required final String hint,
   final TextStyle style = const TextStyle(),
   final bool autofocus = false,
+
+  /// Hides what is typed, and offers no suggestions for it.
+  final bool isSecret = false,
   required final void Function() onSubmitted,
 }) extends StatefulWidget {
   @override
@@ -65,6 +68,9 @@ class _InputState extends State<Input> {
         controller: widget.controller,
         focusNode: _focus,
         autofocus: widget.autofocus,
+        obscureText: widget.isSecret,
+        autocorrect: !widget.isSecret,
+        enableSuggestions: !widget.isSecret,
         style: widget.style,
         decoration: InputDecoration.collapsed(
           hintText: widget.hint,

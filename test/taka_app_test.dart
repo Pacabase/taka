@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taka/agent/agent_launcher.dart';
 import 'package:taka/pages/about/about_page.dart';
-import 'package:taka/pages/login_prompt/login_prompt_dialog.dart';
 import 'package:taka/pages/settings/settings_page.dart';
 import 'package:taka/pages/tunnels/widgets/native_switch.dart';
 import 'package:taka/taka_app.dart';
@@ -142,31 +141,47 @@ void main() {
     },
   );
 
-  testWidgets('a login prompt shows over the window and stays over About', (
+  testWidgets('a login prompt closes About, for the list it opens in', (
     tester,
   ) async {
     final agent = FakeAgent();
     await _pumpApp(tester, const Text('Tunnels'), agent: agent);
+    await _menuCall(tester, 'about');
+    await tester.pumpAndSettle();
+    expect(find.byType(AboutPage), findsOneWidget);
 
     agent.promptsController.add(const [
       LoginPrompt(
         id: 1,
-        tunnel: 'Database',
+        tunnelId: 'database',
         prompt: SshPasswordPrompt("me@bastion's password: "),
       ),
     ]);
-    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AboutPage), findsNothing);
+    expect(find.text('Tunnels'), findsOneWidget);
+  });
+
+  testWidgets('the same prompt again leaves a page opened since', (
+    tester,
+  ) async {
+    final agent = FakeAgent();
+    await _pumpApp(tester, const Text('Tunnels'), agent: agent);
+    const prompt = LoginPrompt(
+      id: 1,
+      tunnelId: 'database',
+      prompt: SshPasswordPrompt("me@bastion's password: "),
+    );
+    agent.promptsController.add(const [prompt]);
+    await tester.pumpAndSettle();
+
     await _menuCall(tester, 'about');
+    await tester.pumpAndSettle();
+    agent.promptsController.add(const [prompt]);
     await tester.pumpAndSettle();
 
     expect(find.byType(AboutPage), findsOneWidget);
-    expect(find.byType(LoginPromptDialog), findsOneWidget);
-
-    await tester.tap(find.text('Cancel'));
-    await tester.pump();
-
-    expect(agent.sent, const [AgentCommand.answer(1, null)]);
-    expect(find.byType(LoginPromptDialog), findsNothing);
   });
 
   testWidgets('About opened while it connects stays open once it connects', (

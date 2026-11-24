@@ -11,7 +11,7 @@ import '../tunnels/fake_agent.dart';
 void main() {
   const passphrase = LoginPrompt(
     id: 1,
-    tunnel: 'Database',
+    tunnelId: 'database',
     prompt: SshPassphrasePrompt(
       "Enter passphrase for key '/home/me/.ssh/id_ed25519': ",
       keyPath: '/home/me/.ssh/id_ed25519',
@@ -19,7 +19,7 @@ void main() {
   );
   const code = LoginPrompt(
     id: 2,
-    tunnel: 'Web',
+    tunnelId: 'web',
     prompt: SshCodePrompt('(me@web) Verification code: '),
   );
   late FakeAgent agent;

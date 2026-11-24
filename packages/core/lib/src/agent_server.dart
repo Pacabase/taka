@@ -71,7 +71,7 @@ class AgentServer(
     final id = ++_lastPrompt;
     final answer = Completer<String?>();
     _prompts[id] = (
-      prompt: LoginPrompt(id: id, tunnel: tunnel.title, prompt: prompt),
+      prompt: LoginPrompt(id: id, tunnelId: tunnel.id, prompt: prompt),
       answer: answer,
     );
     _sendPrompts();
