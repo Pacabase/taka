@@ -80,6 +80,7 @@ Ordered roughly by priority; each line is about one pull request.
 - [ ] **Tags**, several per tunnel, to filter the list by.
 - [ ] **Import** hosts from `~/.ssh/config`.
 - [ ] **More Linux packages** — AppImage and the AUR.
+- [ ] **Other colour schemes** — paste any [base16](https://github.com/tinted-theming/home) scheme, such as one from the [tinted-theming gallery](https://tinted-theming.github.io/tinted-gallery/).
 
 ### Signed Windows releases
 
