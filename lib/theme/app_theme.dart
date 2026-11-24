@@ -84,8 +84,16 @@ class const Base16Palette({
     );
   }
 
-  Color get background => base00;
-  Color get surface => base01;
+  /// The chrome: the darker of base00 and base01, so the content is always
+  /// the lighter one. base16 flips its ramp in light schemes, where base00 is
+  /// the lightest.
+  Color get background => _isBase00Darker ? base00 : base01;
+
+  /// The content, a step lighter than the chrome.
+  Color get surface => _isBase00Darker ? base01 : base00;
+
+  bool get _isBase00Darker =>
+      base00.computeLuminance() <= base01.computeLuminance();
   Color get selection => base02;
   Color get subtle => base03;
   Color get muted => base04;

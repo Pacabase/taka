@@ -2,25 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:taka/theme/app_theme.dart';
 
 class AppThemes {
-  // Light: near-neutral greys with a hint of purple. Text is 11:1 on the
-  // background; base03 is 3:1 and base08 to base0F 4.5:1 on the surface.
+  // Light: near-neutral greys with a hint of purple, the content on base00 and
+  // the header on base01. Text is 10:1 on the header; base03 is 3:1 on the
+  // content; base08 to base0F are 3:1 on the header, and yellow 2.5:1 on the
+  // content, light enough to read as colours.
   static const light = Base16Palette(
     base00: Color(0xfff9f6fa),
-    base01: Color(0xffeae7eb),
-    base02: Color(0xffd8d5d9),
-    base03: Color(0xff837f84),
+    base01: Color(0xffefecf0),
+    base02: Color(0xffe3e0e4),
+    base03: Color(0xff868287),
     base04: Color(0xff6f6c70),
-    base05: Color(0xff373438),
-    base06: Color(0xff232024),
-    base07: Color(0xff0c0a0d),
-    base08: Color(0xffb13b3f),
-    base09: Color(0xff9d4f00),
-    base0A: Color(0xff7e6000),
-    base0B: Color(0xff01751d),
-    base0C: Color(0xff006f79),
-    base0D: Color(0xff1664ba),
-    base0E: Color(0xff824cbc),
-    base0F: Color(0xff8c5743),
+    base05: Color(0xff3a373b),
+    base06: Color(0xff262327),
+    base07: Color(0xff0f0c10),
+    base08: Color(0xffe7585c),
+    base09: Color(0xffd36d00),
+    base0A: Color(0xffbd9a00),
+    base0B: Color(0xff239d36),
+    base0C: Color(0xff0097a4),
+    base0D: Color(0xff3089f1),
+    base0E: Color(0xff864fc0),
+    base0F: Color(0xffb97961),
   );
 
   // Dark: greys tinted towards the accent's violet, with the same
