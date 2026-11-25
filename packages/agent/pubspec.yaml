@@ -16,7 +16,7 @@ dependencies:
   system_ssh:
     git:
       url: https://github.com/Pacabase/system_ssh.git
-      ref: c4b120a849b748b18938663f815869e422639b45
+      ref: 4833442a74d15efcb2441c9cd262149b5541e812
 
 dev_dependencies:
   ffigen: 23.0.0
