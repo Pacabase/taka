@@ -18,12 +18,8 @@ typedef _Opened = ({Future<void> done, Future<void> Function() close});
 /// Hands focus back to the app that had it before Taka came forward.
 typedef HandBack = Future<void> Function();
 
-/// Answers [prompt], or cancels it with null; [finished] completes once the
-/// open call that asked returns, answered or not.
-typedef LoginPrompter = Future<String?> Function(
-  SshPrompt prompt,
-  Future<void> finished,
-);
+/// Answers [prompt], or cancels it with null.
+typedef LoginPrompter = Future<String?> Function(SshPrompt prompt);
 
 @freezed
 sealed class const Phase._() with _$Phase {
@@ -484,18 +480,6 @@ class TunnelSession({
   }
 
   Future<_Opened> _open() async {
-    final finished = Completer<void>();
-    final ask = onPrompt;
-    try {
-      return await _openSsh(
-        ask == null ? null : (prompt) => ask(prompt, finished.future),
-      );
-    } finally {
-      finished.complete();
-    }
-  }
-
-  Future<_Opened> _openSsh(SshPromptHandler? onPrompt) async {
     final abortTrigger = _abort.future;
     _promptsOff = null;
     // ssh's lines, named since tunnels connect at once.

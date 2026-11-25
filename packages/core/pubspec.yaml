@@ -16,7 +16,7 @@ dependencies:
   system_ssh:
     git:
       url: https://github.com/Pacabase/system_ssh.git
-      ref: 8fe38ab0586d7f6cd9c1dcd0c5a3e5320e010ce1
+      ref: 4ef0551d42653fc2ad682088402c0bd4f82d38fd
 
 dev_dependencies:
   build_runner: 2.17.1

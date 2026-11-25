@@ -54,8 +54,9 @@ void main() {
       agent.promptsController.add(const [passphrase, code]);
     },
     expect: () => const [Asking(passphrase), Asking(code)],
-    verify: (_) =>
-        expect(agent.sent, const [AgentCommand.answer(1, 'hunter2')]),
+    verify: (_) => expect(agent.sent.whereType<AnswerPrompt>(), const [
+      AgentCommand.answer(1, 'hunter2'),
+    ]),
   );
 
   blocTest<LoginPromptCubit, LoginPromptState>(
@@ -67,7 +68,9 @@ void main() {
       cubit.answer(2, null);
     },
     expect: () => const [Asking(code), NoPrompt()],
-    verify: (_) => expect(agent.sent, const [AgentCommand.answer(2, null)]),
+    verify: (_) => expect(agent.sent.whereType<AnswerPrompt>(), const [
+      AgentCommand.answer(2, null),
+    ]),
   );
 
   blocTest<LoginPromptCubit, LoginPromptState>(
@@ -76,6 +79,19 @@ void main() {
     act: (cubit) => cubit.answer(1, 'hunter2'),
     expect: () => const <LoginPromptState>[],
     verify: (_) => expect(agent.sent, isEmpty),
+  );
+
+  blocTest<LoginPromptCubit, LoginPromptState>(
+    'tells the agent which prompts it has, so closing gives up those',
+    build: () => LoginPromptCubit(agent: agent),
+    act: (cubit) => agent.promptsController
+      ..add(const [passphrase])
+      ..add(const [passphrase, code])
+      ..add(const []),
+    verify: (_) => expect(agent.sent, const [
+      AgentCommand.sawPrompts([1]),
+      AgentCommand.sawPrompts([1, 2]),
+    ]),
   );
 
   blocTest<LoginPromptCubit, LoginPromptState>(
@@ -89,8 +105,9 @@ void main() {
         ..answer(1, '');
     },
     expect: () => const [Asking(passphrase), Asking(code)],
-    verify: (_) =>
-        expect(agent.sent, const [AgentCommand.answer(1, 'hunter2')]),
+    verify: (_) => expect(agent.sent.whereType<AnswerPrompt>(), const [
+      AgentCommand.answer(1, 'hunter2'),
+    ]),
   );
 
   blocTest<LoginPromptCubit, LoginPromptState>(
@@ -100,7 +117,7 @@ void main() {
       ..add(const [passphrase])
       ..add(const []),
     expect: () => const [Asking(passphrase), NoPrompt()],
-    verify: (_) => expect(agent.sent, isEmpty),
+    verify: (_) => expect(agent.sent.whereType<AnswerPrompt>(), isEmpty),
   );
 
   test('stops listening once closed', () async {

@@ -52,7 +52,7 @@ extension AgentCommandPatterns on AgentCommand {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SaveTunnel value)?  save,TResult Function( RemoveTunnel value)?  remove,TResult Function( ToggleTunnel value)?  toggle,TResult Function( ArrangeTunnels value)?  arrange,TResult Function( TrustHostKey value)?  trustHostKey,TResult Function( EditGroup value)?  editGroup,TResult Function( ImportTunnels value)?  importTunnels,TResult Function( ExportTunnels value)?  exportTunnels,TResult Function( QuitAgent value)?  quit,TResult Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult Function( SetDebugLogging value)?  setDebugLogging,TResult Function( ShowLogs value)?  showLogs,TResult Function( AnswerPrompt value)?  answer,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( SaveTunnel value)?  save,TResult Function( RemoveTunnel value)?  remove,TResult Function( ToggleTunnel value)?  toggle,TResult Function( ArrangeTunnels value)?  arrange,TResult Function( TrustHostKey value)?  trustHostKey,TResult Function( EditGroup value)?  editGroup,TResult Function( ImportTunnels value)?  importTunnels,TResult Function( ExportTunnels value)?  exportTunnels,TResult Function( QuitAgent value)?  quit,TResult Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult Function( SetDebugLogging value)?  setDebugLogging,TResult Function( ShowLogs value)?  showLogs,TResult Function( AnswerPrompt value)?  answer,TResult Function( SawPrompts value)?  sawPrompts,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
@@ -68,7 +68,8 @@ return quit(_that);case SetLaunchAtLogin() when setLaunchAtLogin != null:
 return setLaunchAtLogin(_that);case SetDebugLogging() when setDebugLogging != null:
 return setDebugLogging(_that);case ShowLogs() when showLogs != null:
 return showLogs(_that);case AnswerPrompt() when answer != null:
-return answer(_that);case _:
+return answer(_that);case SawPrompts() when sawPrompts != null:
+return sawPrompts(_that);case _:
   return orElse();
 
 }
@@ -86,7 +87,7 @@ return answer(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SaveTunnel value)  save,required TResult Function( RemoveTunnel value)  remove,required TResult Function( ToggleTunnel value)  toggle,required TResult Function( ArrangeTunnels value)  arrange,required TResult Function( TrustHostKey value)  trustHostKey,required TResult Function( EditGroup value)  editGroup,required TResult Function( ImportTunnels value)  importTunnels,required TResult Function( ExportTunnels value)  exportTunnels,required TResult Function( QuitAgent value)  quit,required TResult Function( SetLaunchAtLogin value)  setLaunchAtLogin,required TResult Function( SetDebugLogging value)  setDebugLogging,required TResult Function( ShowLogs value)  showLogs,required TResult Function( AnswerPrompt value)  answer,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( SaveTunnel value)  save,required TResult Function( RemoveTunnel value)  remove,required TResult Function( ToggleTunnel value)  toggle,required TResult Function( ArrangeTunnels value)  arrange,required TResult Function( TrustHostKey value)  trustHostKey,required TResult Function( EditGroup value)  editGroup,required TResult Function( ImportTunnels value)  importTunnels,required TResult Function( ExportTunnels value)  exportTunnels,required TResult Function( QuitAgent value)  quit,required TResult Function( SetLaunchAtLogin value)  setLaunchAtLogin,required TResult Function( SetDebugLogging value)  setDebugLogging,required TResult Function( ShowLogs value)  showLogs,required TResult Function( AnswerPrompt value)  answer,required TResult Function( SawPrompts value)  sawPrompts,}){
 final _that = this;
 switch (_that) {
 case SaveTunnel():
@@ -102,7 +103,8 @@ return quit(_that);case SetLaunchAtLogin():
 return setLaunchAtLogin(_that);case SetDebugLogging():
 return setDebugLogging(_that);case ShowLogs():
 return showLogs(_that);case AnswerPrompt():
-return answer(_that);}
+return answer(_that);case SawPrompts():
+return sawPrompts(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -116,7 +118,7 @@ return answer(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SaveTunnel value)?  save,TResult? Function( RemoveTunnel value)?  remove,TResult? Function( ToggleTunnel value)?  toggle,TResult? Function( ArrangeTunnels value)?  arrange,TResult? Function( TrustHostKey value)?  trustHostKey,TResult? Function( EditGroup value)?  editGroup,TResult? Function( ImportTunnels value)?  importTunnels,TResult? Function( ExportTunnels value)?  exportTunnels,TResult? Function( QuitAgent value)?  quit,TResult? Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult? Function( SetDebugLogging value)?  setDebugLogging,TResult? Function( ShowLogs value)?  showLogs,TResult? Function( AnswerPrompt value)?  answer,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( SaveTunnel value)?  save,TResult? Function( RemoveTunnel value)?  remove,TResult? Function( ToggleTunnel value)?  toggle,TResult? Function( ArrangeTunnels value)?  arrange,TResult? Function( TrustHostKey value)?  trustHostKey,TResult? Function( EditGroup value)?  editGroup,TResult? Function( ImportTunnels value)?  importTunnels,TResult? Function( ExportTunnels value)?  exportTunnels,TResult? Function( QuitAgent value)?  quit,TResult? Function( SetLaunchAtLogin value)?  setLaunchAtLogin,TResult? Function( SetDebugLogging value)?  setDebugLogging,TResult? Function( ShowLogs value)?  showLogs,TResult? Function( AnswerPrompt value)?  answer,TResult? Function( SawPrompts value)?  sawPrompts,}){
 final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
@@ -132,7 +134,8 @@ return quit(_that);case SetLaunchAtLogin() when setLaunchAtLogin != null:
 return setLaunchAtLogin(_that);case SetDebugLogging() when setDebugLogging != null:
 return setDebugLogging(_that);case ShowLogs() when showLogs != null:
 return showLogs(_that);case AnswerPrompt() when answer != null:
-return answer(_that);case _:
+return answer(_that);case SawPrompts() when sawPrompts != null:
+return sawPrompts(_that);case _:
   return null;
 
 }
@@ -149,7 +152,7 @@ return answer(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,TResult Function( List<({String? group, String id,})> tunnels)?  arrange,TResult Function( String id,  String fingerprint)?  trustHostKey,TResult Function( String group,  String name,  TunnelColour? colour)?  editGroup,TResult Function( List<Tunnel> tunnels,  Map<String, TunnelColour> groupColours)?  importTunnels,TResult Function( String path)?  exportTunnels,TResult Function()?  quit,TResult Function( bool on)?  setLaunchAtLogin,TResult Function( bool on)?  setDebugLogging,TResult Function()?  showLogs,TResult Function( int prompt,  String? answer)?  answer,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Tunnel tunnel)?  save,TResult Function( String id)?  remove,TResult Function( String id)?  toggle,TResult Function( List<({String? group, String id,})> tunnels)?  arrange,TResult Function( String id,  String fingerprint)?  trustHostKey,TResult Function( String group,  String name,  TunnelColour? colour)?  editGroup,TResult Function( List<Tunnel> tunnels,  Map<String, TunnelColour> groupColours)?  importTunnels,TResult Function( String path)?  exportTunnels,TResult Function()?  quit,TResult Function( bool on)?  setLaunchAtLogin,TResult Function( bool on)?  setDebugLogging,TResult Function()?  showLogs,TResult Function( int prompt,  String? answer)?  answer,TResult Function( List<int> prompts)?  sawPrompts,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that.tunnel);case RemoveTunnel() when remove != null:
@@ -164,7 +167,8 @@ return quit();case SetLaunchAtLogin() when setLaunchAtLogin != null:
 return setLaunchAtLogin(_that.on);case SetDebugLogging() when setDebugLogging != null:
 return setDebugLogging(_that.on);case ShowLogs() when showLogs != null:
 return showLogs();case AnswerPrompt() when answer != null:
-return answer(_that.prompt,_that.answer);case _:
+return answer(_that.prompt,_that.answer);case SawPrompts() when sawPrompts != null:
+return sawPrompts(_that.prompts);case _:
   return orElse();
 
 }
@@ -182,7 +186,7 @@ return answer(_that.prompt,_that.answer);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,required TResult Function( List<({String? group, String id,})> tunnels)  arrange,required TResult Function( String id,  String fingerprint)  trustHostKey,required TResult Function( String group,  String name,  TunnelColour? colour)  editGroup,required TResult Function( List<Tunnel> tunnels,  Map<String, TunnelColour> groupColours)  importTunnels,required TResult Function( String path)  exportTunnels,required TResult Function()  quit,required TResult Function( bool on)  setLaunchAtLogin,required TResult Function( bool on)  setDebugLogging,required TResult Function()  showLogs,required TResult Function( int prompt,  String? answer)  answer,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Tunnel tunnel)  save,required TResult Function( String id)  remove,required TResult Function( String id)  toggle,required TResult Function( List<({String? group, String id,})> tunnels)  arrange,required TResult Function( String id,  String fingerprint)  trustHostKey,required TResult Function( String group,  String name,  TunnelColour? colour)  editGroup,required TResult Function( List<Tunnel> tunnels,  Map<String, TunnelColour> groupColours)  importTunnels,required TResult Function( String path)  exportTunnels,required TResult Function()  quit,required TResult Function( bool on)  setLaunchAtLogin,required TResult Function( bool on)  setDebugLogging,required TResult Function()  showLogs,required TResult Function( int prompt,  String? answer)  answer,required TResult Function( List<int> prompts)  sawPrompts,}) {final _that = this;
 switch (_that) {
 case SaveTunnel():
 return save(_that.tunnel);case RemoveTunnel():
@@ -197,7 +201,8 @@ return quit();case SetLaunchAtLogin():
 return setLaunchAtLogin(_that.on);case SetDebugLogging():
 return setDebugLogging(_that.on);case ShowLogs():
 return showLogs();case AnswerPrompt():
-return answer(_that.prompt,_that.answer);}
+return answer(_that.prompt,_that.answer);case SawPrompts():
+return sawPrompts(_that.prompts);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -211,7 +216,7 @@ return answer(_that.prompt,_that.answer);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,TResult? Function( List<({String? group, String id,})> tunnels)?  arrange,TResult? Function( String id,  String fingerprint)?  trustHostKey,TResult? Function( String group,  String name,  TunnelColour? colour)?  editGroup,TResult? Function( List<Tunnel> tunnels,  Map<String, TunnelColour> groupColours)?  importTunnels,TResult? Function( String path)?  exportTunnels,TResult? Function()?  quit,TResult? Function( bool on)?  setLaunchAtLogin,TResult? Function( bool on)?  setDebugLogging,TResult? Function()?  showLogs,TResult? Function( int prompt,  String? answer)?  answer,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Tunnel tunnel)?  save,TResult? Function( String id)?  remove,TResult? Function( String id)?  toggle,TResult? Function( List<({String? group, String id,})> tunnels)?  arrange,TResult? Function( String id,  String fingerprint)?  trustHostKey,TResult? Function( String group,  String name,  TunnelColour? colour)?  editGroup,TResult? Function( List<Tunnel> tunnels,  Map<String, TunnelColour> groupColours)?  importTunnels,TResult? Function( String path)?  exportTunnels,TResult? Function()?  quit,TResult? Function( bool on)?  setLaunchAtLogin,TResult? Function( bool on)?  setDebugLogging,TResult? Function()?  showLogs,TResult? Function( int prompt,  String? answer)?  answer,TResult? Function( List<int> prompts)?  sawPrompts,}) {final _that = this;
 switch (_that) {
 case SaveTunnel() when save != null:
 return save(_that.tunnel);case RemoveTunnel() when remove != null:
@@ -226,7 +231,8 @@ return quit();case SetLaunchAtLogin() when setLaunchAtLogin != null:
 return setLaunchAtLogin(_that.on);case SetDebugLogging() when setDebugLogging != null:
 return setDebugLogging(_that.on);case ShowLogs() when showLogs != null:
 return showLogs();case AnswerPrompt() when answer != null:
-return answer(_that.prompt,_that.answer);case _:
+return answer(_that.prompt,_that.answer);case SawPrompts() when sawPrompts != null:
+return sawPrompts(_that.prompts);case _:
   return null;
 
 }
@@ -1025,6 +1031,76 @@ class _$AnswerPromptCopyWithImpl<$Res>
 null == prompt ? _self.prompt : prompt // ignore: cast_nullable_to_non_nullable
 as int,freezed == answer ? _self.answer : answer // ignore: cast_nullable_to_non_nullable
 as String?,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class SawPrompts extends AgentCommand {
+  const SawPrompts( List<int> prompts): _prompts = prompts,super._();
+  
+
+ final  List<int> _prompts;
+ List<int> get prompts {
+  if (_prompts is EqualUnmodifiableListView) return _prompts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_prompts);
+}
+
+
+/// Create a copy of AgentCommand
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$SawPromptsCopyWith<SawPrompts> get copyWith => _$SawPromptsCopyWithImpl<SawPrompts>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is SawPrompts&&const DeepCollectionEquality().equals(other.prompts, _prompts));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,const DeepCollectionEquality().hash(_prompts));
+}
+
+
+
+}
+
+/// @nodoc
+abstract mixin class $SawPromptsCopyWith<$Res> implements $AgentCommandCopyWith<$Res> {
+  factory $SawPromptsCopyWith(SawPrompts value, $Res Function(SawPrompts) _then) = _$SawPromptsCopyWithImpl;
+@useResult
+$Res call({
+ List<int> prompts
+});
+
+
+
+
+}
+/// @nodoc
+class _$SawPromptsCopyWithImpl<$Res>
+    implements $SawPromptsCopyWith<$Res> {
+  _$SawPromptsCopyWithImpl(this._self, this._then);
+
+  final SawPrompts _self;
+  final $Res Function(SawPrompts) _then;
+
+/// Create a copy of AgentCommand
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? prompts = null,}) {
+  return _then(SawPrompts(
+null == prompts ? _self._prompts : prompts // ignore: cast_nullable_to_non_nullable
+as List<int>,
   ));
 }
 

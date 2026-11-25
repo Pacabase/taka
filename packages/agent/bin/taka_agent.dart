@@ -36,8 +36,8 @@ Future<void> _start() async {
     store: LocalTunnelStore.inTakaDirectory(),
     client: const SystemSshClient(loginShell: true, shareConnections: true),
     // Opening the app again brings its window forward for the prompt.
-    onPrompt: (tunnel, prompt, finished) {
-      final answer = server.ask(tunnel, prompt, finished);
+    onPrompt: (tunnel, prompt) {
+      final answer = server.ask(tunnel, prompt);
       unawaited(_open(app));
       return answer;
     },
@@ -88,6 +88,7 @@ Future<void> _start() async {
       manager,
       preferences,
       identity: identity,
+      onUnseenPrompts: () => unawaited(_open(app)),
     );
     if (bound == null) {
       Fimber.i('Another Taka agent is running');

@@ -20,13 +20,18 @@ class AgentServer(
   final AgentListener _listener,
   final TunnelManager _manager,
   final AgentPreferences _preferences,
-  final String _identity,
-) {
+  final String _identity, {
+
+  /// Runs when the last window closes before it got every waiting prompt,
+  /// to bring one back for them.
+  final void Function()? onUnseenPrompts,
+}) {
   final Set<AgentLink> _clients = {};
   AgentMessage? _pending;
   final Map<int, ({LoginPrompt prompt, Completer<String?> answer})> _prompts =
       {};
   var _lastPrompt = 0;
+  final Set<int> _seen = {};
   bool _isClosed = false;
   late final StreamSubscription<TunnelsSnapshot> _changes;
   late final StreamSubscription<AgentSettings> _settingsChanges;
@@ -46,11 +51,18 @@ class AgentServer(
     TunnelManager manager,
     AgentPreferences preferences, {
     String identity = '',
+    void Function()? onUnseenPrompts,
   }) async {
     final listener = await channel.listen();
     return listener == null
         ? null
-        : AgentServer(listener, manager, preferences, identity);
+        : AgentServer(
+            listener,
+            manager,
+            preferences,
+            identity,
+            onUnseenPrompts: onUnseenPrompts,
+          );
   }
 
   bool show(AgentMessage request) {
@@ -64,8 +76,8 @@ class AgentServer(
   }
 
   /// Asks the windows [prompt] for [tunnel], until one answers, the last one
-  /// closes or [finished] completes; null cancels.
-  Future<String?> ask(Tunnel tunnel, SshPrompt prompt, Future<void> finished) {
+  /// that saw it closes, or ssh withdraws it; null cancels.
+  Future<String?> ask(Tunnel tunnel, SshPrompt prompt) {
     if (_isClosed) return Future.value();
 
     final id = ++_lastPrompt;
@@ -75,11 +87,12 @@ class AgentServer(
       answer: answer,
     );
     _sendPrompts();
-    unawaited(finished.whenComplete(() => _settle(id, null)));
+    unawaited(prompt.withdrawn.whenComplete(() => _settle(id, null)));
     return answer.future;
   }
 
   void _settle(int id, String? answer) {
+    _seen.remove(id);
     if (_prompts.remove(id) case (prompt: _, answer: final waiting)?) {
       waiting.complete(answer);
       _sendPrompts();
@@ -160,6 +173,9 @@ class AgentServer(
     SetDebugLogging(:final on) => _preferences.setDebugLogging(on: on),
     ShowLogs() => await _preferences.showLogs(),
     AnswerPrompt(:final prompt, :final answer) => _settle(prompt, answer),
+    SawPrompts(:final prompts) => _seen.addAll(
+      prompts.where(_prompts.containsKey),
+    ),
   };
 
   void _sendAll(AgentMessage message) {
@@ -171,11 +187,16 @@ class AgentServer(
   void _send(AgentLink client, AgentMessage message) =>
       client.send(jsonEncode(message.toJson()));
 
-  // With no window left, nobody can answer.
+  // With no window left, a prompt the window had is given up; one it never
+  // got, such as one sent as it closed, waits for the next window.
   void _drop(AgentLink client) {
     _clients.remove(client);
     client.close();
-    if (_clients.isEmpty) _cancelPrompts();
+    if (_clients.isNotEmpty || _isClosed) return;
+    for (final id in [..._seen]) {
+      _settle(id, null);
+    }
+    if (_prompts.isNotEmpty) onUnseenPrompts?.call();
   }
 
   Future<void> close() async {

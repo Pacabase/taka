@@ -109,7 +109,7 @@ void main() {
     });
   });
 
-  test('passes each prompt on until the open call finishes', () async {
+  test('passes each prompt on', () async {
     const passphrase = SshPassphrasePrompt(
       "Enter passphrase for key '/k': ",
       keyPath: '/k',
@@ -122,12 +122,9 @@ void main() {
       return opened.future;
     });
     final asked = <SshPrompt>[];
-    Future<void>? finished;
-    var isFinished = false;
     final up = session(
-      onPrompt: (prompt, done) async {
+      onPrompt: (prompt) async {
         asked.add(prompt);
-        finished = done.whenComplete(() => isFinished = true);
         return 'hunter2';
       },
     );
@@ -136,31 +133,10 @@ void main() {
     await pumpEventQueue();
     expect(asked, [passphrase]);
     expect(answered, 'hunter2');
-    expect(isFinished, isFalse);
 
     opened.complete(FakeTunnel(15432));
     await connecting;
-    await finished;
     expect(up.state.phase, isA<Up>());
-  });
-
-  test('a failed open call also finishes its prompts', () async {
-    Future<void>? finished;
-    when(openAnyTunnel).thenAnswer((invocation) async {
-      final ask = invocation.namedArguments[#onPrompt]! as SshPromptHandler;
-      await ask(const SshPasswordPrompt("me@bastion's password: "));
-      throw dropped;
-    });
-    final failing = session(
-      onPrompt: (prompt, done) async {
-        finished = done;
-        return null;
-      },
-    );
-
-    await failing.connect();
-
-    await expectLater(finished, completes);
   });
 
   test('without a prompter, ssh is asked to prompt for nothing', () async {
@@ -191,7 +167,7 @@ void main() {
     });
   });
 
-  test('stopping during a prompt finishes it and stops', () {
+  test('stopping during a prompt stops, not cancels', () {
     fakeAsync((time) {
       when(openAnyTunnel).thenAnswer((invocation) {
         final ask = invocation.namedArguments[#onPrompt]! as SshPromptHandler;
@@ -199,21 +175,13 @@ void main() {
         unawaited(ask(const SshPasswordPrompt("me@bastion's password: ")));
         return abort.then((_) => throw const SshTunnelAbortedException());
       });
-      var isFinished = false;
-      final asking = session(
-        onPrompt: (prompt, done) {
-          unawaited(done.whenComplete(() => isFinished = true));
-          return Completer<String?>().future;
-        },
-      );
+      final asking = session(onPrompt: (prompt) => Completer<String?>().future);
       unawaited(asking.connect());
       time.flushMicrotasks();
-      expect(isFinished, isFalse);
 
       unawaited(asking.stop());
       time.flushMicrotasks();
 
-      expect(isFinished, isTrue);
       expect(asking.state.phase, isA<Ended>());
       expect(asking.status, isNot(const Cancelled()));
     });
@@ -231,7 +199,7 @@ void main() {
         );
         throw refused;
       });
-      final failing = session(onPrompt: (prompt, done) async => null);
+      final failing = session(onPrompt: (prompt) async => null);
 
       unawaited(failing.connect());
       time.flushMicrotasks();

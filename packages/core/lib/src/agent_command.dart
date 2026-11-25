@@ -43,6 +43,9 @@ sealed class const AgentCommand._() with _$AgentCommand {
   /// Answers login prompt [prompt]; a null [answer] cancels the login.
   const factory answer(int prompt, String? answer) = AnswerPrompt;
 
+  /// The window has [prompts], so closing it gives them up.
+  const factory sawPrompts(List<int> prompts) = SawPrompts;
+
   // Freezed's would print the answer.
   @override
   String toString() => switch (this) {
@@ -106,6 +109,9 @@ sealed class const AgentCommand._() with _$AgentCommand {
         final String answer => answer,
         _ => null,
       }),
+    {'command': 'sawPrompts', 'prompts': final List<Object?> prompts}
+        when prompts.every((prompt) => prompt is int) =>
+      SawPrompts(prompts.cast<int>()),
     _ => throw FormatException('Not a command: $json'),
   };
 
@@ -146,5 +152,6 @@ sealed class const AgentCommand._() with _$AgentCommand {
       'prompt': prompt,
       'answer': ?answer,
     },
+    SawPrompts(:final prompts) => {'command': 'sawPrompts', 'prompts': prompts},
   };
 }

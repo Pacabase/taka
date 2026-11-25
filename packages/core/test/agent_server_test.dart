@@ -39,8 +39,13 @@ void main() {
         await directory.delete(recursive: true);
       });
 
-      Future<AgentServer> serve() async {
-        final server = (await AgentServer.bind(channel, manager, preferences))!;
+      Future<AgentServer> serve({void Function()? onUnseenPrompts}) async {
+        final server = (await AgentServer.bind(
+          channel,
+          manager,
+          preferences,
+          onUnseenPrompts: onUnseenPrompts,
+        ))!;
         addTearDown(server.close);
         return server;
       }
@@ -371,11 +376,7 @@ void main() {
           final theirs = StreamQueue(other.prompts);
           await (mine.identity, other.identity).wait;
 
-          final answer = server.ask(
-            database,
-            password,
-            Completer<void>().future,
-          );
+          final answer = server.ask(database, password);
 
           expect(await myPrompts.next, [asked]);
           expect(await theirs.next, [asked]);
@@ -389,11 +390,7 @@ void main() {
         test('waits for a window that connects later', () async {
           final server = await serve();
 
-          final answer = server.ask(
-            database,
-            password,
-            Completer<void>().future,
-          );
+          final answer = server.ask(database, password);
           final agent = await connect();
 
           expect(await agent.prompts.first, [asked]);
@@ -401,46 +398,63 @@ void main() {
           expect(await answer, '');
         });
 
-        test('is cancelled once the open call finishes', () async {
+        test('is cancelled once ssh withdraws it', () async {
           final server = await serve();
           final agent = await connect();
           final prompts = StreamQueue(agent.prompts);
           await agent.identity;
-          final finished = Completer<void>();
+          final withdrawn = Completer<void>();
 
-          final answer = server.ask(database, password, finished.future);
+          final answer = server.ask(
+            database,
+            SshPasswordPrompt(password.text, withdrawn: withdrawn.future),
+          );
           expect(await prompts.next, [asked]);
-          finished.complete();
+          withdrawn.complete();
 
           expect(await answer, isNull);
           expect(await prompts.next, isEmpty);
         });
 
-        test('is cancelled when the last window closes', () async {
-          final server = await serve();
+        test('is cancelled when the last window that had it closes', () async {
+          var reopened = 0;
+          final server = await serve(onUnseenPrompts: () => reopened++);
           final agent = await connect();
-          final answer = server.ask(
-            database,
-            password,
-            Completer<void>().future,
-          );
+          final answer = server.ask(database, password);
           await agent.prompts.first;
+          agent.send(const AgentCommand.sawPrompts([1]));
 
           await agent.close();
 
           expect(await answer, isNull);
+          expect(reopened, 0);
         });
+
+        test(
+          'waits for the next window if the last closed without it',
+          () async {
+            final reopened = Completer<void>();
+            final server = await serve(onUnseenPrompts: reopened.complete);
+            final agent = await connect();
+            await agent.identity;
+            final answer = server.ask(database, password);
+
+            await agent.close();
+            await reopened.future.timeout(const Duration(seconds: 10));
+            final next = await connect();
+            expect(await next.prompts.first, [asked]);
+            next.send(const AgentCommand.answer(1, 'hunter2'));
+
+            expect(await answer, 'hunter2');
+          },
+        );
 
         test('stays while another window is open', () async {
           final server = await serve();
           final mine = await connect();
           final other = await connect();
           await (mine.identity, other.identity).wait;
-          final answer = server.ask(
-            database,
-            password,
-            Completer<void>().future,
-          );
+          final answer = server.ask(database, password);
           await (mine.prompts.first, other.prompts.first).wait;
 
           await mine.close();
@@ -452,18 +466,11 @@ void main() {
         test('is cancelled when the agent closes', () async {
           final server = await serve();
 
-          final answer = server.ask(
-            database,
-            password,
-            Completer<void>().future,
-          );
+          final answer = server.ask(database, password);
           await server.close();
 
           expect(await answer, isNull);
-          expect(
-            await server.ask(database, password, Completer<void>().future),
-            isNull,
-          );
+          expect(await server.ask(database, password), isNull);
         });
 
         test('an answer to a prompt that is gone is ignored', () async {
@@ -471,15 +478,14 @@ void main() {
           final agent = await connect();
           final prompts = StreamQueue(agent.prompts);
           await agent.identity;
-          final first = server.ask(database, password, Future.value());
+          final first = server.ask(
+            database,
+            SshPasswordPrompt(password.text, withdrawn: Future.value()),
+          );
           expect(await first, isNull);
 
           agent.send(const AgentCommand.answer(1, 'late'));
-          final second = server.ask(
-            database,
-            password,
-            Completer<void>().future,
-          );
+          final second = server.ask(database, password);
           expect(await prompts.next, [asked]);
           expect(await prompts.next, isEmpty);
           expect(await prompts.next, [asked.copyWith(id: 2)]);

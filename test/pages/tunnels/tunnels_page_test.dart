@@ -106,7 +106,9 @@ void main() {
       await tester.tap(find.text('Log In'));
       await tester.pumpAndSettle();
 
-      expect(agent.sent, const [AgentCommand.answer(1, 'hunter2')]);
+      expect(agent.sent.whereType<AnswerPrompt>(), const [
+        AgentCommand.answer(1, 'hunter2'),
+      ]);
       expect(find.byType(LoginPromptForm), findsNothing);
     });
 
@@ -138,7 +140,9 @@ void main() {
       await tester.tap(find.text('Cancel').first);
       await tester.pumpAndSettle();
 
-      expect(agent.sent, const [AgentCommand.answer(1, null)]);
+      expect(agent.sent.whereType<AnswerPrompt>(), const [
+        AgentCommand.answer(1, null),
+      ]);
       expect(find.byType(LoginPromptForm), findsNothing);
       expect(find.text('New tunnel'), findsOneWidget);
     });

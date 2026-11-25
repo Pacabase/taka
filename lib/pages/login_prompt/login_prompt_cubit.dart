@@ -26,6 +26,11 @@ class LoginPromptCubit({required final AgentClient agent})
 
   this : super(const NoPrompt()) {
     _prompts = agent.prompts.listen((prompts) {
+      if (prompts.isNotEmpty) {
+        agent.send(
+          AgentCommand.sawPrompts([for (final prompt in prompts) prompt.id]),
+        );
+      }
       _waiting = prompts;
       _answered.retainAll(prompts.map((prompt) => prompt.id));
       _show();

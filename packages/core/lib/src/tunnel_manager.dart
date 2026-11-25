@@ -22,12 +22,7 @@ class TunnelManager({
 
   /// Answers what ssh asks while [Tunnel] logs in; without it, ssh asks
   /// nothing.
-  final Future<String?> Function(
-    Tunnel tunnel,
-    SshPrompt prompt,
-    Future<void> finished,
-  )?
-  onPrompt,
+  final Future<String?> Function(Tunnel tunnel, SshPrompt prompt)? onPrompt,
   final Future<bool> Function()? isLocked,
   final Future<void> Function(String address, int localPort)? checkDestination,
   final Duration warningLifetime = const Duration(seconds: 30),
@@ -196,7 +191,7 @@ class TunnelManager({
       client: client,
       comeForward: comeForward,
       onPrompt: switch (onPrompt) {
-        final ask? => (prompt, finished) => ask(tunnel, prompt, finished),
+        final ask? => (prompt) => ask(tunnel, prompt),
         null => null,
       },
       isLocked: isLocked,

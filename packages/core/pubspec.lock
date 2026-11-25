@@ -509,8 +509,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "8fe38ab0586d7f6cd9c1dcd0c5a3e5320e010ce1"
-      resolved-ref: "8fe38ab0586d7f6cd9c1dcd0c5a3e5320e010ce1"
+      ref: "4ef0551d42653fc2ad682088402c0bd4f82d38fd"
+      resolved-ref: "4ef0551d42653fc2ad682088402c0bd4f82d38fd"
       url: "https://github.com/Pacabase/system_ssh.git"
     source: git
     version: "0.11.0"

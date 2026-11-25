@@ -74,6 +74,7 @@ void main() {
       AgentCommand.answer(1, 'hunter2'),
       AgentCommand.answer(2, ''),
       AgentCommand.answer(3, null),
+      AgentCommand.sawPrompts([1, 2]),
     ]) {
       // Named by its JSON: its description leaves most of it out.
       test('${jsonEncode(command.toJson())} round-trips', () {
