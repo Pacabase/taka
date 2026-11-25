@@ -443,12 +443,11 @@ packages:
   system_ssh:
     dependency: "direct main"
     description:
-      path: "."
-      ref: "4ef0551d42653fc2ad682088402c0bd4f82d38fd"
-      resolved-ref: "4ef0551d42653fc2ad682088402c0bd4f82d38fd"
-      url: "https://github.com/Pacabase/system_ssh.git"
-    source: git
-    version: "0.11.0"
+      name: system_ssh
+      sha256: "98d089d46cf229baa4b796fde65da6b6b6e4007d4ff908c16f4af485a3de7f85"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.12.0"
   term_glyph:
     dependency: transitive
     description:
