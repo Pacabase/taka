@@ -50,7 +50,7 @@ void main() {
     act: (cubit) async {
       agent.promptsController.add(const [passphrase, code]);
       await Future<void>.delayed(Duration.zero);
-      cubit.answer('hunter2');
+      cubit.answer(1, 'hunter2');
       agent.promptsController.add(const [passphrase, code]);
     },
     expect: () => const [Asking(passphrase), Asking(code)],
@@ -64,7 +64,7 @@ void main() {
     act: (cubit) async {
       agent.promptsController.add(const [code]);
       await Future<void>.delayed(Duration.zero);
-      cubit.answer(null);
+      cubit.answer(2, null);
     },
     expect: () => const [Asking(code), NoPrompt()],
     verify: (_) => expect(agent.sent, const [AgentCommand.answer(2, null)]),
@@ -73,9 +73,24 @@ void main() {
   blocTest<LoginPromptCubit, LoginPromptState>(
     'an answer with nothing asked sends nothing',
     build: () => LoginPromptCubit(agent: agent),
-    act: (cubit) => cubit.answer('hunter2'),
+    act: (cubit) => cubit.answer(1, 'hunter2'),
     expect: () => const <LoginPromptState>[],
     verify: (_) => expect(agent.sent, isEmpty),
+  );
+
+  blocTest<LoginPromptCubit, LoginPromptState>(
+    'a second press answers nothing, not the next prompt',
+    build: () => LoginPromptCubit(agent: agent),
+    act: (cubit) async {
+      agent.promptsController.add(const [passphrase, code]);
+      await Future<void>.delayed(Duration.zero);
+      cubit
+        ..answer(1, 'hunter2')
+        ..answer(1, '');
+    },
+    expect: () => const [Asking(passphrase), Asking(code)],
+    verify: (_) =>
+        expect(agent.sent, const [AgentCommand.answer(1, 'hunter2')]),
   );
 
   blocTest<LoginPromptCubit, LoginPromptState>(

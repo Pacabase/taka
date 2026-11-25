@@ -44,6 +44,11 @@ void main() {
           tunnelId: 'web',
           prompt: SshCodePrompt('(me@web) Verification code: '),
         ),
+        LoginPrompt(
+          id: 4,
+          tunnelId: 'old',
+          prompt: SshPasswordPrompt("me@old's password: ", isVerified: false),
+        ),
       ]),
     ]) {
       test('$message round-trips', () {
@@ -71,6 +76,25 @@ void main() {
           'keyPath': '/k',
           'text': "Enter passphrase for key '/k': ",
         },
+      );
+    });
+
+    test('a login prompt ssh can vouch for says nothing of it', () {
+      expect(
+        const LoginPrompt(
+          id: 1,
+          tunnelId: 'web',
+          prompt: SshCodePrompt('Code: '),
+        ).toJson(),
+        isNot(contains('verified')),
+      );
+      expect(
+        const LoginPrompt(
+          id: 1,
+          tunnelId: 'web',
+          prompt: SshCodePrompt('Code: ', isVerified: false),
+        ).toJson()['verified'],
+        false,
       );
     });
 

@@ -92,11 +92,11 @@ class AgentServer(
     }
   }
 
-  void _sendPrompts() => _sendAll(
-    AgentMessage.prompts([
-      for (final (:prompt, answer: _) in _prompts.values) prompt,
-    ]),
-  );
+  void _sendPrompts() => _sendAll(_promptsMessage);
+
+  AgentMessage get _promptsMessage => AgentMessage.prompts([
+    for (final (:prompt, answer: _) in _prompts.values) prompt,
+  ]);
 
   void _accept(AgentLink client) {
     _admit(client);
@@ -113,14 +113,7 @@ class AgentServer(
     _send(client, AgentMessage.identity(_identity));
     _send(client, AgentMessage.snapshot(_manager.state));
     _send(client, AgentMessage.settings(_preferences.settings));
-    if (_prompts.isNotEmpty) {
-      _send(
-        client,
-        AgentMessage.prompts([
-          for (final (:prompt, answer: _) in _prompts.values) prompt,
-        ]),
-      );
-    }
+    if (_prompts.isNotEmpty) _send(client, _promptsMessage);
     if (_pending case final request?) {
       _pending = null;
       _send(client, request);

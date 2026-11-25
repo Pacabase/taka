@@ -379,10 +379,9 @@ void main() {
 
           expect(await myPrompts.next, [asked]);
           expect(await theirs.next, [asked]);
-          mine
-            ..send(const AgentCommand.answer(1, 'hunter2'))
-            ..send(const AgentCommand.answer(1, 'other'));
+          mine.send(const AgentCommand.answer(1, 'hunter2'));
           expect(await answer, 'hunter2');
+          other.send(const AgentCommand.answer(1, 'other'));
           expect(await myPrompts.next, isEmpty);
           expect(await theirs.next, isEmpty);
         });
@@ -430,6 +429,24 @@ void main() {
           await agent.close();
 
           expect(await answer, isNull);
+        });
+
+        test('stays while another window is open', () async {
+          final server = await serve();
+          final mine = await connect();
+          final other = await connect();
+          await (mine.identity, other.identity).wait;
+          final answer = server.ask(
+            database,
+            password,
+            Completer<void>().future,
+          );
+          await (mine.prompts.first, other.prompts.first).wait;
+
+          await mine.close();
+          other.send(const AgentCommand.answer(1, 'hunter2'));
+
+          expect(await answer, 'hunter2');
         });
 
         test('is cancelled when the agent closes', () async {

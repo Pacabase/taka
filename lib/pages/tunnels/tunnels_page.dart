@@ -304,7 +304,9 @@ class const _TunnelRows({
                           LoginPromptForm(
                             key: ValueKey(prompt.id),
                             prompt: prompt,
-                            onAnswer: context.read<LoginPromptCubit>().answer,
+                            onAnswer: (answer) => context
+                                .read<LoginPromptCubit>()
+                                .answer(prompt.id, answer),
                           ),
                         _ => null,
                       },
@@ -358,7 +360,8 @@ class const _PromptStrip({required final bool isListShown})
           key: ValueKey(prompt.id),
           prompt: prompt,
           tunnel: tunnel?.title ?? 'a tunnel',
-          onAnswer: context.read<LoginPromptCubit>().answer,
+          onAnswer: (answer) =>
+              context.read<LoginPromptCubit>().answer(prompt.id, answer),
         ),
       );
     }

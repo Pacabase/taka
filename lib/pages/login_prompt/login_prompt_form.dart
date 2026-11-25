@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -29,16 +31,18 @@ class _LoginPromptFormState extends State<LoginPromptForm>
   @override
   void initState() {
     super.initState();
-    _opening.forward();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Scrollable.ensureVisible(
-          context,
-          duration: const Duration(milliseconds: 180),
-          alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-        );
-      }
-    });
+    // Once open, when it has its height.
+    unawaited(
+      _opening.forward().whenComplete(() {
+        if (mounted) {
+          Scrollable.ensureVisible(
+            context,
+            duration: const Duration(milliseconds: 180),
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          );
+        }
+      }),
+    );
   }
 
   @override
@@ -86,6 +90,16 @@ class _LoginPromptFormState extends State<LoginPromptForm>
                   style: const TextStyle(fontWeight: FontWeight.w500),
                 ),
               ...switch (prompt) {
+                // An older ssh can't tell its prompts from a server's.
+                SshPrompt(isVerified: false) => [
+                  Text('ssh, or the server, asks:', style: secondary),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 120),
+                    child: SingleChildScrollView(
+                      child: Text(prompt.text.trim()),
+                    ),
+                  ),
+                ],
                 SshPassphrasePrompt(:final keyPath) => [
                   Text(switch (keyPath.split(RegExp(r'[/\\]')).last) {
                     // ssh cuts a long path short, maybe inside a folder.
@@ -114,6 +128,7 @@ class _LoginPromptFormState extends State<LoginPromptForm>
                     child: Input(
                       controller: _answer,
                       hint: switch (prompt) {
+                        SshPrompt(isVerified: false) => 'Answer',
                         SshPassphrasePrompt() => 'Passphrase',
                         SshPasswordPrompt() => 'Password',
                         SshCodePrompt() => 'Answer',

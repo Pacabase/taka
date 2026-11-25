@@ -32,9 +32,10 @@ class LoginPromptCubit({required final AgentClient agent})
     });
   }
 
-  /// Sends [answer] to the prompt shown; null cancels its login.
-  void answer(String? answer) {
-    if (state case Asking(:final prompt)) {
+  /// Sends [answer] to prompt [id] if it's the one shown, so a second press
+  /// can't answer the next; null cancels its login.
+  void answer(int id, String? answer) {
+    if (state case Asking(:final prompt) when prompt.id == id) {
       _answered.add(prompt.id);
       agent.send(AgentCommand.answer(prompt.id, answer));
       _show();

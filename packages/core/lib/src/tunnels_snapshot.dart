@@ -14,6 +14,9 @@ enum TunnelFailure {
   hostNotFound,
   unreachable,
   loginRefused,
+
+  /// The login needed an answer, but ssh couldn't ask on this computer.
+  promptsOff,
   hostKey,
   dropped,
   remotePortRefused,

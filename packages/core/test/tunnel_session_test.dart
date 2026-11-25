@@ -191,6 +191,58 @@ void main() {
     });
   });
 
+  test('stopping during a prompt finishes it and stops', () {
+    fakeAsync((time) {
+      when(openAnyTunnel).thenAnswer((invocation) {
+        final ask = invocation.namedArguments[#onPrompt]! as SshPromptHandler;
+        final abort = invocation.namedArguments[#abortTrigger]! as Future<void>;
+        unawaited(ask(const SshPasswordPrompt("me@bastion's password: ")));
+        return abort.then((_) => throw const SshTunnelAbortedException());
+      });
+      var isFinished = false;
+      final asking = session(
+        onPrompt: (prompt, done) {
+          unawaited(done.whenComplete(() => isFinished = true));
+          return Completer<String?>().future;
+        },
+      );
+      unawaited(asking.connect());
+      time.flushMicrotasks();
+      expect(isFinished, isFalse);
+
+      unawaited(asking.stop());
+      time.flushMicrotasks();
+
+      expect(isFinished, isTrue);
+      expect(asking.state.phase, isA<Ended>());
+      expect(asking.status, isNot(const Cancelled()));
+    });
+  });
+
+  test('a login it could not ask for says so, not that it was refused', () {
+    fakeAsync((time) {
+      const why = "system_ssh_askpass.exe isn't with the app, so ssh can't ask";
+      const refused = SshLoginRefusedException(
+        'Permission denied (publickey). (not asking for passwords: $why)',
+      );
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        (invocation.namedArguments[#onLog]! as void Function(SshLog log))(
+          const SshPromptsOff(why),
+        );
+        throw refused;
+      });
+      final failing = session(onPrompt: (prompt, done) async => null);
+
+      unawaited(failing.connect());
+      time.flushMicrotasks();
+
+      expect(
+        failing.status,
+        Failed(refused.message, failure: TunnelFailure.promptsOff),
+      );
+    });
+  });
+
   test('a config error is a config error', () async {
     const message = 'ClearAllForwardings drops the tunnel';
     when(openAnyTunnel)

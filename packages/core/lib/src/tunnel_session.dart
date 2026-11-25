@@ -134,6 +134,8 @@ class TunnelSession({
   final _abort = Completer<void>();
   late DateTime _lastAwayCheck;
   final _timers = <Type, Timer>{};
+
+  String? _promptsOff;
   final List<Future<HandBack?>> _cameForward = [];
   // Handles that aren't values a state can hold: the attempt of Opening or
   // Redialing, the ssh of Up, and ssh's close once Ended.
@@ -495,6 +497,7 @@ class TunnelSession({
 
   Future<_Opened> _openSsh(SshPromptHandler? onPrompt) async {
     final abortTrigger = _abort.future;
+    _promptsOff = null;
     // ssh's lines, named since tunnels connect at once.
     void onLog(SshLog log) {
       _sshLog.d('${tunnel.title}: ${log.line}');
@@ -506,6 +509,9 @@ class TunnelSession({
           add(SessionEvent.refused(failed));
         case (SshForwardFailed(:final reason), Up()):
           add(SessionEvent.warned(reason));
+        case (SshPromptsOff(:final reason), _):
+          _promptsOff = reason;
+          _log.w('${tunnel.title}: $reason');
         case _:
       }
     }
@@ -577,6 +583,8 @@ class TunnelSession({
     SshAddressUnavailableException() => TunnelFailure.addressUnavailable,
     SshHostNotFoundException() => TunnelFailure.hostNotFound,
     SshUnreachableException() => TunnelFailure.unreachable,
+    SshLoginRefusedException() when _promptsOff != null =>
+      TunnelFailure.promptsOff,
     SshLoginRefusedException() => TunnelFailure.loginRefused,
     SshHostKeyRefusedException() ||
     SshHostKeyChangedException() ||

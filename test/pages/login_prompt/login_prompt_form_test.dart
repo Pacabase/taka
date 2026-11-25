@@ -89,6 +89,43 @@ void main() {
     expect(find.text('<b>Verification</b> code:'), findsOneWidget);
   });
 
+  testWidgets("an older ssh's passphrase prompt shows its words", (
+    tester,
+  ) async {
+    await pumpForm(
+      tester,
+      const LoginPrompt(
+        id: 5,
+        tunnelId: 'database',
+        prompt: SshPassphrasePrompt(
+          "Enter passphrase for key '/home/me/.ssh/id_ed25519': ",
+          keyPath: '/home/me/.ssh/id_ed25519',
+          isVerified: false,
+        ),
+      ),
+    );
+
+    expect(find.text('ssh, or the server, asks:'), findsOneWidget);
+    expect(
+      find.text("Enter passphrase for key '/home/me/.ssh/id_ed25519':"),
+      findsOneWidget,
+    );
+    expect(find.text('Passphrase for id_ed25519'), findsNothing);
+    expect(find.text('Answer'), findsOneWidget);
+  });
+
+  testWidgets('an answer stays within the 1023 bytes ssh reads', (
+    tester,
+  ) async {
+    await pumpForm(tester, password);
+
+    await tester.enterText(find.byType(TextField), 'ä' * 511);
+    await tester.enterText(find.byType(TextField), '${'ä' * 511}ää');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+
+    expect(answers.single, 'ä' * 511);
+  });
+
   testWidgets('names the tunnel only when told to', (tester) async {
     await pumpForm(tester, password);
     expect(find.textContaining('Log in to open'), findsNothing);

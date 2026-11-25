@@ -75,7 +75,8 @@ void main() {
       AgentCommand.answer(2, ''),
       AgentCommand.answer(3, null),
     ]) {
-      test('$command round-trips', () {
+      // Named by its JSON: its description leaves most of it out.
+      test('${jsonEncode(command.toJson())} round-trips', () {
         expect(
           AgentCommand.fromJson(jsonDecode(jsonEncode(command.toJson()))),
           command,

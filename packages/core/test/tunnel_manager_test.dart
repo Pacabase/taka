@@ -1274,11 +1274,13 @@ void main() {
       return tunnel;
     });
     final asked = <(Tunnel, SshPrompt)>[];
+    late Future<void> finished;
     final manager = TunnelManager(
       store: store,
       client: client,
-      onPrompt: (tunnel, prompt, finished) async {
+      onPrompt: (tunnel, prompt, done) async {
         asked.add((tunnel, prompt));
+        finished = done;
         return 'hunter2';
       },
     );
@@ -1288,6 +1290,7 @@ void main() {
     await manager.toggle('a1');
 
     expect(asked, [(database, password)]);
+    await expectLater(finished, completes);
     expect(manager.state.statusOf('a1'), const Connected());
   });
 

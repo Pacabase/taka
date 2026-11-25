@@ -24,13 +24,21 @@ sealed class const LoginPrompt._() with _$LoginPrompt {
       LoginPrompt(
         id: id,
         tunnelId: tunnelId,
-        prompt: switch ((kind, fields['keyPath'])) {
-          ('passphrase', final String keyPath) => SshPassphrasePrompt(
+        prompt: switch ((
+          kind,
+          fields['keyPath'],
+          fields['verified'] != false,
+        )) {
+          ('passphrase', final String keyPath, final isVerified) =>
+            SshPassphrasePrompt(text, keyPath: keyPath, isVerified: isVerified),
+          ('password', _, final isVerified) => SshPasswordPrompt(
             text,
-            keyPath: keyPath,
+            isVerified: isVerified,
           ),
-          ('password', _) => SshPasswordPrompt(text),
-          _ => SshCodePrompt(text),
+          (_, _, final isVerified) => SshCodePrompt(
+            text,
+            isVerified: isVerified,
+          ),
         },
       ),
     _ => throw FormatException('Not a login prompt: $json'),
@@ -48,5 +56,6 @@ sealed class const LoginPrompt._() with _$LoginPrompt {
       SshCodePrompt() => {'kind': 'code'},
     },
     'text': prompt.text,
+    if (!prompt.isVerified) 'verified': false,
   };
 }
