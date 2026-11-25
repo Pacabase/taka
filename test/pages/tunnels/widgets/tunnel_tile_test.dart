@@ -118,6 +118,18 @@ void main() {
     expect(find.byType(ColourDot), findsNothing);
   });
 
+  testWidgets("a login Taka couldn't ask for says so", (tester) async {
+    await pumpTile(
+      tester,
+      status: const Failed(
+        'Permission denied',
+        failure: TunnelFailure.promptsOff,
+      ),
+    );
+
+    expect(find.textContaining("can't ask"), findsOneWidget);
+  });
+
   testWidgets('a cancelled login says so, and is off', (tester) async {
     await pumpTile(tester, status: const Cancelled());
 

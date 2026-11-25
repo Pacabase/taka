@@ -112,6 +112,47 @@ void main() {
       expect(find.byType(LoginPromptForm), findsNothing);
     });
 
+    testWidgets('starts empty for the next prompt, and answers that one', (
+      tester,
+    ) async {
+      final agent = FakeAgent();
+      await pumpPage(tester, agent: agent);
+      agent.promptsController.add(const [passphrase]);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'hunter2');
+
+      agent.promptsController.add([passphrase.copyWith(id: 2)]);
+      await tester.pumpAndSettle();
+
+      expect(find.text('hunter2'), findsNothing);
+      await tester.tap(find.text('Log In'));
+      await tester.pumpAndSettle();
+      expect(agent.sent.whereType<AnswerPrompt>(), const [
+        AgentCommand.answer(2, ''),
+      ]);
+    });
+
+    testWidgets('keeps what was typed when a form opens over the list', (
+      tester,
+    ) async {
+      final agent = FakeAgent();
+      await pumpPage(tester, agent: agent);
+      agent.promptsController.add(const [passphrase]);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'hunt');
+
+      await tester.tap(find.byTooltip('Add tunnel'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(LoginPromptForm),
+          matching: find.text('hunt'),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('goes when the agent closes it', (tester) async {
       final agent = FakeAgent();
       await pumpPage(tester, agent: agent);

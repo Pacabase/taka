@@ -126,6 +126,20 @@ void main() {
     expect(answers.single, 'ä' * 511);
   });
 
+  testWidgets('takes exactly 1023 bytes, and turns away a longer paste', (
+    tester,
+  ) async {
+    await pumpForm(tester, password);
+    final longest = '${'a' * 1021}ä';
+
+    await tester.enterText(find.byType(TextField), 'a' * 1024);
+    expect(find.text('a' * 1024), findsNothing);
+    await tester.enterText(find.byType(TextField), longest);
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+
+    expect(answers.single, longest);
+  });
+
   testWidgets('names the tunnel only when told to', (tester) async {
     await pumpForm(tester, password);
     expect(find.textContaining('Log in to open'), findsNothing);

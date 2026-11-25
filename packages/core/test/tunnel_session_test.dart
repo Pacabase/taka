@@ -140,14 +140,15 @@ void main() {
   });
 
   test('without a prompter, ssh is asked to prompt for nothing', () async {
+    Object? onPrompt = 'not passed';
     when(openAnyTunnel).thenAnswer((invocation) async {
-      expect(invocation.namedArguments[#onPrompt], isNull);
+      onPrompt = invocation.namedArguments[#onPrompt];
       return FakeTunnel(15432);
     });
 
     await session().connect();
 
-    verify(openAnyTunnel).called(1);
+    expect(onPrompt, isNull);
   });
 
   test('a cancelled login stops, neither failed nor retried', () {
@@ -167,6 +168,29 @@ void main() {
     });
   });
 
+  test('a login cancelled while it reconnects stops, with no more tries', () {
+    fakeAsync((time) {
+      final tunnel = FakeTunnel(15432);
+      var attempt = 0;
+      when(openAnyTunnel).thenAnswer((_) async {
+        if (++attempt == 1) return tunnel;
+        throw const SshLoginCancelledException();
+      });
+      final up = session();
+      unawaited(up.connect());
+      time.flushMicrotasks();
+
+      tunnel.dropWith(dropped);
+      time
+        ..flushMicrotasks()
+        ..elapse(retryDelays.first)
+        ..elapse(const Duration(minutes: 1));
+
+      expect(up.status, const Cancelled());
+      expect(attempt, 2);
+    });
+  });
+
   test('stopping during a prompt stops, not cancels', () {
     fakeAsync((time) {
       when(openAnyTunnel).thenAnswer((invocation) {
@@ -182,8 +206,9 @@ void main() {
       unawaited(asking.stop());
       time.flushMicrotasks();
 
+      // An ended session keeps the status it had, not a cancel's.
       expect(asking.state.phase, isA<Ended>());
-      expect(asking.status, isNot(const Cancelled()));
+      expect(asking.status, const Connecting());
     });
   });
 
@@ -207,6 +232,38 @@ void main() {
       expect(
         failing.status,
         Failed(refused.message, failure: TunnelFailure.promptsOff),
+      );
+    });
+  });
+
+  test('a refusal after an attempt that could not ask is plainly refused', () {
+    fakeAsync((time) {
+      const refused = SshLoginRefusedException(
+        'Permission denied (publickey).',
+      );
+      final tunnel = FakeTunnel(15432);
+      var attempt = 0;
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        if (++attempt == 1) {
+          (invocation.namedArguments[#onLog]! as void Function(SshLog log))(
+            const SshPromptsOff('no helper'),
+          );
+          return tunnel;
+        }
+        throw refused;
+      });
+      final up = session(onPrompt: (prompt) async => null);
+      unawaited(up.connect());
+      time.flushMicrotasks();
+
+      tunnel.dropWith(dropped);
+      time
+        ..flushMicrotasks()
+        ..elapse(retryDelays.first);
+
+      expect(
+        up.status,
+        Failed(refused.message, failure: TunnelFailure.loginRefused),
       );
     });
   });

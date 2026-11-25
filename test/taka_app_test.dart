@@ -141,27 +141,32 @@ void main() {
     },
   );
 
-  testWidgets('a login prompt closes About, for the list it opens in', (
-    tester,
-  ) async {
-    final agent = FakeAgent();
-    await _pumpApp(tester, const Text('Tunnels'), agent: agent);
-    await _menuCall(tester, 'about');
-    await tester.pumpAndSettle();
-    expect(find.byType(AboutPage), findsOneWidget);
+  for (final (menu, page) in [
+    ('about', AboutPage),
+    ('settings', SettingsPage),
+  ]) {
+    testWidgets('a login prompt closes $page, for the list it opens in', (
+      tester,
+    ) async {
+      final agent = FakeAgent();
+      await _pumpApp(tester, const Text('Tunnels'), agent: agent);
+      await _menuCall(tester, menu);
+      await tester.pumpAndSettle();
+      expect(find.byType(page), findsOneWidget);
 
-    agent.promptsController.add(const [
-      LoginPrompt(
-        id: 1,
-        tunnelId: 'database',
-        prompt: SshPasswordPrompt("me@bastion's password: "),
-      ),
-    ]);
-    await tester.pumpAndSettle();
+      agent.promptsController.add(const [
+        LoginPrompt(
+          id: 1,
+          tunnelId: 'database',
+          prompt: SshPasswordPrompt("me@bastion's password: "),
+        ),
+      ]);
+      await tester.pumpAndSettle();
 
-    expect(find.byType(AboutPage), findsNothing);
-    expect(find.text('Tunnels'), findsOneWidget);
-  });
+      expect(find.byType(page), findsNothing);
+      expect(find.text('Tunnels'), findsOneWidget);
+    });
+  }
 
   testWidgets('the same prompt again leaves a page opened since', (
     tester,

@@ -440,7 +440,7 @@ void main() {
             final answer = server.ask(database, password);
 
             await agent.close();
-            await reopened.future.timeout(const Duration(seconds: 10));
+            await reopened.future;
             final next = await connect();
             expect(await next.prompts.first, [asked]);
             next.send(const AgentCommand.answer(1, 'hunter2'));
@@ -448,6 +448,28 @@ void main() {
             expect(await answer, 'hunter2');
           },
         );
+
+        test('keeps only the prompts the closing window never had', () async {
+          var reopened = 0;
+          final server = await serve(onUnseenPrompts: () => reopened++);
+          final agent = await connect();
+          final prompts = StreamQueue(agent.prompts);
+          await agent.identity;
+          final first = server.ask(database, password);
+          await prompts.next;
+          var second = false;
+          unawaited(server.ask(database, password).then((_) => second = true));
+          await prompts.next;
+
+          // 99 is no prompt, so it changes nothing.
+          agent.send(const AgentCommand.sawPrompts([1, 99]));
+          await agent.close();
+
+          expect(await first, isNull);
+          await pumpEventQueue();
+          expect(second, isFalse);
+          expect(reopened, 1);
+        });
 
         test('stays while another window is open', () async {
           final server = await serve();
@@ -464,13 +486,17 @@ void main() {
         });
 
         test('is cancelled when the agent closes', () async {
-          final server = await serve();
+          var reopened = 0;
+          final server = await serve(onUnseenPrompts: () => reopened++);
+          final agent = await connect();
+          await agent.identity;
 
           final answer = server.ask(database, password);
           await server.close();
 
           expect(await answer, isNull);
           expect(await server.ask(database, password), isNull);
+          expect(reopened, 0);
         });
 
         test('an answer to a prompt that is gone is ignored', () async {

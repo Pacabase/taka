@@ -93,6 +93,13 @@ void main() {
       {'command': 'debugLogging'},
       {'command': 'import', 'tunnels': 'all'},
       {'command': 'export'},
+      {'command': 'answer', 'prompt': '1', 'answer': 'x'},
+      {'command': 'answer'},
+      {
+        'command': 'sawPrompts',
+        'prompts': [1, '2'],
+      },
+      {'command': 'sawPrompts'},
       {
         'command': 'save',
         'tunnel': {'id': 'a1'},

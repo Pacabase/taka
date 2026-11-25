@@ -13,6 +13,9 @@ class const LoginPromptForm({
   required final LoginPrompt prompt,
   final String? tunnel,
 
+  /// Kept by the caller, so typing survives the form moving; else its own.
+  final TextEditingController? answer,
+
   /// Null cancels the login.
   required final void Function(String? answer) onAnswer,
 }) extends StatefulWidget {
@@ -22,7 +25,7 @@ class const LoginPromptForm({
 
 class _LoginPromptFormState extends State<LoginPromptForm>
     with SingleTickerProviderStateMixin {
-  final _answer = TextEditingController();
+  late final _answer = widget.answer ?? TextEditingController();
   late final _opening = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 180),
@@ -48,9 +51,7 @@ class _LoginPromptFormState extends State<LoginPromptForm>
   @override
   void dispose() {
     _opening.dispose();
-    _answer
-      ..clear()
-      ..dispose();
+    if (widget.answer == null) _answer.dispose();
     super.dispose();
   }
 
@@ -76,73 +77,77 @@ class _LoginPromptFormState extends State<LoginPromptForm>
       alignment: Alignment.topCenter,
       child: CallbackShortcuts(
         bindings: {const SingleActivator(LogicalKeyboardKey.escape): _cancel},
-        child: Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 2),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 6,
-            children: [
-              if (widget.tunnel case final tunnel?)
-                Text(
-                  'Log in to open $tunnel',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-              ...switch (prompt) {
-                // An older ssh can't tell its prompts from a server's.
-                SshPrompt(isVerified: false) => [
-                  Text('ssh, or the server, asks:', style: secondary),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 120),
-                    child: SingleChildScrollView(
-                      child: Text(prompt.text.trim()),
-                    ),
-                  ),
-                ],
-                SshPassphrasePrompt(:final keyPath) => [
-                  Text(switch (keyPath.split(RegExp(r'[/\\]')).last) {
-                    // ssh cuts a long path short, maybe inside a folder.
-                    '' => 'Passphrase for the key',
-                    final file => 'Passphrase for $file',
-                  }),
+        child: Semantics(
+          container: true,
+          liveRegion: true,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 6,
+              children: [
+                if (widget.tunnel case final tunnel?)
                   Text(
-                    keyPath,
-                    style: secondary.copyWith(fontFamily: fontMono),
+                    'Log in to open $tunnel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
-                ],
-                SshPasswordPrompt(:final text) => [Text(text.trim())],
-                // The server's own words, so plain text and never markup.
-                SshCodePrompt(:final text) => [
-                  Text('The server asks:', style: secondary),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 120),
-                    child: SingleChildScrollView(child: Text(text.trim())),
-                  ),
-                ],
-              },
-              Row(
-                spacing: 8,
-                children: [
-                  Expanded(
-                    child: Input(
-                      controller: _answer,
-                      hint: switch (prompt) {
-                        SshPrompt(isVerified: false) => 'Answer',
-                        SshPassphrasePrompt() => 'Passphrase',
-                        SshPasswordPrompt() => 'Password',
-                        SshCodePrompt() => 'Answer',
-                      },
-                      autofocus: true,
-                      isSecret: true,
-                      onSubmitted: _send,
+                ...switch (prompt) {
+                  // An older ssh can't tell its prompts from a server's.
+                  SshPrompt(isVerified: false) => [
+                    Text('ssh, or the server, asks:', style: secondary),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 120),
+                      child: SingleChildScrollView(
+                        child: Text(prompt.text.trim()),
+                      ),
                     ),
-                  ),
-                  TextButton(onPressed: _cancel, child: const Text('Cancel')),
-                  FilledButton(onPressed: _send, child: const Text('Log In')),
-                ],
-              ),
-            ],
+                  ],
+                  SshPassphrasePrompt(:final keyPath) => [
+                    Text(switch (keyPath.split(RegExp(r'[/\\]')).last) {
+                      // ssh cuts a long path short, maybe inside a folder.
+                      '' => 'Passphrase for the key',
+                      final file => 'Passphrase for $file',
+                    }),
+                    Text(
+                      keyPath,
+                      style: secondary.copyWith(fontFamily: fontMono),
+                    ),
+                  ],
+                  SshPasswordPrompt(:final text) => [Text(text.trim())],
+                  // The server's own words, so plain text and never markup.
+                  SshCodePrompt(:final text) => [
+                    Text('The server asks:', style: secondary),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 120),
+                      child: SingleChildScrollView(child: Text(text.trim())),
+                    ),
+                  ],
+                },
+                Row(
+                  spacing: 8,
+                  children: [
+                    Expanded(
+                      child: Input(
+                        controller: _answer,
+                        hint: switch (prompt) {
+                          SshPrompt(isVerified: false) => 'Answer',
+                          SshPassphrasePrompt() => 'Passphrase',
+                          SshPasswordPrompt() => 'Password',
+                          SshCodePrompt() => 'Answer',
+                        },
+                        autofocus: true,
+                        isSecret: true,
+                        onSubmitted: _send,
+                      ),
+                    ),
+                    TextButton(onPressed: _cancel, child: const Text('Cancel')),
+                    FilledButton(onPressed: _send, child: const Text('Log In')),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

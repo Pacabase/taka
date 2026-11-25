@@ -93,14 +93,14 @@ class AgentServer(
 
   void _settle(int id, String? answer) {
     _seen.remove(id);
-    if (_prompts.remove(id) case (prompt: _, answer: final waiting)?) {
-      waiting.complete(answer);
-      _sendPrompts();
-    }
+    final waiting = _prompts.remove(id);
+    if (waiting == null) return;
+    waiting.answer.complete(answer);
+    _sendPrompts();
   }
 
-  void _cancelPrompts() {
-    for (final id in [..._prompts.keys]) {
+  void _cancel(Iterable<int> ids) {
+    for (final id in [...ids]) {
       _settle(id, null);
     }
   }
@@ -108,7 +108,7 @@ class AgentServer(
   void _sendPrompts() => _sendAll(_promptsMessage);
 
   AgentMessage get _promptsMessage => AgentMessage.prompts([
-    for (final (:prompt, answer: _) in _prompts.values) prompt,
+    for (final waiting in _prompts.values) waiting.prompt,
   ]);
 
   void _accept(AgentLink client) {
@@ -134,12 +134,24 @@ class AgentServer(
   }
 
   Future<void> _handle(String line) async {
+    final Object? json;
     final AgentCommand command;
     try {
-      command = AgentCommand.fromJson(jsonDecode(line));
+      json = jsonDecode(line);
     } on FormatException {
-      // Not the line itself, which may hold an answer.
-      _log.w("Ignoring a line that isn't a command");
+      _log.w("Ignoring a line that isn't JSON");
+      return;
+    }
+    // Any parse error, since one left uncaught would end the agent.
+    try {
+      command = AgentCommand.fromJson(json);
+    } on Object {
+      // Only its name: the rest may hold an answer.
+      final name = switch (json) {
+        {'command': final String name} => name,
+        _ => 'nameless',
+      };
+      _log.w("Ignoring a $name command that isn't valid");
       return;
     }
 
@@ -193,9 +205,7 @@ class AgentServer(
     _clients.remove(client);
     client.close();
     if (_clients.isNotEmpty || _isClosed) return;
-    for (final id in [..._seen]) {
-      _settle(id, null);
-    }
+    _cancel(_seen);
     if (_prompts.isNotEmpty) onUnseenPrompts?.call();
   }
 
@@ -205,7 +215,7 @@ class AgentServer(
     await _changes.cancel();
     await _settingsChanges.cancel();
     [..._clients].forEach(_drop);
-    _cancelPrompts();
+    _cancel(_prompts.keys);
     await _listener.close();
   }
 }
