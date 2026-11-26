@@ -40,6 +40,19 @@ sealed class const AgentCommand._() with _$AgentCommand {
 
   const factory showLogs() = ShowLogs;
 
+  /// Answers login prompt [prompt]; a null [answer] cancels the login.
+  const factory answer(int prompt, String? answer) = AnswerPrompt;
+
+  /// The window has [prompts], so closing it gives them up.
+  const factory sawPrompts(List<int> prompts) = SawPrompts;
+
+  // Freezed's would print the answer.
+  @override
+  String toString() => switch (this) {
+    AnswerPrompt(:final prompt) => 'AgentCommand.answer($prompt)',
+    _ => 'AgentCommand.${toJson()['command']}',
+  };
+
   static AgentCommand fromJson(Object? json) => switch (json) {
     {'command': 'save', 'tunnel': final tunnel} => SaveTunnel(
       Tunnel.fromJson(tunnel),
@@ -90,6 +103,15 @@ sealed class const AgentCommand._() with _$AgentCommand {
     ),
     {'command': 'debugLogging', 'on': final bool on} => SetDebugLogging(on: on),
     {'command': 'showLogs'} => const ShowLogs(),
+    {'command': 'answer', 'prompt': final int prompt} &&
+        final Map<Object?, Object?> fields =>
+      AnswerPrompt(prompt, switch (fields['answer']) {
+        final String answer => answer,
+        _ => null,
+      }),
+    {'command': 'sawPrompts', 'prompts': final List<Object?> prompts}
+        when prompts.every((prompt) => prompt is int) =>
+      SawPrompts(prompts.cast<int>()),
     _ => throw FormatException('Not a command: $json'),
   };
 
@@ -125,5 +147,11 @@ sealed class const AgentCommand._() with _$AgentCommand {
     SetLaunchAtLogin(:final on) => {'command': 'launchAtLogin', 'on': on},
     SetDebugLogging(:final on) => {'command': 'debugLogging', 'on': on},
     ShowLogs() => {'command': 'showLogs'},
+    AnswerPrompt(:final prompt, :final answer) => {
+      'command': 'answer',
+      'prompt': prompt,
+      'answer': ?answer,
+    },
+    SawPrompts(:final prompts) => {'command': 'sawPrompts', 'prompts': prompts},
   };
 }

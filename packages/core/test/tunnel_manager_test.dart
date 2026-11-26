@@ -29,6 +29,7 @@ void main() {
     bindAddress: any(named: 'bindAddress'),
     localPort: any(named: 'localPort'),
     onLog: any(named: 'onLog'),
+    onPrompt: any(named: 'onPrompt'),
     abortTrigger: any(named: 'abortTrigger'),
   );
 
@@ -37,6 +38,7 @@ void main() {
     bindAddress: any(named: 'bindAddress'),
     localPort: any(named: 'localPort'),
     onLog: any(named: 'onLog'),
+    onPrompt: any(named: 'onPrompt'),
     abortTrigger: any(named: 'abortTrigger'),
   );
 
@@ -46,6 +48,7 @@ void main() {
     bindAddress: any(named: 'bindAddress'),
     localPort: any(named: 'localPort'),
     onLog: any(named: 'onLog'),
+    onPrompt: any(named: 'onPrompt'),
     abortTrigger: any(named: 'abortTrigger'),
   );
 
@@ -173,6 +176,7 @@ void main() {
             remotePort: any(named: 'remotePort'),
             localPort: 15433,
             onLog: any(named: 'onLog'),
+            onPrompt: any(named: 'onPrompt'),
             abortTrigger: any(named: 'abortTrigger'),
           ),
         ).called(1);
@@ -525,6 +529,7 @@ void main() {
           remotePort: 5432,
           localPort: 15432,
           onLog: any(named: 'onLog'),
+          onPrompt: any(named: 'onPrompt'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
       ).called(1);
@@ -541,6 +546,7 @@ void main() {
           const SshTarget('bastion'),
           localPort: 1080,
           onLog: any(named: 'onLog'),
+          onPrompt: any(named: 'onPrompt'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
       ).called(1);
@@ -559,6 +565,7 @@ void main() {
           remoteSocket: '/var/run/docker.sock',
           localPort: 2375,
           onLog: any(named: 'onLog'),
+          onPrompt: any(named: 'onPrompt'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
       ).called(1);
@@ -585,6 +592,7 @@ void main() {
           bindAddress: '0.0.0.0',
           localPort: any(named: 'localPort'),
           onLog: any(named: 'onLog'),
+          onPrompt: any(named: 'onPrompt'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
       ).called(1);
@@ -595,6 +603,7 @@ void main() {
           bindAddress: '172.17.0.1',
           localPort: any(named: 'localPort'),
           onLog: any(named: 'onLog'),
+          onPrompt: any(named: 'onPrompt'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
       ).called(1);
@@ -620,6 +629,7 @@ void main() {
         localPort: any(named: 'localPort'),
         remotePort: any(named: 'remotePort'),
         onLog: any(named: 'onLog'),
+        onPrompt: any(named: 'onPrompt'),
         abortTrigger: any(named: 'abortTrigger'),
       );
 
@@ -642,6 +652,7 @@ void main() {
             localPort: 3000,
             remotePort: 8080,
             onLog: any(named: 'onLog'),
+            onPrompt: any(named: 'onPrompt'),
             abortTrigger: any(named: 'abortTrigger'),
           ),
         ).called(1);
@@ -660,6 +671,7 @@ void main() {
             localPort: 3000,
             remotePort: 8080,
             onLog: any(named: 'onLog'),
+            onPrompt: any(named: 'onPrompt'),
             abortTrigger: any(named: 'abortTrigger'),
           ),
         ).called(1);
@@ -1186,6 +1198,7 @@ void main() {
             bindAddress: any(named: 'bindAddress'),
             localPort: any(named: 'localPort'),
             onLog: any(named: 'onLog'),
+            onPrompt: any(named: 'onPrompt'),
             abortTrigger: any(named: 'abortTrigger'),
           ),
         ).called(1);
@@ -1251,6 +1264,44 @@ void main() {
 
       expect(manager.state.statusOf('a1'), const Connected());
     });
+  });
+
+  test('asks with the tunnel whose login it is', () async {
+    const password = SshPasswordPrompt("deploy@bastion's password: ");
+    when(openAnyTunnel).thenAnswer((invocation) async {
+      final ask = invocation.namedArguments[#onPrompt]! as SshPromptHandler;
+      expect(await ask(password), 'hunter2');
+      return tunnel;
+    });
+    final asked = <(Tunnel, SshPrompt)>[];
+    final manager = TunnelManager(
+      store: store,
+      client: client,
+      onPrompt: (tunnel, prompt) async {
+        asked.add((tunnel, prompt));
+        return 'hunter2';
+      },
+    );
+    addTearDown(manager.close);
+    await manager.load();
+
+    await manager.toggle('a1');
+
+    expect(asked, [(database, password)]);
+    expect(manager.state.statusOf('a1'), const Connected());
+  });
+
+  test('a cancelled login is off, and toggling tries again', () async {
+    when(openAnyTunnel)
+        .thenAnswer((_) => Future.error(const SshLoginCancelledException()));
+    final manager = await loaded();
+
+    await manager.toggle('a1');
+    expect(manager.state.statusOf('a1'), const Cancelled());
+
+    when(openAnyTunnel).thenAnswer((_) async => tunnel);
+    await manager.toggle('a1');
+    expect(manager.state.statusOf('a1'), const Connected());
   });
 
   test('connectAll opens every tunnel that is off', () async {
@@ -1731,6 +1782,7 @@ void main() {
             bindAddress: address,
             localPort: any(named: 'localPort'),
             onLog: any(named: 'onLog'),
+            onPrompt: any(named: 'onPrompt'),
             abortTrigger: any(named: 'abortTrigger'),
           ),
         ).called(1);
@@ -1758,6 +1810,7 @@ void main() {
           localPort: any(named: 'localPort'),
           remotePort: any(named: 'remotePort'),
           onLog: any(named: 'onLog'),
+          onPrompt: any(named: 'onPrompt'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
       ).thenAnswer((_) async => FakeRemoteTunnel(8080));
@@ -2782,6 +2835,7 @@ void main() {
           bindAddress: any(named: 'bindAddress'),
           localPort: 15433,
           onLog: any(named: 'onLog'),
+          onPrompt: any(named: 'onPrompt'),
           abortTrigger: any(named: 'abortTrigger'),
         ),
       ).called(1);

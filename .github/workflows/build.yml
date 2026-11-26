@@ -176,6 +176,8 @@ jobs:
           release=build/windows/x64/runner/Release
           test -f "$release/taka.exe" && test -f "$release/agent/bin/Taka.exe"
           test -f "$release/vcruntime140.dll" && test -f "$release/agent/bin/vcruntime140.dll"
+          # Without the helper next to its locator, ssh can't ask for a login.
+          test -f "$release/agent/lib/system_ssh_askpass.exe" && test -f "$release/agent/lib/system_ssh_askpass_locator.dll"
           mkdir -p build/package dist
           cp -R "$release" build/package/Taka
           (cd build/package && 7z a -tzip "../../dist/$ZIP" Taka)
@@ -208,6 +210,9 @@ jobs:
           Run "dist\$env:SETUP" '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/DIR=$app"
           if (-not (Test-Path "$app\taka.exe") -or -not (Test-Path "$app\agent\bin\Taka.exe")) {
             throw "The installer didn't install Taka"
+          }
+          if (-not (Test-Path "$app\agent\lib\system_ssh_askpass.exe") -or -not (Test-Path "$app\agent\lib\system_ssh_askpass_locator.dll")) {
+            throw "The installer didn't install the login helper"
           }
           # Running, so the uninstaller has to stop it.
           Start-Process "$app\agent\bin\Taka.exe"

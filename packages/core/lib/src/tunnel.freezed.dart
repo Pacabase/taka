@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Tunnel {
 
- String get id; String get name; TunnelKind get kind; String get sshHost; String? get bindAddress; String? get localHost; int get localPort; String? get remoteHost; int? get remotePort; String? get remoteSocket; String? get group;/// Shown instead of its group's colour, when set.
+ String get id; String get name; TunnelKind get kind; String get sshHost; String? get bindAddress; String? get localHost; int get localPort; String? get remoteHost; int? get remotePort; String? get remoteSocket; String? get group;/// Shown when its group has no colour of its own.
  TunnelColour? get colour;
 /// Create a copy of Tunnel
 /// with the given fields replaced by the non-null parameter values.
@@ -227,7 +227,7 @@ class _Tunnel extends Tunnel {
 @override final  int? remotePort;
 @override final  String? remoteSocket;
 @override final  String? group;
-/// Shown instead of its group's colour, when set.
+/// Shown when its group has no colour of its own.
 @override final  TunnelColour? colour;
 
 /// Create a copy of Tunnel

@@ -31,6 +31,24 @@ void main() {
     );
   });
 
+  test('a cancel is an answer without one', () {
+    expect(const AgentCommand.answer(3, null).toJson(), {
+      'command': 'answer',
+      'prompt': 3,
+    });
+    expect(
+      AgentCommand.fromJson({'command': 'answer', 'prompt': 3, 'answer': 7}),
+      const AgentCommand.answer(3, null),
+    );
+  });
+
+  test('an answer never shows in its description', () {
+    expect(
+      '${const AgentCommand.answer(1, 'hunter2')}',
+      isNot(contains('hunter2')),
+    );
+  });
+
   group('AgentCommand', () {
     for (final command in const [
       AgentCommand.save(database),
@@ -53,8 +71,13 @@ void main() {
       ),
       AgentCommand.exportTunnels('/Users/me/tunnels.json'),
       AgentCommand.quit(),
+      AgentCommand.answer(1, 'hunter2'),
+      AgentCommand.answer(2, ''),
+      AgentCommand.answer(3, null),
+      AgentCommand.sawPrompts([1, 2]),
     ]) {
-      test('$command round-trips', () {
+      // Named by its JSON: its description leaves most of it out.
+      test('${jsonEncode(command.toJson())} round-trips', () {
         expect(
           AgentCommand.fromJson(jsonDecode(jsonEncode(command.toJson()))),
           command,
@@ -70,6 +93,13 @@ void main() {
       {'command': 'debugLogging'},
       {'command': 'import', 'tunnels': 'all'},
       {'command': 'export'},
+      {'command': 'answer', 'prompt': '1', 'answer': 'x'},
+      {'command': 'answer'},
+      {
+        'command': 'sawPrompts',
+        'prompts': [1, '2'],
+      },
+      {'command': 'sawPrompts'},
       {
         'command': 'save',
         'tunnel': {'id': 'a1'},

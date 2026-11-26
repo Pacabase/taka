@@ -6,6 +6,7 @@ import 'package:core/src/agent_channel.dart';
 import 'package:core/src/agent_command.dart';
 import 'package:core/src/agent_message.dart';
 import 'package:core/src/agent_settings.dart';
+import 'package:core/src/login_prompt.dart';
 import 'package:core/src/tunnels_snapshot.dart';
 import 'package:fimber/fimber.dart';
 
@@ -21,6 +22,9 @@ abstract interface class AgentClient {
 
   Stream<AgentSettings> get settings;
 
+  /// Every login prompt waiting for an answer, each time that changes.
+  Stream<List<LoginPrompt>> get prompts;
+
   void send(AgentCommand command);
 
   Future<void> close();
@@ -30,6 +34,7 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
   final _snapshots = StreamController<TunnelsSnapshot>();
   final _tunnelRequests = StreamController<OpenTunnel>();
   final _settings = StreamController<AgentSettings>();
+  final _prompts = StreamController<List<LoginPrompt>>();
   final _identity = Completer<String>();
 
   this {
@@ -44,6 +49,7 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
         unawaited(_snapshots.close());
         unawaited(_tunnelRequests.close());
         unawaited(_settings.close());
+        unawaited(_prompts.close());
       },
     );
   }
@@ -64,6 +70,9 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
   Stream<AgentSettings> get settings => _settings.stream;
 
   @override
+  Stream<List<LoginPrompt>> get prompts => _prompts.stream;
+
+  @override
   void send(AgentCommand command) =>
       _socket.writeln(jsonEncode(command.toJson()));
 
@@ -79,6 +88,8 @@ class SocketAgentClient(final Socket _socket) implements AgentClient {
           _tunnelRequests.add(request);
         case SettingsChanged(:final settings):
           _settings.add(settings);
+        case PromptsChanged(:final prompts):
+          _prompts.add(prompts);
         case AgentSnapshot(:final snapshot):
           // An agent that sends a snapshot first is too old to say.
           _identify('');

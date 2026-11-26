@@ -1,3 +1,6 @@
+export 'package:system_ssh/system_ssh.dart'
+    show SshCodePrompt, SshPassphrasePrompt, SshPasswordPrompt, SshPrompt;
+
 export 'src/agent_channel.dart' hide linesOf;
 export 'src/agent_client.dart';
 export 'src/agent_command.dart';
@@ -7,6 +10,7 @@ export 'src/agent_settings.dart';
 export 'src/failure_reason.dart';
 export 'src/local_tunnel_store.dart';
 export 'src/logging/debug_logging.dart';
+export 'src/login_prompt.dart';
 export 'src/loopback_channel.dart';
 export 'src/pasted_command.dart';
 export 'src/paths.dart';

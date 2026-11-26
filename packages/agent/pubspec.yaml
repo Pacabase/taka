@@ -13,7 +13,7 @@ dependencies:
   fimber: 0.7.0
   nativeapi: 0.5.8
   objective_c: 9.6.3
-  system_ssh: 0.11.0
+  system_ssh: 0.12.0
 
 dev_dependencies:
   ffigen: 23.0.0

@@ -141,6 +141,75 @@ void main() {
     },
   );
 
+  for (final (menu, page) in [
+    ('about', AboutPage),
+    ('settings', SettingsPage),
+  ]) {
+    testWidgets('a login prompt closes $page, for the list it opens in', (
+      tester,
+    ) async {
+      final agent = FakeAgent();
+      await _pumpApp(tester, const Text('Tunnels'), agent: agent);
+      await _menuCall(tester, menu);
+      await tester.pumpAndSettle();
+      expect(find.byType(page), findsOneWidget);
+
+      agent.promptsController.add(const [
+        LoginPrompt(
+          id: 1,
+          tunnelId: 'database',
+          prompt: SshPasswordPrompt("me@bastion's password: "),
+        ),
+      ]);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(page), findsNothing);
+      expect(find.text('Tunnels'), findsOneWidget);
+    });
+  }
+
+  testWidgets('the same prompt again leaves a page opened since', (
+    tester,
+  ) async {
+    final agent = FakeAgent();
+    await _pumpApp(tester, const Text('Tunnels'), agent: agent);
+    const prompt = LoginPrompt(
+      id: 1,
+      tunnelId: 'database',
+      prompt: SshPasswordPrompt("me@bastion's password: "),
+    );
+    agent.promptsController.add(const [prompt]);
+    await tester.pumpAndSettle();
+
+    await _menuCall(tester, 'about');
+    await tester.pumpAndSettle();
+    agent.promptsController.add(const [prompt]);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AboutPage), findsOneWidget);
+  });
+
+  testWidgets('a new prompt closes a page opened during the last one', (
+    tester,
+  ) async {
+    final agent = FakeAgent();
+    await _pumpApp(tester, const Text('Tunnels'), agent: agent);
+    const first = LoginPrompt(
+      id: 1,
+      tunnelId: 'database',
+      prompt: SshPasswordPrompt("me@bastion's password: "),
+    );
+    agent.promptsController.add(const [first]);
+    await tester.pumpAndSettle();
+    await _menuCall(tester, 'about');
+    await tester.pumpAndSettle();
+
+    agent.promptsController.add([first.copyWith(id: 2)]);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AboutPage), findsNothing);
+  });
+
   testWidgets('About opened while it connects stays open once it connects', (
     tester,
   ) async {

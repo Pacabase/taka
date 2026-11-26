@@ -149,6 +149,7 @@ TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
   _shortened(switch (status) {
     Stopped() => tunnel.title,
     Connecting() => '${tunnel.title} — connecting…',
+    Cancelled() => '${tunnel.title} — login cancelled',
     Connected() when tunnel.kind == TunnelKind.remote =>
       '${tunnel.title} — port ${tunnel.remotePort} on the server',
     Connected() => '${tunnel.title} — ${tunnel.address}',

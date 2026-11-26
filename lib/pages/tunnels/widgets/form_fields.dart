@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:taka/theme/app_theme.dart';
 
 class const FieldBox({
@@ -33,6 +36,9 @@ class const Input({
   required final String hint,
   final TextStyle style = const TextStyle(),
   final bool autofocus = false,
+
+  /// Hides what is typed, and offers no suggestions for it.
+  final bool isSecret = false,
   required final void Function() onSubmitted,
 }) extends StatefulWidget {
   @override
@@ -65,6 +71,10 @@ class _InputState extends State<Input> {
         controller: widget.controller,
         focusNode: _focus,
         autofocus: widget.autofocus,
+        obscureText: widget.isSecret,
+        autocorrect: !widget.isSecret,
+        enableSuggestions: !widget.isSecret,
+        inputFormatters: [if (widget.isSecret) const _AnswerLimit()],
         style: widget.style,
         decoration: InputDecoration.collapsed(
           hintText: widget.hint,
@@ -74,4 +84,13 @@ class _InputState extends State<Input> {
       ),
     );
   }
+}
+
+// ssh reads at most 1023 bytes of an answer.
+class const _AnswerLimit() extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) => utf8.encode(newValue.text).length > 1023 ? oldValue : newValue;
 }

@@ -21,6 +21,9 @@ class const TunnelTile({
   required final void Function(String fingerprint) onTrust,
   required final void Function() onEdit,
   required final void Function() onDelete,
+
+  /// What ssh asks while this tunnel logs in, opened under the row.
+  final Widget? prompt,
 }) extends StatefulWidget {
   @override
   State<TunnelTile> createState() => _TunnelTileState();
@@ -62,6 +65,7 @@ class _TunnelTileState extends State<TunnelTile> {
         details: message,
       ),
       Connecting() => _Caption('Connecting…', colors.orange),
+      Cancelled() => _Caption('Login cancelled', colors.textSecondary),
       UnknownHostKey() => null,
       Reconnecting(:final failure, :final message) => _Caption(
         'Reconnecting — ${failureSentence(tunnel, failure)}',
@@ -239,6 +243,7 @@ class _TunnelTileState extends State<TunnelTile> {
                       ],
                     ),
                     ?hostKey,
+                    ?widget.prompt,
                   ],
                 ),
               ),

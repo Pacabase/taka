@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:taka/agent/agent_bloc.dart';
 import 'package:taka/pages/about/about_page.dart';
 import 'package:taka/pages/agent_error_page.dart';
+import 'package:taka/pages/login_prompt/login_prompt_cubit.dart';
 import 'package:taka/pages/settings/settings_bloc.dart';
 import 'package:taka/pages/settings/settings_page.dart';
 import 'package:taka/theme/taka_theme.dart';
@@ -67,12 +68,28 @@ class _TakaAppState extends State<TakaApp> {
           onTap: _unfocus,
           // The agent sends its settings once, so their bloc listens from connect.
           child: switch (link) {
-            AgentConnected(:final agent) => BlocProvider(
-              lazy: false,
-              create: (_) =>
-                  SettingsBloc(agent: agent)
-                    ..add(const SettingsEvent.started()),
-              child: child,
+            AgentConnected(:final agent) => MultiBlocProvider(
+              providers: [
+                BlocProvider(
+                  lazy: false,
+                  create: (_) =>
+                      SettingsBloc(agent: agent)
+                        ..add(const SettingsEvent.started()),
+                ),
+                BlocProvider(create: (_) => LoginPromptCubit(agent: agent)),
+              ],
+              // The prompt opens in the tunnels list, under its tunnel.
+              child: BlocListener<LoginPromptCubit, LoginPromptState>(
+                listenWhen: (previous, state) => switch ((previous, state)) {
+                  (Asking(prompt: final shown), Asking(:final prompt)) =>
+                    shown.id != prompt.id,
+                  (_, Asking()) => true,
+                  _ => false,
+                },
+                listener: (_, _) =>
+                    _navigator.currentState?.popUntil((route) => route.isFirst),
+                child: child!,
+              ),
             ),
             _ => child,
           },

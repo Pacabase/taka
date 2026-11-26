@@ -32,6 +32,7 @@ void main() {
     bindAddress: any(named: 'bindAddress'),
     localPort: any(named: 'localPort'),
     onLog: any(named: 'onLog'),
+    onPrompt: any(named: 'onPrompt'),
     abortTrigger: any(named: 'abortTrigger'),
   );
 
@@ -47,12 +48,14 @@ void main() {
     bool isRestored = false,
     FutureOr<bool> Function()? locked,
     Future<HandBack> Function()? comeForward,
+    LoginPrompter? onPrompt,
     DateTime Function()? clock,
   }) {
     final session = TunnelSession(
       tunnel: database,
       client: client,
       comeForward: comeForward,
+      onPrompt: onPrompt,
       isLocked: locked == null ? null : () async => locked(),
       checkDestination: null,
       warningLifetime: const Duration(seconds: 30),
@@ -104,6 +107,176 @@ void main() {
       );
       verify(openAnyTunnel).called(1);
     });
+  });
+
+  test('passes each prompt on', () async {
+    const passphrase = SshPassphrasePrompt(
+      "Enter passphrase for key '/k': ",
+      keyPath: '/k',
+    );
+    final opened = Completer<SshTunnel>();
+    String? answered;
+    when(openAnyTunnel).thenAnswer((invocation) async {
+      final ask = invocation.namedArguments[#onPrompt]! as SshPromptHandler;
+      answered = await ask(passphrase);
+      return opened.future;
+    });
+    final asked = <SshPrompt>[];
+    final up = session(
+      onPrompt: (prompt) async {
+        asked.add(prompt);
+        return 'hunter2';
+      },
+    );
+
+    final connecting = up.connect();
+    await pumpEventQueue();
+    expect(asked, [passphrase]);
+    expect(answered, 'hunter2');
+
+    opened.complete(FakeTunnel(15432));
+    await connecting;
+    expect(up.state.phase, isA<Up>());
+  });
+
+  test('without a prompter, ssh is asked to prompt for nothing', () async {
+    Object? onPrompt = 'not passed';
+    when(openAnyTunnel).thenAnswer((invocation) async {
+      onPrompt = invocation.namedArguments[#onPrompt];
+      return FakeTunnel(15432);
+    });
+
+    await session().connect();
+
+    expect(onPrompt, isNull);
+  });
+
+  test('a cancelled login stops, neither failed nor retried', () {
+    fakeAsync((time) {
+      when(openAnyTunnel)
+          .thenAnswer((_) => Future.error(const SshLoginCancelledException()));
+      final cancelled = session(isRestored: true);
+
+      unawaited(cancelled.connect());
+      time
+        ..flushMicrotasks()
+        ..elapse(const Duration(minutes: 1));
+
+      expect(cancelled.status, const Cancelled());
+      expect(cancelled.status.isOn, isFalse);
+      verify(openAnyTunnel).called(1);
+    });
+  });
+
+  test('a login cancelled while it reconnects stops, with no more tries', () {
+    fakeAsync((time) {
+      final tunnel = FakeTunnel(15432);
+      var attempt = 0;
+      when(openAnyTunnel).thenAnswer((_) async {
+        if (++attempt == 1) return tunnel;
+        throw const SshLoginCancelledException();
+      });
+      final up = session();
+      unawaited(up.connect());
+      time.flushMicrotasks();
+
+      tunnel.dropWith(dropped);
+      time
+        ..flushMicrotasks()
+        ..elapse(retryDelays.first)
+        ..elapse(const Duration(minutes: 1));
+
+      expect(up.status, const Cancelled());
+      expect(attempt, 2);
+    });
+  });
+
+  test('stopping during a prompt stops, not cancels', () {
+    fakeAsync((time) {
+      when(openAnyTunnel).thenAnswer((invocation) {
+        final ask = invocation.namedArguments[#onPrompt]! as SshPromptHandler;
+        final abort = invocation.namedArguments[#abortTrigger]! as Future<void>;
+        unawaited(ask(const SshPasswordPrompt("me@bastion's password: ")));
+        return abort.then((_) => throw const SshTunnelAbortedException());
+      });
+      final asking = session(onPrompt: (prompt) => Completer<String?>().future);
+      unawaited(asking.connect());
+      time.flushMicrotasks();
+
+      unawaited(asking.stop());
+      time.flushMicrotasks();
+
+      // An ended session keeps the status it had, not a cancel's.
+      expect(asking.state.phase, isA<Ended>());
+      expect(asking.status, const Connecting());
+    });
+  });
+
+  test('a login it could not ask for says so, not that it was refused', () {
+    fakeAsync((time) {
+      const why = "system_ssh_askpass.exe isn't with the app, so ssh can't ask";
+      const refused = SshLoginRefusedException(
+        'Permission denied (publickey). (not asking for passwords: $why)',
+      );
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        (invocation.namedArguments[#onLog]! as void Function(SshLog log))(
+          const SshPromptsOff(why),
+        );
+        throw refused;
+      });
+      final failing = session(onPrompt: (prompt) async => null);
+
+      unawaited(failing.connect());
+      time.flushMicrotasks();
+
+      expect(
+        failing.status,
+        Failed(refused.message, failure: TunnelFailure.promptsOff),
+      );
+    });
+  });
+
+  test('a refusal after an attempt that could not ask is plainly refused', () {
+    fakeAsync((time) {
+      const refused = SshLoginRefusedException(
+        'Permission denied (publickey).',
+      );
+      final tunnel = FakeTunnel(15432);
+      var attempt = 0;
+      when(openAnyTunnel).thenAnswer((invocation) async {
+        if (++attempt == 1) {
+          (invocation.namedArguments[#onLog]! as void Function(SshLog log))(
+            const SshPromptsOff('no helper'),
+          );
+          return tunnel;
+        }
+        throw refused;
+      });
+      final up = session(onPrompt: (prompt) async => null);
+      unawaited(up.connect());
+      time.flushMicrotasks();
+
+      tunnel.dropWith(dropped);
+      time
+        ..flushMicrotasks()
+        ..elapse(retryDelays.first);
+
+      expect(
+        up.status,
+        Failed(refused.message, failure: TunnelFailure.loginRefused),
+      );
+    });
+  });
+
+  test('a config error is a config error', () async {
+    const message = 'ClearAllForwardings drops the tunnel';
+    when(openAnyTunnel)
+        .thenAnswer((_) => Future.error(const SshConfigException(message)));
+    final config = session();
+
+    await config.connect();
+
+    expect(config.status, const Failed(message, failure: TunnelFailure.config));
   });
 
   test('a restored tunnel retries its first try, counting the attempt', () {

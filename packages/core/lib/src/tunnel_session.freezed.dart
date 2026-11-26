@@ -56,7 +56,7 @@ extension PhasePatterns on Phase {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Opening value)?  opening,TResult Function( Redialing value)?  redialing,TResult Function( Up value)?  up,TResult Function( Waiting value)?  waiting,TResult Function( AwaitingTrust value)?  awaitingTrust,TResult Function( Trusting value)?  trusting,TResult Function( GaveUp value)?  gaveUp,TResult Function( Ended value)?  ended,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( Opening value)?  opening,TResult Function( Redialing value)?  redialing,TResult Function( Up value)?  up,TResult Function( Waiting value)?  waiting,TResult Function( AwaitingTrust value)?  awaitingTrust,TResult Function( Trusting value)?  trusting,TResult Function( GaveUp value)?  gaveUp,TResult Function( CancelledLogin value)?  cancelledLogin,TResult Function( Ended value)?  ended,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case Opening() when opening != null:
@@ -66,7 +66,8 @@ return up(_that);case Waiting() when waiting != null:
 return waiting(_that);case AwaitingTrust() when awaitingTrust != null:
 return awaitingTrust(_that);case Trusting() when trusting != null:
 return trusting(_that);case GaveUp() when gaveUp != null:
-return gaveUp(_that);case Ended() when ended != null:
+return gaveUp(_that);case CancelledLogin() when cancelledLogin != null:
+return cancelledLogin(_that);case Ended() when ended != null:
 return ended(_that);case _:
   return orElse();
 
@@ -85,7 +86,7 @@ return ended(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Opening value)  opening,required TResult Function( Redialing value)  redialing,required TResult Function( Up value)  up,required TResult Function( Waiting value)  waiting,required TResult Function( AwaitingTrust value)  awaitingTrust,required TResult Function( Trusting value)  trusting,required TResult Function( GaveUp value)  gaveUp,required TResult Function( Ended value)  ended,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( Opening value)  opening,required TResult Function( Redialing value)  redialing,required TResult Function( Up value)  up,required TResult Function( Waiting value)  waiting,required TResult Function( AwaitingTrust value)  awaitingTrust,required TResult Function( Trusting value)  trusting,required TResult Function( GaveUp value)  gaveUp,required TResult Function( CancelledLogin value)  cancelledLogin,required TResult Function( Ended value)  ended,}){
 final _that = this;
 switch (_that) {
 case Opening():
@@ -95,7 +96,8 @@ return up(_that);case Waiting():
 return waiting(_that);case AwaitingTrust():
 return awaitingTrust(_that);case Trusting():
 return trusting(_that);case GaveUp():
-return gaveUp(_that);case Ended():
+return gaveUp(_that);case CancelledLogin():
+return cancelledLogin(_that);case Ended():
 return ended(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
@@ -110,7 +112,7 @@ return ended(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Opening value)?  opening,TResult? Function( Redialing value)?  redialing,TResult? Function( Up value)?  up,TResult? Function( Waiting value)?  waiting,TResult? Function( AwaitingTrust value)?  awaitingTrust,TResult? Function( Trusting value)?  trusting,TResult? Function( GaveUp value)?  gaveUp,TResult? Function( Ended value)?  ended,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( Opening value)?  opening,TResult? Function( Redialing value)?  redialing,TResult? Function( Up value)?  up,TResult? Function( Waiting value)?  waiting,TResult? Function( AwaitingTrust value)?  awaitingTrust,TResult? Function( Trusting value)?  trusting,TResult? Function( GaveUp value)?  gaveUp,TResult? Function( CancelledLogin value)?  cancelledLogin,TResult? Function( Ended value)?  ended,}){
 final _that = this;
 switch (_that) {
 case Opening() when opening != null:
@@ -120,7 +122,8 @@ return up(_that);case Waiting() when waiting != null:
 return waiting(_that);case AwaitingTrust() when awaitingTrust != null:
 return awaitingTrust(_that);case Trusting() when trusting != null:
 return trusting(_that);case GaveUp() when gaveUp != null:
-return gaveUp(_that);case Ended() when ended != null:
+return gaveUp(_that);case CancelledLogin() when cancelledLogin != null:
+return cancelledLogin(_that);case Ended() when ended != null:
 return ended(_that);case _:
   return null;
 
@@ -138,7 +141,7 @@ return ended(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  opening,TResult Function( Reconnecting reconnecting)?  redialing,TResult Function( String warning,  bool isVerifying)?  up,TResult Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult Function( SshHostKey key)?  awaitingTrust,TResult Function()?  trusting,TResult Function( Failed failed)?  gaveUp,TResult Function( TunnelStatus last)?  ended,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function()?  opening,TResult Function( Reconnecting reconnecting)?  redialing,TResult Function( String warning,  bool isVerifying)?  up,TResult Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult Function( SshHostKey key)?  awaitingTrust,TResult Function()?  trusting,TResult Function( Failed failed)?  gaveUp,TResult Function()?  cancelledLogin,TResult Function( TunnelStatus last)?  ended,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case Opening() when opening != null:
 return opening();case Redialing() when redialing != null:
@@ -147,7 +150,8 @@ return up(_that.warning,_that.isVerifying);case Waiting() when waiting != null:
 return waiting(_that.reconnecting,_that.forUnlock);case AwaitingTrust() when awaitingTrust != null:
 return awaitingTrust(_that.key);case Trusting() when trusting != null:
 return trusting();case GaveUp() when gaveUp != null:
-return gaveUp(_that.failed);case Ended() when ended != null:
+return gaveUp(_that.failed);case CancelledLogin() when cancelledLogin != null:
+return cancelledLogin();case Ended() when ended != null:
 return ended(_that.last);case _:
   return orElse();
 
@@ -166,7 +170,7 @@ return ended(_that.last);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  opening,required TResult Function( Reconnecting reconnecting)  redialing,required TResult Function( String warning,  bool isVerifying)  up,required TResult Function( Reconnecting reconnecting,  bool forUnlock)  waiting,required TResult Function( SshHostKey key)  awaitingTrust,required TResult Function()  trusting,required TResult Function( Failed failed)  gaveUp,required TResult Function( TunnelStatus last)  ended,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function()  opening,required TResult Function( Reconnecting reconnecting)  redialing,required TResult Function( String warning,  bool isVerifying)  up,required TResult Function( Reconnecting reconnecting,  bool forUnlock)  waiting,required TResult Function( SshHostKey key)  awaitingTrust,required TResult Function()  trusting,required TResult Function( Failed failed)  gaveUp,required TResult Function()  cancelledLogin,required TResult Function( TunnelStatus last)  ended,}) {final _that = this;
 switch (_that) {
 case Opening():
 return opening();case Redialing():
@@ -175,7 +179,8 @@ return up(_that.warning,_that.isVerifying);case Waiting():
 return waiting(_that.reconnecting,_that.forUnlock);case AwaitingTrust():
 return awaitingTrust(_that.key);case Trusting():
 return trusting();case GaveUp():
-return gaveUp(_that.failed);case Ended():
+return gaveUp(_that.failed);case CancelledLogin():
+return cancelledLogin();case Ended():
 return ended(_that.last);}
 }
 /// A variant of `when` that fallback to returning `null`
@@ -190,7 +195,7 @@ return ended(_that.last);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  opening,TResult? Function( Reconnecting reconnecting)?  redialing,TResult? Function( String warning,  bool isVerifying)?  up,TResult? Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult? Function( SshHostKey key)?  awaitingTrust,TResult? Function()?  trusting,TResult? Function( Failed failed)?  gaveUp,TResult? Function( TunnelStatus last)?  ended,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function()?  opening,TResult? Function( Reconnecting reconnecting)?  redialing,TResult? Function( String warning,  bool isVerifying)?  up,TResult? Function( Reconnecting reconnecting,  bool forUnlock)?  waiting,TResult? Function( SshHostKey key)?  awaitingTrust,TResult? Function()?  trusting,TResult? Function( Failed failed)?  gaveUp,TResult? Function()?  cancelledLogin,TResult? Function( TunnelStatus last)?  ended,}) {final _that = this;
 switch (_that) {
 case Opening() when opening != null:
 return opening();case Redialing() when redialing != null:
@@ -199,7 +204,8 @@ return up(_that.warning,_that.isVerifying);case Waiting() when waiting != null:
 return waiting(_that.reconnecting,_that.forUnlock);case AwaitingTrust() when awaitingTrust != null:
 return awaitingTrust(_that.key);case Trusting() when trusting != null:
 return trusting();case GaveUp() when gaveUp != null:
-return gaveUp(_that.failed);case Ended() when ended != null:
+return gaveUp(_that.failed);case CancelledLogin() when cancelledLogin != null:
+return cancelledLogin();case Ended() when ended != null:
 return ended(_that.last);case _:
   return null;
 
@@ -615,6 +621,38 @@ as Failed,
 
 
 }
+
+/// @nodoc
+
+
+class CancelledLogin extends Phase {
+  const CancelledLogin(): super._();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is CancelledLogin);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'Phase.cancelledLogin()';
+}
+
+
+}
+
+
+
 
 /// @nodoc
 

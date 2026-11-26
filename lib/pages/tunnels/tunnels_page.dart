@@ -5,6 +5,8 @@ import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:taka/pages/login_prompt/login_prompt_cubit.dart';
+import 'package:taka/pages/login_prompt/login_prompt_form.dart';
 import 'package:taka/pages/tunnels/tunnels_bloc.dart';
 import 'package:taka/pages/tunnels/tunnels_screen_cubit.dart';
 import 'package:taka/pages/tunnels/widgets/group_form.dart';
@@ -56,73 +58,76 @@ class const _TunnelsView() extends StatelessWidget {
               Navigator.popUntil(context, (route) => route.isFirst),
         ),
       ],
-      child: Scaffold(
-        body: Column(
-          children: [
-            TunnelsHeader(
-              title: switch (screen) {
-                ListScreen() => 'Tunnels',
-                NewTunnelScreen() => 'New tunnel',
-                EditTunnelScreen() => 'Edit tunnel',
-                EditGroupScreen() => 'Edit group',
-              },
-              isFormOpen: isOpen,
-              onPressed: isOpen ? screens.closeForm : screens.openTunnel,
-              onSettings: () =>
-                  Navigator.pushNamed(context, TakaApp.settingsRoute),
-            ),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween(
-                      begin: const Offset(0, -0.01),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
-                  ),
-                ),
-                child: switch (screen) {
-                  ListScreen() => _TunnelList(
-                    key: const ValueKey('list'),
-                    onEdit: screens.openTunnel,
-                    onEditGroup: screens.editGroup,
-                    onAdd: (kind) => screens.openTunnel(null, kind),
-                  ),
-                  NewTunnelScreen(:final kind) => _TunnelFormScreen(
-                    key: ValueKey('new ${kind.name}'),
-                    kind: kind,
-                    hosts: hosts,
-                  ),
-                  EditTunnelScreen(:final tunnel) => _TunnelFormScreen(
-                    key: ValueKey(tunnel.id),
-                    initial: tunnel,
-                    hosts: hosts,
-                  ),
-                  EditGroupScreen(:final group, :final colour) => GroupForm(
-                    key: ValueKey('group $group'),
-                    group: group,
-                    colour: colour,
-                    onSave: (name, colour) {
-                      context.read<TunnelsBloc>().add(
-                        TunnelsEvent.send(
-                          AgentCommand.editGroup(
-                            group,
-                            name: name,
-                            colour: colour,
-                          ),
-                        ),
-                      );
-                      screens.closeForm();
-                    },
-                    onCancel: screens.closeForm,
-                  ),
+      child: _PromptAnswer(
+        child: Scaffold(
+          body: Column(
+            children: [
+              TunnelsHeader(
+                title: switch (screen) {
+                  ListScreen() => 'Tunnels',
+                  NewTunnelScreen() => 'New tunnel',
+                  EditTunnelScreen() => 'Edit tunnel',
+                  EditGroupScreen() => 'Edit group',
                 },
+                isFormOpen: isOpen,
+                onPressed: isOpen ? screens.closeForm : screens.openTunnel,
+                onSettings: () =>
+                    Navigator.pushNamed(context, TakaApp.settingsRoute),
               ),
-            ),
-          ],
+              _PromptStrip(isListShown: !isOpen),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween(
+                        begin: const Offset(0, -0.01),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: switch (screen) {
+                    ListScreen() => _TunnelList(
+                      key: const ValueKey('list'),
+                      onEdit: screens.openTunnel,
+                      onEditGroup: screens.editGroup,
+                      onAdd: (kind) => screens.openTunnel(null, kind),
+                    ),
+                    NewTunnelScreen(:final kind) => _TunnelFormScreen(
+                      key: ValueKey('new ${kind.name}'),
+                      kind: kind,
+                      hosts: hosts,
+                    ),
+                    EditTunnelScreen(:final tunnel) => _TunnelFormScreen(
+                      key: ValueKey(tunnel.id),
+                      initial: tunnel,
+                      hosts: hosts,
+                    ),
+                    EditGroupScreen(:final group, :final colour) => GroupForm(
+                      key: ValueKey('group $group'),
+                      group: group,
+                      colour: colour,
+                      onSave: (name, colour) {
+                        context.read<TunnelsBloc>().add(
+                          TunnelsEvent.send(
+                            AgentCommand.editGroup(
+                              group,
+                              name: name,
+                              colour: colour,
+                            ),
+                          ),
+                        );
+                        screens.closeForm();
+                      },
+                      onCancel: screens.closeForm,
+                    ),
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -231,6 +236,7 @@ class const _TunnelRows({
   Widget build(BuildContext context) {
     final colors = context.theme;
     final rows = snapshot.tunnels.rows;
+    final prompt = context.watch<LoginPromptCubit>().state;
 
     return ReorderableRows(
       spanOf: (index) => rows[index].span,
@@ -294,6 +300,19 @@ class const _TunnelRows({
                       onEdit: () => onEdit(tunnel),
                       onDelete: () =>
                           _send(context, AgentCommand.remove(tunnel.id)),
+                      prompt: switch (prompt) {
+                        Asking(:final prompt)
+                            when prompt.tunnelId == tunnel.id =>
+                          LoginPromptForm(
+                            key: ValueKey(prompt.id),
+                            prompt: prompt,
+                            answer: context.read<_AnswerText>().controller,
+                            onAnswer: (answer) => context
+                                .read<LoginPromptCubit>()
+                                .answer(prompt.id, answer),
+                          ),
+                        _ => null,
+                      },
                     ),
                     if (rows.elementAtOrNull(index + 1)
                         case TunnelRow(tunnel: Tunnel(group: final next))
@@ -316,6 +335,75 @@ class const _TunnelRows({
     );
   }
 }
+
+/// The login prompt, under the header, while its tunnel's row isn't in the
+/// list on screen: a form is open, or the tunnel is gone.
+class const _PromptStrip({required final bool isListShown})
+    extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final tunnels = switch (context.watch<TunnelsBloc>().state) {
+      Ready(:final snapshot) => snapshot.tunnels,
+      _ => const <Tunnel>[],
+    };
+    final LoginPromptState state = context.watch<LoginPromptCubit>().state;
+    if (state case Asking(:final prompt)) {
+      final tunnel = tunnels
+          .where((tunnel) => tunnel.id == prompt.tunnelId)
+          .firstOrNull;
+      if (tunnel != null && isListShown) return const SizedBox.shrink();
+
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: context.theme.selection)),
+        ),
+        child: LoginPromptForm(
+          key: ValueKey(prompt.id),
+          prompt: prompt,
+          answer: context.read<_AnswerText>().controller,
+          tunnel: tunnel?.title ?? 'a tunnel',
+          onAnswer: (answer) =>
+              context.read<LoginPromptCubit>().answer(prompt.id, answer),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+}
+
+/// The answer being typed, which the prompt's row and [_PromptStrip] share,
+/// so it survives a form opening or closing; a new prompt starts empty.
+class const _PromptAnswer({required final Widget child})
+    extends StatefulWidget {
+  @override
+  State<_PromptAnswer> createState() => _PromptAnswerState();
+}
+
+class _PromptAnswerState extends State<_PromptAnswer> {
+  final _text = _AnswerText(TextEditingController());
+
+  @override
+  void dispose() {
+    _text.controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      BlocListener<LoginPromptCubit, LoginPromptState>(
+        listenWhen: (previous, state) => switch ((previous, state)) {
+          (Asking(prompt: final shown), Asking(:final prompt)) =>
+            shown.id != prompt.id,
+          _ => true,
+        },
+        listener: (_, _) => _text.controller.clear(),
+        child: RepositoryProvider.value(value: _text, child: widget.child),
+      );
+}
+
+class const _AnswerText(final TextEditingController controller);
 
 void _send(BuildContext context, AgentCommand command) =>
     context.read<TunnelsBloc>().add(TunnelsEvent.send(command));

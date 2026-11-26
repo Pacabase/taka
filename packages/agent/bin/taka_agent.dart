@@ -31,9 +31,16 @@ Future<void> _start() async {
   final identity = agentIdentity(Platform.resolvedExecutable);
   Fimber.i('Agent $identity on ${Platform.operatingSystemVersion}');
 
+  late final AgentServer server;
   final manager = TunnelManager(
     store: LocalTunnelStore.inTakaDirectory(),
     client: const SystemSshClient(loginShell: true, shareConnections: true),
+    // Opening the app again brings its window forward for the prompt.
+    onPrompt: (tunnel, prompt) {
+      final answer = server.ask(tunnel, prompt);
+      unawaited(_open(app));
+      return answer;
+    },
     comeForward: agentBundle == null || !Platform.isMacOS
         ? null
         : Foreground(
@@ -75,13 +82,13 @@ Future<void> _start() async {
             takaBuild.name,
           ),
   );
-  final AgentServer server;
   try {
     final bound = await AgentServer.bind(
       AgentChannel.at(agentSocketPath()),
       manager,
       preferences,
       identity: identity,
+      onUnseenPrompts: () => unawaited(_open(app)),
     );
     if (bound == null) {
       Fimber.i('Another Taka agent is running');

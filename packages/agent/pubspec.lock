@@ -444,10 +444,10 @@ packages:
     dependency: "direct main"
     description:
       name: system_ssh
-      sha256: "886b0ddd8a052cf8ffec3447d0159c4450b3f76828eaeac0d1e782f678341843"
+      sha256: "98d089d46cf229baa4b796fde65da6b6b6e4007d4ff908c16f4af485a3de7f85"
       url: "https://pub.dev"
     source: hosted
-    version: "0.11.0"
+    version: "0.12.0"
   term_glyph:
     dependency: transitive
     description:

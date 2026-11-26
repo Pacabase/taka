@@ -12,6 +12,7 @@ String failureShort(Tunnel tunnel, Failed failed) => switch (failed.failure) {
   TunnelFailure.hostNotFound => 'server not found',
   TunnelFailure.unreachable => "can't reach the server",
   TunnelFailure.loginRefused => 'login refused',
+  TunnelFailure.promptsOff => "login refused, can't ask",
   TunnelFailure.hostKey => 'host key changed',
   TunnelFailure.dropped => 'disconnected',
   TunnelFailure.remotePortRefused =>
@@ -38,6 +39,9 @@ String failureSentence(Tunnel tunnel, TunnelFailure failure) =>
       TunnelFailure.hostNotFound => "Can't find the server.",
       TunnelFailure.unreachable => "Can't reach the server.",
       TunnelFailure.loginRefused => 'The server refused the login.',
+      TunnelFailure.promptsOff =>
+        "The server refused the login, and Taka can't ask for a password "
+            'on this computer.',
       TunnelFailure.hostKey => "The server's host key changed.",
       TunnelFailure.dropped => 'The connection dropped.',
       TunnelFailure.remotePortRefused =>
