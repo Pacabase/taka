@@ -12,15 +12,16 @@ void main() {
   const database = Tunnel(
     id: 'a1',
     sshHost: 'bastion',
-    localPort: 15432,
-    remoteHost: 'db.internal',
-    remotePort: 5432,
+    forward: LocalForward(
+      localPort: 15432,
+      remoteHost: 'db.internal',
+      remotePort: 5432,
+    ),
   );
   const proxy = Tunnel(
     id: 'b2',
-    kind: TunnelKind.socks,
     sshHost: 'bastion',
-    localPort: 1080,
+    forward: SocksProxy(localPort: 1080),
   );
   const connected = TunnelsSnapshot(
     tunnels: [database],

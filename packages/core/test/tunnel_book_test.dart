@@ -244,7 +244,9 @@ void main() {
       expect(
         const TunnelBook(tunnels: [database])
             .imported(
-              TunnelBook(tunnels: [other, other.copyWith(localPort: 1081)]),
+              TunnelBook(
+                tunnels: [other, other.copyWith.forward(localPort: 1081)],
+              ),
             )
             .tunnels
             .map((tunnel) => tunnel.id),

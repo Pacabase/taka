@@ -84,7 +84,11 @@ void main() {
         final mine = StreamQueue(agent.snapshots);
         final theirs = await listen();
         await (mine.next, theirs.next).wait;
-        const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
+        const added = Tunnel(
+          id: 'c3',
+          sshHost: 'web',
+          forward: SocksProxy(localPort: 8080),
+        );
 
         agent.send(const AgentCommand.save(added));
 
@@ -97,7 +101,11 @@ void main() {
         final agent = await connect();
         final snapshots = StreamQueue(agent.snapshots);
         await snapshots.next;
-        const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
+        const added = Tunnel(
+          id: 'c3',
+          sshHost: 'web',
+          forward: SocksProxy(localPort: 8080),
+        );
 
         agent
           ..send(const AgentCommand.save(added))

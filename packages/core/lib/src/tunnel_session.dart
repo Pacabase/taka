@@ -191,7 +191,7 @@ class TunnelSession({
 
       // Not on reconnects or at login: each check hits the service for real.
       final checks =
-          tunnel.kind == TunnelKind.local &&
+          (tunnel.forward is LocalForward || tunnel.forward is SocketForward) &&
           !isRestored &&
           !state.hasConnected &&
           checkDestination != null;
@@ -431,7 +431,11 @@ class TunnelSession({
 
   Future<void> _checkDestination() async {
     try {
-      await checkDestination!(tunnel.reachableAt, tunnel.localPort);
+      if (tunnel.forward
+          case LocalForward(:final bindAddress, :final localPort) ||
+              SocketForward(:final bindAddress, :final localPort)) {
+        await checkDestination!(reachableAt(bindAddress), localPort);
+      }
     } on Object catch (exception) {
       _log.w('${tunnel.title}: could not check where it leads ($exception)');
     }
@@ -500,54 +504,58 @@ class TunnelSession({
       }
     }
 
-    final bindAddress = tunnel.listenAddress;
     final SshTunnel opened;
-    switch (tunnel) {
-      case Tunnel(kind: TunnelKind.socks):
+    switch (tunnel.forward) {
+      case SocksProxy(:final bindAddress, :final localPort):
         opened = await client.openSocksProxy(
           tunnel.target,
           bindAddress: bindAddress,
-          localPort: tunnel.localPort,
+          localPort: localPort,
           onLog: onLog,
           onPrompt: onPrompt,
           abortTrigger: abortTrigger,
         );
-      case Tunnel(kind: TunnelKind.remote, :final remotePort?):
+      case RemoteForward(:final remotePort, :final localHost, :final localPort):
         final remote = await client.openRemoteTunnel(
           tunnel.target,
-          localHost: tunnel.localHost ?? 'localhost',
-          localPort: tunnel.localPort,
+          localHost: localHost ?? 'localhost',
+          localPort: localPort,
           remotePort: remotePort,
           onLog: onLog,
           onPrompt: onPrompt,
           abortTrigger: abortTrigger,
         );
         return (done: remote.done, close: remote.close);
-      case Tunnel(kind: TunnelKind.remote):
-        throw ArgumentError('A remote tunnel needs a port on the SSH host');
-      case Tunnel(:final remoteSocket?):
+      case SocketForward(
+        :final bindAddress,
+        :final localPort,
+        :final remoteSocket,
+      ):
         opened = await client.openSocketTunnel(
           tunnel.target,
           remoteSocket: remoteSocket,
           bindAddress: bindAddress,
-          localPort: tunnel.localPort,
+          localPort: localPort,
           onLog: onLog,
           onPrompt: onPrompt,
           abortTrigger: abortTrigger,
         );
-      case Tunnel(:final remoteHost?, :final remotePort?):
+      case LocalForward(
+        :final bindAddress,
+        :final localPort,
+        :final remoteHost,
+        :final remotePort,
+      ):
         opened = await client.openTunnel(
           tunnel.target,
           remoteHost: remoteHost,
           remotePort: remotePort,
           bindAddress: bindAddress,
-          localPort: tunnel.localPort,
+          localPort: localPort,
           onLog: onLog,
           onPrompt: onPrompt,
           abortTrigger: abortTrigger,
         );
-      case _:
-        throw ArgumentError('A local tunnel needs a remote host and port');
     }
     return (done: opened.done, close: opened.close);
   }

@@ -14,9 +14,11 @@ void main() {
   const database = Tunnel(
     id: 'a1',
     sshHost: 'bastion',
-    localPort: 15432,
-    remoteHost: 'db.internal',
-    remotePort: 5432,
+    forward: LocalForward(
+      localPort: 15432,
+      remoteHost: 'db.internal',
+      remotePort: 5432,
+    ),
     group: 'Work',
   );
   late FakeAgent agent;

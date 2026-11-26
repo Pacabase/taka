@@ -81,12 +81,7 @@ class _TunnelFormState extends State<TunnelForm> {
   };
 
   // sshCommand is null for a tunnel system_ssh would refuse to open.
-  bool get _isValid =>
-      _port(_fromPort.text) != null &&
-      _sshHost.text.trim().isNotEmpty &&
-      (!_isLocal || _toHost.text.trim().isNotEmpty) &&
-      (_kind == TunnelKind.socks || _isSocket || _port(_toPort.text) != null) &&
-      _tunnel.sshCommand != null;
+  bool get _isValid => _tunnel?.sshCommand != null;
 
   @override
   void initState() {
@@ -332,21 +327,36 @@ class _TunnelFormState extends State<TunnelForm> {
   }
 
   void _show(Tunnel tunnel) {
-    final (fromPort, toHost, toPort) = switch (tunnel.kind) {
-      TunnelKind.remote => (
-        tunnel.remotePort,
-        tunnel.localHost,
-        tunnel.localPort,
+    final (fromHost, fromPort, toHost, toPort) = switch (tunnel.forward) {
+      LocalForward(
+        :final bindAddress,
+        :final localPort,
+        :final remoteHost,
+        :final remotePort,
+      ) =>
+        (bindAddress, localPort, remoteHost, remotePort),
+      SocketForward(
+        :final bindAddress,
+        :final localPort,
+        :final remoteSocket,
+      ) =>
+        (bindAddress, localPort, remoteSocket, null),
+      SocksProxy(:final bindAddress, :final localPort) => (
+        bindAddress,
+        localPort,
+        null,
+        null,
       ),
-      TunnelKind.local || TunnelKind.socks => (
-        tunnel.localPort,
-        tunnel.remoteSocket ?? tunnel.remoteHost,
-        tunnel.remotePort,
+      RemoteForward(:final remotePort, :final localHost, :final localPort) => (
+        null,
+        remotePort,
+        localHost,
+        localPort,
       ),
     };
     for (final (field, value) in [
-      (_fromHost, tunnel.bindAddress ?? ''),
-      (_fromPort, '${fromPort ?? ''}'),
+      (_fromHost, bindAddressNamed(fromHost) ?? ''),
+      (_fromPort, '$fromPort'),
       (_sshHost, tunnel.sshHost),
       (_toHost, toHost ?? ''),
       (_toPort, '${toPort ?? ''}'),
@@ -364,29 +374,57 @@ class _TunnelFormState extends State<TunnelForm> {
   };
 
   void _save() {
-    if (_isValid) widget.onSave(_tunnel);
+    if (_tunnel case final tunnel? when tunnel.sshCommand != null) {
+      widget.onSave(tunnel);
+    }
   }
 
-  Tunnel get _tunnel => Tunnel(
-    id: widget.initial?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
-    name: _name.text.trim(),
-    kind: _kind,
-    sshHost: _sshHost.text.trim(),
-    bindAddress: _isRemote ? null : _bindAddress,
-    localHost: _isRemote && _toHost.text.trim().isNotEmpty
-        ? _toHost.text.trim()
-        : null,
-    localPort: _port((_isRemote ? _toPort : _fromPort).text)!,
-    remoteHost: _isLocal && !_isSocket ? _toHost.text.trim() : null,
-    remotePort: switch (_kind) {
-      TunnelKind.local => _isSocket ? null : _port(_toPort.text),
-      TunnelKind.socks => null,
-      TunnelKind.remote => _port(_fromPort.text),
-    },
-    remoteSocket: _isSocket ? _toHost.text.trim() : null,
-    group: _typedGroup,
-    colour: _colour,
-  );
+  Tunnel? get _tunnel {
+    final toHost = _toHost.text.trim();
+    final bindAddress = _bindAddress ?? '127.0.0.1';
+    final forward = switch ((
+      _kind,
+      _port(_fromPort.text),
+      _port(_toPort.text),
+    )) {
+      (_, null, _) => null,
+      (TunnelKind.local, final localPort?, _) when _isSocket => SocketForward(
+        bindAddress: bindAddress,
+        localPort: localPort,
+        remoteSocket: toHost,
+      ),
+      (TunnelKind.local, final localPort?, final remotePort?)
+          when toHost.isNotEmpty =>
+        LocalForward(
+          bindAddress: bindAddress,
+          localPort: localPort,
+          remoteHost: toHost,
+          remotePort: remotePort,
+        ),
+      (TunnelKind.socks, final localPort?, _) => SocksProxy(
+        bindAddress: bindAddress,
+        localPort: localPort,
+      ),
+      (TunnelKind.remote, final remotePort?, final localPort?) => RemoteForward(
+        remotePort: remotePort,
+        localHost: toHost.isEmpty ? null : toHost,
+        localPort: localPort,
+      ),
+      _ => null,
+    };
+    if (forward == null || _sshHost.text.trim().isEmpty) return null;
+
+    return Tunnel(
+      id:
+          widget.initial?.id ??
+          DateTime.now().microsecondsSinceEpoch.toString(),
+      name: _name.text.trim(),
+      sshHost: _sshHost.text.trim(),
+      forward: forward,
+      group: _typedGroup,
+      colour: _colour,
+    );
+  }
 }
 
 // Reads the clipboard itself: a field is one line, so it would drop the

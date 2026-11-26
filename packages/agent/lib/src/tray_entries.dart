@@ -150,9 +150,13 @@ TrayEntry _tunnelEntry(Tunnel tunnel, TunnelStatus status) => TunnelEntry(
     Stopped() => tunnel.title,
     Connecting() => '${tunnel.title} — connecting…',
     Cancelled() => '${tunnel.title} — login cancelled',
-    Connected() when tunnel.kind == TunnelKind.remote =>
-      '${tunnel.title} — port ${tunnel.remotePort} on the server',
-    Connected() => '${tunnel.title} — ${tunnel.address}',
+    Connected() => switch (tunnel.forward) {
+      RemoteForward(:final remotePort) =>
+        '${tunnel.title} — port $remotePort on the server',
+      LocalForward() ||
+      SocketForward() ||
+      SocksProxy() => '${tunnel.title} — ${tunnel.address}',
+    },
     final Failed failure =>
       '${tunnel.title} — ${failureShort(tunnel, failure)}',
     Reconnecting() => '${tunnel.title} — reconnecting…',
@@ -178,7 +182,7 @@ List<TrayEntry> _tunnelActions(
     ...whyDown,
     if (whyDown.isNotEmpty) const SeparatorEntry(),
     CopyEntry(
-      tunnel.kind == TunnelKind.remote
+      tunnel.forward is RemoteForward
           ? 'Copy Address on the Server'
           : 'Copy Address',
       tunnel.address,

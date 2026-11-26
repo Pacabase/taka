@@ -5,19 +5,18 @@ import 'package:core/core.dart';
 import 'package:system_ssh/system_ssh.dart';
 import 'package:test/test.dart';
 
+import 'fakes/fakes.dart' show ListeningOn;
+
 void main() {
   const database = Tunnel(
     id: '',
     sshHost: 'deploy@bastion',
-    localPort: 15432,
-    remoteHost: 'db',
-    remotePort: 5432,
+    forward: LocalForward(localPort: 15432, remoteHost: 'db', remotePort: 5432),
   );
   const proxy = Tunnel(
     id: '',
-    kind: TunnelKind.socks,
     sshHost: 'bastion',
-    localPort: 1080,
+    forward: SocksProxy(localPort: 1080),
   );
 
   group('reads back what Taka copies', () {
@@ -58,8 +57,10 @@ void main() {
         const Tunnel(
           id: '',
           sshHost: 'bastion',
-          localPort: 2375,
-          remoteSocket: '/var/run/docker.sock',
+          forward: SocketForward(
+            localPort: 2375,
+            remoteSocket: '/var/run/docker.sock',
+          ),
         ),
       );
       expect(pasted?.leftOut, isEmpty);
@@ -78,11 +79,12 @@ void main() {
         pasted?.tunnel,
         const Tunnel(
           id: '',
-          kind: TunnelKind.remote,
           sshHost: 'bastion',
-          localHost: 'localhost',
-          localPort: 3000,
-          remotePort: 8080,
+          forward: RemoteForward(
+            remotePort: 8080,
+            localHost: 'localhost',
+            localPort: 3000,
+          ),
         ),
       );
       expect(pasted?.leftOut, isEmpty);
@@ -92,9 +94,14 @@ void main() {
       final pasted = parseSshCommand('ssh -R 8080:192.168.1.1:80 bastion');
 
       expect(pasted?.tunnel.kind, TunnelKind.remote);
-      expect(pasted?.tunnel.remotePort, 8080);
-      expect(pasted?.tunnel.localHost, '192.168.1.1');
-      expect(pasted?.tunnel.localPort, 80);
+      expect(
+        pasted?.tunnel.forward,
+        const RemoteForward(
+          remotePort: 8080,
+          localHost: '192.168.1.1',
+          localPort: 80,
+        ),
+      );
     });
 
     test('an IPv6 destination', () {
@@ -107,7 +114,14 @@ void main() {
         ),
       );
 
-      expect(pasted?.tunnel.remoteHost, '::1');
+      expect(
+        pasted?.tunnel.forward,
+        const LocalForward(
+          localPort: 15432,
+          remoteHost: '::1',
+          remotePort: 5432,
+        ),
+      );
     });
 
     test('a server port, which a tunnel cannot keep', () {
@@ -204,17 +218,17 @@ void main() {
       (
         'on another address',
         'ssh -L 172.17.0.1:15432:db:5432 deploy@bastion',
-        database.copyWith(bindAddress: '172.17.0.1'),
+        database.listeningOn('172.17.0.1'),
       ),
       (
         "on every address, as ssh's *",
         'ssh -L *:15432:db:5432 deploy@bastion',
-        database.copyWith(bindAddress: '0.0.0.0'),
+        database.listeningOn('0.0.0.0'),
       ),
       (
         'on every address, as an empty one',
         'ssh -L :15432:db:5432 deploy@bastion',
-        database.copyWith(bindAddress: '0.0.0.0'),
+        database.listeningOn('0.0.0.0'),
       ),
       (
         'on 127.0.0.1, the default',
@@ -235,7 +249,7 @@ void main() {
       (
         'a SOCKS proxy on another address',
         'ssh -D 0.0.0.0:1080 bastion',
-        proxy.copyWith(bindAddress: '0.0.0.0'),
+        proxy.listeningOn('0.0.0.0'),
       ),
     ]) {
       test(reason, () {
@@ -250,35 +264,28 @@ void main() {
       expect(
         parseSshCommand('ssh -L [::1]:15432:[fd00::5]:5432 deploy@bastion')
             ?.tunnel
-            .remoteHost,
-        'fd00::5',
+            .forward,
+        const LocalForward(
+          bindAddress: '::1',
+          localPort: 15432,
+          remoteHost: 'fd00::5',
+          remotePort: 5432,
+        ),
       );
-      expect(
-        parseSshCommand('ssh -L [::]:15432:db:5432 deploy@bastion')
-            ?.tunnel
-            .bindAddress,
-        '::',
-      );
+      expect(_bindAddressOf('ssh -L [::]:15432:db:5432 deploy@bastion'), '::');
     });
 
     test('-g opens a forward with no address to other computers', () {
+      expect(_bindAddressOf('ssh -g -L 15432:db:5432 bastion'), '0.0.0.0');
       expect(
-        parseSshCommand('ssh -g -L 15432:db:5432 bastion')?.tunnel.bindAddress,
-        '0.0.0.0',
-      );
-      expect(
-        parseSshCommand('ssh -g -L 172.17.0.1:15432:db:5432 bastion')
-            ?.tunnel
-            .bindAddress,
+        _bindAddressOf('ssh -g -L 172.17.0.1:15432:db:5432 bastion'),
         '172.17.0.1',
       );
     });
 
     test('a socket forward on another address', () {
       expect(
-        parseSshCommand('ssh -L 0.0.0.0:2375:/var/run/docker.sock bastion')
-            ?.tunnel
-            .bindAddress,
+        _bindAddressOf('ssh -L 0.0.0.0:2375:/var/run/docker.sock bastion'),
         '0.0.0.0',
       );
     });
@@ -287,8 +294,12 @@ void main() {
       expect(
         parseSshCommand('ssh -R 0.0.0.0:8080:localhost:3000 bastion')
             ?.tunnel
-            .bindAddress,
-        isNull,
+            .forward,
+        const RemoteForward(
+          remotePort: 8080,
+          localHost: 'localhost',
+          localPort: 3000,
+        ),
       );
     });
 
@@ -388,3 +399,11 @@ void main() {
     }
   });
 }
+
+String? _bindAddressOf(String command) =>
+    switch (parseSshCommand(command)?.tunnel.forward) {
+      LocalForward(:final bindAddress) ||
+      SocketForward(:final bindAddress) ||
+      SocksProxy(:final bindAddress) => bindAddress,
+      RemoteForward() || null => null,
+    };

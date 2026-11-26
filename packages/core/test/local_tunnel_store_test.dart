@@ -15,15 +15,16 @@ void main() {
     id: 'a1',
     name: 'Production database',
     sshHost: 'bastion',
-    localPort: 15432,
-    remoteHost: 'db.internal',
-    remotePort: 5432,
+    forward: LocalForward(
+      localPort: 15432,
+      remoteHost: 'db.internal',
+      remotePort: 5432,
+    ),
   );
   const proxy = Tunnel(
     id: 'b2',
-    kind: TunnelKind.socks,
     sshHost: 'bastion',
-    localPort: 1080,
+    forward: SocksProxy(localPort: 1080),
   );
 
   setUp(() async {

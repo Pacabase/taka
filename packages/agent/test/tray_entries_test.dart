@@ -10,23 +10,29 @@ void main() {
     id: 'a1',
     name: 'Production database',
     sshHost: 'bastion',
-    localPort: 15432,
-    remoteHost: 'db.internal',
-    remotePort: 5432,
+    forward: LocalForward(
+      localPort: 15432,
+      remoteHost: 'db.internal',
+      remotePort: 5432,
+    ),
   );
   const proxy = Tunnel(
     id: 'b2',
     name: 'Proxy',
-    kind: TunnelKind.socks,
     sshHost: 'bastion',
-    localPort: 1080,
+    forward: SocksProxy(localPort: 1080),
   );
-  const web = Tunnel(id: 'c3', name: 'Web', sshHost: 'web', localPort: 8080);
+  const web = Tunnel(
+    id: 'c3',
+    name: 'Web',
+    sshHost: 'web',
+    forward: SocksProxy(localPort: 8080),
+  );
   const other = Tunnel(
     id: 'd4',
     name: 'Other',
     sshHost: 'web',
-    localPort: 8081,
+    forward: SocksProxy(localPort: 8081),
   );
 
   List<String> menu(TunnelsSnapshot snapshot) =>
@@ -122,10 +128,8 @@ void main() {
     const preview = Tunnel(
       id: 'r5',
       name: 'Preview',
-      kind: TunnelKind.remote,
       sshHost: 'bastion',
-      localPort: 3000,
-      remotePort: 8080,
+      forward: RemoteForward(remotePort: 8080, localPort: 3000),
     );
     const snapshot = TunnelsSnapshot(
       tunnels: [preview],
@@ -146,16 +150,31 @@ void main() {
   test('puts each group in a submenu, where its first tunnel is', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [
-        Tunnel(id: 'a', name: 'Api', localPort: 1, group: 'Prod'),
-        Tunnel(id: 'b', name: 'Local', localPort: 2),
-        Tunnel(id: 'c', name: 'Cache', localPort: 3, group: 'Prod'),
-        Tunnel(id: 'd', name: 'Dev db', localPort: 4, group: 'Dev'),
+        Tunnel(
+          id: 'a',
+          name: 'Api',
+          forward: SocksProxy(localPort: 1),
+          group: 'Prod',
+        ),
+        Tunnel(id: 'b', name: 'Local', forward: SocksProxy(localPort: 2)),
+        Tunnel(
+          id: 'c',
+          name: 'Cache',
+          forward: SocksProxy(localPort: 3),
+          group: 'Prod',
+        ),
+        Tunnel(
+          id: 'd',
+          name: 'Dev db',
+          forward: SocksProxy(localPort: 4),
+          group: 'Dev',
+        ),
       ],
       statuses: {'a': Connected()},
     );
     const prod =
         'Prod — 1 of 2 connected ▸ '
-        '☑ Api — 127.0.0.1:1 | ☐ Cache | --- | Disconnect All';
+        '☑ Api — socks5h://127.0.0.1:1 | ☐ Cache | --- | Disconnect All';
 
     expect(menu(snapshot).take(6), [
       '1 of 4 connected',
@@ -176,7 +195,14 @@ void main() {
   test("shortens a long group's name, not its count", () {
     final group = 'A very long group name ' * 3;
     final snapshot = TunnelsSnapshot(
-      tunnels: [Tunnel(id: 'a', name: 'Api', localPort: 1, group: group)],
+      tunnels: [
+        Tunnel(
+          id: 'a',
+          name: 'Api',
+          forward: SocksProxy(localPort: 1),
+          group: group,
+        ),
+      ],
     );
 
     expect(menu(snapshot)[2], endsWith('… — 0 of 1 connected ▸ ☐ Api'));
@@ -186,8 +212,18 @@ void main() {
   test('offers to connect a group when none of it is on', () {
     const snapshot = TunnelsSnapshot(
       tunnels: [
-        Tunnel(id: 'a', name: 'Api', localPort: 1, group: 'Prod'),
-        Tunnel(id: 'c', name: 'Cache', localPort: 3, group: 'Prod'),
+        Tunnel(
+          id: 'a',
+          name: 'Api',
+          forward: SocksProxy(localPort: 1),
+          group: 'Prod',
+        ),
+        Tunnel(
+          id: 'c',
+          name: 'Cache',
+          forward: SocksProxy(localPort: 3),
+          group: 'Prod',
+        ),
       ],
     );
 
@@ -224,14 +260,14 @@ void main() {
       'Port 8080 is already in use. | '
       'Try Again | '
       '--- | '
-      'Copy Address ⧉ 127.0.0.1:8080 | '
-      'Copy SSH Command ⧉ ssh -N -L 127.0.0.1:8080::0 web | '
+      'Copy Address ⧉ socks5h://127.0.0.1:8080 | '
+      'Copy SSH Command ⧉ ssh -N -D 127.0.0.1:8080 web | '
       'Edit… | '
       'Other ▸ '
       'The connection dropped. | '
       '--- | '
-      'Copy Address ⧉ 127.0.0.1:8081 | '
-      'Copy SSH Command ⧉ ssh -N -L 127.0.0.1:8081::0 web | '
+      'Copy Address ⧉ socks5h://127.0.0.1:8081 | '
+      'Copy SSH Command ⧉ ssh -N -D 127.0.0.1:8081 web | '
       'Edit…',
     );
   });
@@ -297,12 +333,19 @@ void main() {
 
   test('offers no ssh command for a tunnel ssh cannot open', () {
     const snapshot = TunnelsSnapshot(
-      tunnels: [Tunnel(id: 'd4', name: 'Broken', sshHost: 'web', localPort: 0)],
+      tunnels: [
+        Tunnel(
+          id: 'd4',
+          name: 'Broken',
+          sshHost: 'web',
+          forward: SocksProxy(localPort: 0),
+        ),
+      ],
     );
 
     expect(
       tunnelActions(snapshot),
-      'Tunnel Actions ▸ Broken ▸ Copy Address ⧉ 127.0.0.1:0 | Edit…',
+      'Tunnel Actions ▸ Broken ▸ Copy Address ⧉ socks5h://127.0.0.1:0 | Edit…',
     );
   });
 
@@ -336,7 +379,7 @@ void main() {
       id: 'e5',
       name: 'A very long tunnel name that would make the menu wide',
       sshHost: 'web',
-      localPort: 8082,
+      forward: SocksProxy(localPort: 8082),
     );
 
     final snapshot = TunnelsSnapshot(

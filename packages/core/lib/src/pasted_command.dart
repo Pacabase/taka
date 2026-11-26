@@ -54,15 +54,16 @@ typedef _Argument = ({String? flag, String? value});
         : null;
 
     return (
-      tunnel:
-          _tunnel(
-            arguments[forwardAt],
-            gatewayPorts: arguments.any((argument) => argument.flag == 'g'),
-          ).copyWith(
-            sshHost: user == null
-                ? host
-                : '$user@${host.substring(host.lastIndexOf('@') + 1)}',
-          ),
+      tunnel: Tunnel(
+        id: '',
+        sshHost: user == null
+            ? host
+            : '$user@${host.substring(host.lastIndexOf('@') + 1)}',
+        forward: _forward(
+          arguments[forwardAt],
+          gatewayPorts: arguments.any((argument) => argument.flag == 'g'),
+        ),
+      ),
       leftOut: [
         for (final (index, (:flag, :value)) in arguments.indexed)
           if (flag != null &&
@@ -156,50 +157,45 @@ List<_Argument> _flags(
   };
 }
 
-Tunnel _tunnel(_Argument forward, {required bool gatewayPorts}) => switch ((
-  forward.flag,
-  _portForward.firstMatch(forward.value!),
-  _socksForward.firstMatch(forward.value!),
-  _socketForward.firstMatch(forward.value!),
-)) {
-  ('L', _, _, final socket?) => Tunnel(
-    id: '',
-    bindAddress: _bindAddress(socket, gatewayPorts: gatewayPorts),
-    localPort: _port(socket[3]!),
-    remoteSocket: socket[4],
-  ),
-  ('L', final local?, _, _) => Tunnel(
-    id: '',
-    bindAddress: _bindAddress(local, gatewayPorts: gatewayPorts),
-    localPort: _port(local[3]!),
-    remoteHost: local[4] ?? local[5],
-    remotePort: _port(local[6]!),
-  ),
-  ('R', final remote?, _, _) => Tunnel(
-    id: '',
-    kind: TunnelKind.remote,
-    remotePort: _port(remote[3]!),
-    localHost: remote[4] ?? remote[5],
-    localPort: _port(remote[6]!),
-  ),
-  ('D', _, final socks?, _) => Tunnel(
-    id: '',
-    kind: TunnelKind.socks,
-    bindAddress: _bindAddress(socks, gatewayPorts: gatewayPorts),
-    localPort: _port(socks[3]!),
-  ),
-  _ => throw FormatException('Not a forward: ${forward.value}'),
-};
+TunnelForward _forward(_Argument forward, {required bool gatewayPorts}) =>
+    switch ((
+      forward.flag,
+      _portForward.firstMatch(forward.value!),
+      _socksForward.firstMatch(forward.value!),
+      _socketForward.firstMatch(forward.value!),
+    )) {
+      ('L', _, _, final socket?) => SocketForward(
+        bindAddress: _bindAddress(socket, gatewayPorts: gatewayPorts),
+        localPort: _port(socket[3]!),
+        remoteSocket: socket[4]!,
+      ),
+      ('L', final local?, _, _) => LocalForward(
+        bindAddress: _bindAddress(local, gatewayPorts: gatewayPorts),
+        localPort: _port(local[3]!),
+        remoteHost: local[4] ?? local[5]!,
+        remotePort: _port(local[6]!),
+      ),
+      ('R', final remote?, _, _) => RemoteForward(
+        remotePort: _port(remote[3]!),
+        localHost: remote[4] ?? remote[5],
+        localPort: _port(remote[6]!),
+      ),
+      ('D', _, final socks?, _) => SocksProxy(
+        bindAddress: _bindAddress(socks, gatewayPorts: gatewayPorts),
+        localPort: _port(socks[3]!),
+      ),
+      _ => throw FormatException('Not a forward: ${forward.value}'),
+    };
 
 // ssh's `*`, an empty address, or no address with -g, is every IPv4 one. Taka
 // keeps an IP address and leaves a name such as localhost at the default.
-String? _bindAddress(RegExpMatch forward, {required bool gatewayPorts}) =>
+String _bindAddress(RegExpMatch forward, {required bool gatewayPorts}) =>
     switch (forward[1] ?? forward[2]) {
-      null => gatewayPorts ? '0.0.0.0' : null,
+      null => gatewayPorts ? '0.0.0.0' : '127.0.0.1',
       '' => '0.0.0.0',
       final typed => switch (bindAddressNamed(typed)) {
         final address? when isIpAddress(address) => address,
-        _ => null,
+        _ => '127.0.0.1',
       },
     };
 

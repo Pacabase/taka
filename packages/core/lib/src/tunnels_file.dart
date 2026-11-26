@@ -9,7 +9,7 @@ import 'package:core/src/tunnel_store.dart';
 int _versionOf(List<Tunnel> tunnels) =>
     tunnels.any(
       (tunnel) =>
-          tunnel.kind == TunnelKind.remote || tunnel.remoteSocket != null,
+          tunnel.forward is RemoteForward || tunnel.forward is SocketForward,
     )
     ? 2
     : 1;

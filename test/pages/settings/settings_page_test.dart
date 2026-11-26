@@ -57,7 +57,11 @@ void main() {
   });
 
   testWidgets('Import adds the tunnels in the chosen file', (tester) async {
-    const tunnel = Tunnel(id: 'a1', sshHost: 'bastion', localPort: 1080);
+    const tunnel = Tunnel(
+      id: 'a1',
+      sshHost: 'bastion',
+      forward: SocksProxy(localPort: 1080),
+    );
     pickFiles().opened = XFile.fromData(
       utf8.encode(encodeTunnels(const TunnelBook(tunnels: [tunnel]))),
       path: '/Users/me/Taka tunnels.json',

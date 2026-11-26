@@ -5,35 +5,47 @@ import 'package:core/core.dart';
 import 'package:system_ssh/system_ssh.dart';
 import 'package:test/test.dart';
 
+import 'fakes/fakes.dart' show ListeningOn;
+
 void main() {
   const database = Tunnel(
     id: 'a1',
     name: 'Production database',
     sshHost: 'deploy@bastion.example.com',
-    localPort: 15432,
-    remoteHost: 'db.internal',
-    remotePort: 5432,
+    forward: LocalForward(
+      localPort: 15432,
+      remoteHost: 'db.internal',
+      remotePort: 5432,
+    ),
   );
   const proxy = Tunnel(
     id: 'b2',
-    kind: TunnelKind.socks,
     sshHost: 'bastion',
-    localPort: 1080,
+    forward: SocksProxy(localPort: 1080),
   );
 
   const preview = Tunnel(
     id: 'r5',
-    kind: TunnelKind.remote,
     sshHost: 'bastion',
-    localPort: 3000,
-    remotePort: 8080,
+    forward: RemoteForward(remotePort: 8080, localPort: 3000),
+  );
+  const toRouter = Tunnel(
+    id: 'r5',
+    sshHost: 'bastion',
+    forward: RemoteForward(
+      remotePort: 8080,
+      localHost: '192.168.1.1',
+      localPort: 3000,
+    ),
   );
 
   const docker = Tunnel(
     id: 's6',
     sshHost: 'bastion',
-    localPort: 2375,
-    remoteSocket: '/var/run/docker.sock',
+    forward: SocketForward(
+      localPort: 2375,
+      remoteSocket: '/var/run/docker.sock',
+    ),
   );
 
   group('JSON', () {
@@ -63,13 +75,12 @@ void main() {
       });
       expect(Tunnel.fromJson(preview.toJson()), preview);
 
-      final toRouter = preview.copyWith(localHost: '192.168.1.1');
       expect(toRouter.toJson()['localHost'], '192.168.1.1');
       expect(Tunnel.fromJson(toRouter.toJson()), toRouter);
     });
 
     test('a bind address round-trips, and is left out when there is none', () {
-      final docker = database.copyWith(bindAddress: '172.17.0.1');
+      final docker = database.listeningOn('172.17.0.1');
 
       expect(docker.toJson(), containsPair('bindAddress', '172.17.0.1'));
       expect(Tunnel.fromJson(docker.toJson()), docker);
@@ -90,15 +101,58 @@ void main() {
 
     test('missing optional fields fall back to their defaults', () {
       expect(
-        Tunnel.fromJson({'id': 'c3', 'localPort': 8080}),
-        const Tunnel(id: 'c3', localPort: 8080),
+        Tunnel.fromJson({'id': 'c3', 'kind': 'socks', 'localPort': 8080}),
+        const Tunnel(id: 'c3', forward: SocksProxy(localPort: 8080)),
+      );
+      expect(
+        Tunnel.fromJson({
+          'id': 'a1',
+          'localPort': 15432,
+          'remoteHost': 'db.internal',
+          'remotePort': 5432,
+        }).forward,
+        const LocalForward(
+          localPort: 15432,
+          remoteHost: 'db.internal',
+          remotePort: 5432,
+        ),
       );
     });
 
-    test('an unknown kind falls back to local', () {
+    test('a tunnel missing a field its kind needs is not a tunnel', () {
+      for (final json in [
+        {'id': 'a1', 'localPort': 15432, 'remotePort': 5432},
+        {'id': 'a1', 'localPort': 15432, 'remoteHost': 'db.internal'},
+        {'id': 'a1', 'remoteHost': 'db.internal', 'remotePort': 5432},
+        {'id': 's6', 'remoteSocket': '/var/run/docker.sock'},
+        {'id': 'b2', 'kind': 'socks'},
+        {'id': 'r5', 'kind': 'remote', 'localPort': 3000},
+        {'id': 'r5', 'kind': 'remote', 'remotePort': 8080},
+        {'id': 'r5', 'kind': 'remote', 'remotePort': '8080', 'localPort': 3000},
+      ]) {
+        expect(
+          () => Tunnel.fromJson(json),
+          throwsFormatException,
+          reason: '$json',
+        );
+      }
+    });
+
+    test('an unknown kind is not a tunnel', () {
       expect(
-        Tunnel.fromJson({'id': 'c3', 'localPort': 8080, 'kind': 'vpn'}).kind,
-        TunnelKind.local,
+        () => Tunnel.fromJson({'id': 'c3', 'localPort': 8080, 'kind': 'vpn'}),
+        throwsFormatException,
+      );
+    });
+
+    test('a socket takes the place of a host and port left over', () {
+      expect(
+        Tunnel.fromJson({
+          ...docker.toJson(),
+          'remoteHost': 'db',
+          'remotePort': 5432,
+        }),
+        docker,
       );
     });
   });
@@ -117,7 +171,11 @@ void main() {
 
     test('splits at the last @', () {
       expect(
-        const Tunnel(id: 'x', sshHost: 'a@b@host', localPort: 1).target,
+        const Tunnel(
+          id: 'x',
+          sshHost: 'a@b@host',
+          forward: SocksProxy(localPort: 1),
+        ).target,
         const SshTarget('host', user: 'a@b'),
       );
     });
@@ -144,10 +202,7 @@ void main() {
 
     test('summary describes a remote tunnel', () {
       expect(preview.summary, 'port 8080 on bastion → localhost:3000');
-      expect(
-        preview.copyWith(localHost: '192.168.1.1').summary,
-        'port 8080 on bastion → 192.168.1.1:3000',
-      );
+      expect(toRouter.summary, 'port 8080 on bastion → 192.168.1.1:3000');
     });
 
     test('title is the name, or the summary without one', () {
@@ -162,35 +217,23 @@ void main() {
     });
 
     test('address and summary name another address to listen on', () {
-      final docker = database.copyWith(bindAddress: '172.17.0.1');
+      final docker = database.listeningOn('172.17.0.1');
 
       expect(docker.address, '172.17.0.1:15432');
       expect(docker.summary, startsWith('172.17.0.1:15432 → '));
-      expect(
-        proxy.copyWith(bindAddress: 'fd00::1').address,
-        'socks5h://[fd00::1]:1080',
-      );
+      expect(proxy.listeningOn('fd00::1').address, 'socks5h://[fd00::1]:1080');
     });
 
     test('a tunnel on every address says so, and is reached on loopback', () {
       expect(
-        database.copyWith(bindAddress: '0.0.0.0').summary,
+        database.listeningOn('0.0.0.0').summary,
         startsWith('0.0.0.0:15432 → '),
       );
-      expect(
-        database.copyWith(bindAddress: '0.0.0.0').address,
-        '127.0.0.1:15432',
-      );
-      expect(
-        proxy.copyWith(bindAddress: '::').summary,
-        'SOCKS on [::]:1080 via bastion',
-      );
-      expect(
-        database.copyWith(bindAddress: '0.0.0.0').reachableAt,
-        '127.0.0.1',
-      );
-      expect(proxy.copyWith(bindAddress: '::').address, 'socks5h://[::1]:1080');
-      expect(database.reachableAt, '127.0.0.1');
+      expect(database.listeningOn('0.0.0.0').address, '127.0.0.1:15432');
+      expect(proxy.listeningOn('::').summary, 'SOCKS on [::]:1080 via bastion');
+      expect(reachableAt('0.0.0.0'), '127.0.0.1');
+      expect(proxy.listeningOn('::').address, 'socks5h://[::1]:1080');
+      expect(reachableAt('127.0.0.1'), '127.0.0.1');
     });
 
     test('reaches every address on loopback however it is written', () {
@@ -199,11 +242,7 @@ void main() {
         ('0:0:0:0:0:0:0:0', '::1'),
         ('172.17.0.1', '172.17.0.1'),
       ]) {
-        expect(
-          database.copyWith(bindAddress: address).reachableAt,
-          reached,
-          reason: address,
-        );
+        expect(reachableAt(address), reached, reason: address);
       }
     });
 
@@ -213,11 +252,11 @@ void main() {
   });
 
   group('groups', () {
-    const a = Tunnel(id: 'a', localPort: 1, group: 'Prod');
-    const b = Tunnel(id: 'b', localPort: 2);
-    const c = Tunnel(id: 'c', localPort: 3, group: 'Prod');
-    const d = Tunnel(id: 'd', localPort: 4);
-    const e = Tunnel(id: 'e', localPort: 5, group: 'dev');
+    const a = Tunnel(id: 'a', forward: SocksProxy(localPort: 1), group: 'Prod');
+    const b = Tunnel(id: 'b', forward: SocksProxy(localPort: 2));
+    const c = Tunnel(id: 'c', forward: SocksProxy(localPort: 3), group: 'Prod');
+    const d = Tunnel(id: 'd', forward: SocksProxy(localPort: 4));
+    const e = Tunnel(id: 'e', forward: SocksProxy(localPort: 5), group: 'dev');
     const tunnels = [a, b, c, d, e];
 
     test('a group round-trips, and is left out when there is none', () {
@@ -227,12 +266,21 @@ void main() {
     });
 
     test('a colour round-trips, and one it does not know is none', () {
-      const red = Tunnel(id: 'r', localPort: 1, colour: TunnelColour.red);
+      const red = Tunnel(
+        id: 'r',
+        forward: SocksProxy(localPort: 1),
+        colour: TunnelColour.red,
+      );
 
       expect(red.toJson()['colour'], 'red');
       expect(Tunnel.fromJson(red.toJson()), red);
       expect(
-        Tunnel.fromJson({'id': 'p', 'localPort': 1, 'colour': 'pink'}).colour,
+        Tunnel.fromJson({
+          'id': 'p',
+          'kind': 'socks',
+          'localPort': 1,
+          'colour': 'pink',
+        }).colour,
         isNull,
       );
     });
@@ -369,11 +417,21 @@ void main() {
 
     test('a blank group is no group', () {
       expect(
-        Tunnel.fromJson({'id': 'x', 'localPort': 1, 'group': '  '}).group,
+        Tunnel.fromJson({
+          'id': 'x',
+          'kind': 'socks',
+          'localPort': 1,
+          'group': '  ',
+        }).group,
         isNull,
       );
       expect(
-        Tunnel.fromJson({'id': 'x', 'localPort': 1, 'group': ' Prod '}).group,
+        Tunnel.fromJson({
+          'id': 'x',
+          'kind': 'socks',
+          'localPort': 1,
+          'group': ' Prod ',
+        }).group,
         'Prod',
       );
     });
@@ -458,7 +516,14 @@ void main() {
         'ssh -N -L 127.0.0.1:2375:/var/run/docker.sock bastion',
       );
       for (final path in ['docker.sock', '/run/%h.sock', r'/run/$UID.sock']) {
-        expect(docker.copyWith(remoteSocket: path).sshCommand, isNull);
+        expect(
+          docker
+              .copyWith(
+                forward: SocketForward(localPort: 2375, remoteSocket: path),
+              )
+              .sshCommand,
+          isNull,
+        );
       }
     });
 
@@ -468,31 +533,27 @@ void main() {
         'ssh -N -R 127.0.0.1:8080:localhost:3000 bastion',
       );
       expect(
-        preview.copyWith(localHost: '192.168.1.1').sshCommand,
+        toRouter.sshCommand,
         'ssh -N -R 127.0.0.1:8080:192.168.1.1:3000 bastion',
       );
     });
 
     test('listens on the bind address', () {
       expect(
-        database.copyWith(bindAddress: '172.17.0.1').sshCommand,
+        database.listeningOn('172.17.0.1').sshCommand,
         contains('-L 172.17.0.1:15432:db.internal:5432'),
       );
       expect(
-        docker.copyWith(bindAddress: '0.0.0.0').sshCommand,
+        docker.listeningOn('0.0.0.0').sshCommand,
         contains('-L 0.0.0.0:2375:/var/run/docker.sock'),
       );
-      expect(
-        proxy.copyWith(bindAddress: '::').sshCommand,
-        contains('-D [::]:1080'),
-      );
-      expect(database.copyWith(bindAddress: 'localhost').sshCommand, isNull);
+      expect(proxy.listeningOn('::').sshCommand, contains('-D [::]:1080'));
+      expect(database.listeningOn('localhost').sshCommand, isNull);
     });
 
     test('is null for a tunnel ssh cannot open', () {
-      expect(preview.copyWith(remotePort: null).sshCommand, isNull);
-      expect(proxy.copyWith(localPort: 0).sshCommand, isNull);
-      expect(database.copyWith(localPort: 65536).sshCommand, isNull);
+      expect(proxy.copyWith.forward(localPort: 0).sshCommand, isNull);
+      expect(database.copyWith.forward(localPort: 65536).sshCommand, isNull);
       expect(proxy.copyWith(sshHost: '-oProxyCommand=x').sshCommand, isNull);
     });
   });
