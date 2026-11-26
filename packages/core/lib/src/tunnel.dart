@@ -1,71 +1,21 @@
-import 'dart:io';
-
 import 'package:collection/collection.dart';
 import 'package:core/src/tunnel_colour.dart';
+import 'package:core/src/tunnel_forward.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:system_ssh/system_ssh.dart';
 
+export 'package:core/src/tunnel_forward.dart';
+
 part 'tunnel.freezed.dart';
-
-enum TunnelKind { local, socks, remote }
-
-/// Whether [address] is an IPv4 or IPv6 address, rather than a name.
-bool isIpAddress(String address) {
-  try {
-    address.contains(':')
-        ? Uri.parseIPv6Address(address)
-        : Uri.parseIPv4Address(address);
-    return true;
-  } on FormatException {
-    return false;
-  }
-}
-
-/// [typed] as a tunnel keeps it: null for the default 127.0.0.1, 0.0.0.0 for
-/// ssh's `*`, and an IPv6 address without its brackets.
-String? bindAddressNamed(String? typed) => switch (typed?.trim()) {
-  null || '' || '127.0.0.1' || 'localhost' => null,
-  '*' => '0.0.0.0',
-  final address when address.startsWith('[') && address.endsWith(']') =>
-    address.substring(1, address.length - 1),
-  final address => address,
-};
-
-/// Whether only this computer can reach [address], however it's written.
-bool isLoopbackAddress(String address) =>
-    InternetAddress.tryParse(address)?.isLoopback ?? false;
-
-/// Whether [address] is every IPv4 or every IPv6 address, as 0.0.0.0 or ::.
-bool isEveryAddress(String address) =>
-    switch (InternetAddress.tryParse(address)) {
-      final parsed? => parsed == .anyIPv4 || parsed == .anyIPv6,
-      null => false,
-    };
 
 @freezed
 sealed class const Tunnel._() with _$Tunnel {
   /// [sshHost] is a `~/.ssh/config` alias, a host or `user@host`.
-  ///
-  /// A local tunnel leads to [remoteHost] and [remotePort], or to the Unix
-  /// socket at [remoteSocket] on [sshHost] when that is set.
-  ///
-  /// A local tunnel or SOCKS proxy listens on [bindAddress], an IP address of
-  /// this computer, or 127.0.0.1 when null.
-  ///
-  /// A remote tunnel has [sshHost] listen on its own [remotePort], and brings
-  /// each connection back to [localHost], or localhost when null, on
-  /// [localPort].
   const factory({
     required String id,
     @Default('') String name,
-    @Default(TunnelKind.local) TunnelKind kind,
     @Default('') String sshHost,
-    String? bindAddress,
-    String? localHost,
-    required int localPort,
-    String? remoteHost,
-    int? remotePort,
-    String? remoteSocket,
+    required TunnelForward forward,
     String? group,
 
     /// Shown when its group has no colour of its own.
@@ -74,8 +24,7 @@ sealed class const Tunnel._() with _$Tunnel {
 
   static Tunnel fromJson(Object? json) {
     if (json
-        case {'id': final String id, 'localPort': final int localPort} &&
-            final Map<Object?, Object?> fields) {
+        case {'id': final String id} && final Map<Object?, Object?> fields) {
       T? field<T>(String key) => switch (fields[key]) {
         final T value => value,
         _ => null,
@@ -84,14 +33,8 @@ sealed class const Tunnel._() with _$Tunnel {
       return Tunnel(
         id: id,
         name: field<String>('name') ?? '',
-        kind: TunnelKind.values.asNameMap()[fields['kind']] ?? TunnelKind.local,
         sshHost: field<String>('sshHost') ?? '',
-        bindAddress: bindAddressNamed(field<String>('bindAddress')),
-        localHost: field<String>('localHost'),
-        localPort: localPort,
-        remoteHost: field<String>('remoteHost'),
-        remotePort: field<int>('remotePort'),
-        remoteSocket: field<String>('remoteSocket'),
+        forward: TunnelForward.fromJson(fields),
         group: groupNamed(field<String>('group')),
         colour: TunnelColour.fromName(fields['colour']),
       );
@@ -103,21 +46,16 @@ sealed class const Tunnel._() with _$Tunnel {
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
-    'kind': kind.name,
     'sshHost': sshHost,
-    'bindAddress': ?bindAddress,
-    'localHost': ?localHost,
-    'localPort': localPort,
-    'remoteHost': ?remoteHost,
-    'remotePort': ?remotePort,
-    'remoteSocket': ?remoteSocket,
+    ...forward.toJson(),
     'group': ?group,
     'colour': ?colour?.name,
   };
 
+  TunnelKind get kind => forward.kind;
+
   SshTarget get target {
     final at = sshHost.lastIndexOf('@');
-
     return at == -1
         ? SshTarget(sshHost)
         : SshTarget(sshHost.substring(at + 1), user: sshHost.substring(0, at));
@@ -125,68 +63,18 @@ sealed class const Tunnel._() with _$Tunnel {
 
   String get title => name.isNotEmpty ? name : summary;
 
-  /// Where this computer reaches the tunnel: 0.0.0.0 and :: listen on
-  /// loopback too.
-  String get reachableAt => switch (listenAddress) {
-    final address when isEveryAddress(address) =>
-      address.contains(':') ? '::1' : '127.0.0.1',
-    final address => address,
-  };
-
-  String get listenAddress => bindAddress ?? '127.0.0.1';
-
-  String get address => switch (kind) {
-    TunnelKind.local => '${_bracketed(reachableAt)}:$localPort',
-    TunnelKind.socks => 'socks5h://${_bracketed(reachableAt)}:$localPort',
-    TunnelKind.remote => 'localhost:$remotePort',
-  };
+  String get address => forward.address;
 
   /// Null for a tunnel ssh can't open, such as a local port outside 1 to 65535.
   String? get sshCommand {
     try {
-      return switch (kind) {
-        TunnelKind.local => switch (remoteSocket) {
-          final remoteSocket? => socketTunnelCommand(
-            target,
-            bindAddress: listenAddress,
-            remoteSocket: remoteSocket,
-            localPort: localPort,
-          ),
-          null => tunnelCommand(
-            target,
-            bindAddress: listenAddress,
-            remoteHost: remoteHost ?? '',
-            remotePort: remotePort ?? 0,
-            localPort: localPort,
-          ),
-        },
-        TunnelKind.socks => socksProxyCommand(
-          target,
-          bindAddress: listenAddress,
-          localPort: localPort,
-        ),
-        TunnelKind.remote => remoteTunnelCommand(
-          target,
-          localHost: localHost ?? 'localhost',
-          localPort: localPort,
-          remotePort: remotePort ?? 0,
-        ),
-      };
+      return forward.sshCommand(target);
     } on ArgumentError {
       return null;
     }
   }
 
-  String get _listen => _bracketed(listenAddress);
-
-  String get summary => switch (kind) {
-    TunnelKind.local =>
-      '$_listen:$localPort → '
-          '${remoteSocket ?? '$remoteHost:$remotePort'} via $sshHost',
-    TunnelKind.socks => 'SOCKS on $_listen:$localPort via $sshHost',
-    TunnelKind.remote =>
-      'port $remotePort on $sshHost → ${localHost ?? 'localhost'}:$localPort',
-  };
+  String get summary => forward.summary(sshHost);
 
   @override
   String toString() => 'Tunnel($id, $title)';
@@ -345,6 +233,3 @@ extension TunnelOrder on List<Tunnel> {
     ];
   }
 }
-
-String _bracketed(String address) =>
-    address.contains(':') ? '[$address]' : address;

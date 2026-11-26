@@ -18,9 +18,11 @@ void main() {
   const unnamed = Tunnel(
     id: 'a',
     sshHost: 'db',
-    localPort: 15432,
-    remoteHost: 'localhost',
-    remotePort: 5432,
+    forward: LocalForward(
+      localPort: 15432,
+      remoteHost: 'localhost',
+      remotePort: 5432,
+    ),
   );
   late int toggles;
   late List<String> trusted;
@@ -260,8 +262,10 @@ void main() {
       tunnel: const Tunnel(
         id: 's',
         sshHost: 'db',
-        localPort: 2375,
-        remoteSocket: '/var/run/docker.sock',
+        forward: SocketForward(
+          localPort: 2375,
+          remoteSocket: '/var/run/docker.sock',
+        ),
       ),
       status: const Connected(warning: 'administratively prohibited'),
     );
@@ -388,7 +392,7 @@ void main() {
   testWidgets('offers no copy button for a tunnel ssh cannot open', (
     tester,
   ) async {
-    await pumpTile(tester, tunnel: unnamed.copyWith(localPort: 0));
+    await pumpTile(tester, tunnel: unnamed.copyWith.forward(localPort: 0));
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: tester.getCenter(find.byType(TunnelTile)));
     await tester.pump();

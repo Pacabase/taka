@@ -8,22 +8,29 @@ void main() {
   const database = Tunnel(
     id: 'a1',
     sshHost: 'bastion',
-    localPort: 15432,
-    remoteHost: 'db.internal',
-    remotePort: 5432,
+    forward: LocalForward(
+      localPort: 15432,
+      remoteHost: 'db.internal',
+      remotePort: 5432,
+    ),
   );
   const docker = Tunnel(
     id: 's6',
     sshHost: 'bastion',
-    localPort: 2375,
-    remoteSocket: '/var/run/docker.sock',
+    forward: SocketForward(
+      localPort: 2375,
+      remoteSocket: '/var/run/docker.sock',
+    ),
   );
   const web = Tunnel(
     id: 'r5',
-    kind: TunnelKind.remote,
     sshHost: 'bastion',
-    localPort: 3000,
-    remotePort: 8080,
+    forward: RemoteForward(remotePort: 8080, localPort: 3000),
+  );
+  const proxy = Tunnel(
+    id: 'b2',
+    sshHost: 'bastion',
+    forward: SocksProxy(localPort: 1080),
   );
 
   for (final (tunnel, failure, short, sentence) in [
@@ -112,12 +119,24 @@ void main() {
       "can't open /var/run/docker.sock",
       "Can't open /var/run/docker.sock on the server.",
     ),
+    (
+      web,
+      TunnelFailure.forwardRefused,
+      "can't reach localhost:3000",
+      "Can't reach localhost:3000 from this computer.",
+    ),
+    (
+      proxy,
+      TunnelFailure.forwardRefused,
+      "can't reach a site",
+      "A site through the SOCKS proxy couldn't be reached.",
+    ),
   ]) {
-    test('says "$short" for ${failure.name}', () {
+    test('says "$short" for ${failure.name} of ${tunnel.id}', () {
       expect(failureShort(tunnel, Failed('ssh said', failure: failure)), short);
     });
 
-    test('says "$sentence" for ${failure.name}', () {
+    test('says "$sentence" for ${failure.name} of ${tunnel.id}', () {
       expect(failureSentence(tunnel, failure), sentence);
     });
   }
@@ -143,9 +162,11 @@ void main() {
           const Tunnel(
             id: 'a1',
             sshHost: 'bastion',
-            localPort: 15432,
-            remoteHost: 'db.example.com',
-            remotePort: 5432,
+            forward: LocalForward(
+              localPort: 15432,
+              remoteHost: 'db.example.com',
+              remotePort: 5432,
+            ),
           ),
         ),
         "Can't reach db.example.com:5432 through the server.",
@@ -158,8 +179,10 @@ void main() {
           const Tunnel(
             id: 's6',
             sshHost: 'bastion',
-            localPort: 2375,
-            remoteSocket: '/var/run/docker.sock',
+            forward: SocketForward(
+              localPort: 2375,
+              remoteSocket: '/var/run/docker.sock',
+            ),
           ),
         ),
         "Can't open /var/run/docker.sock on the server.",
@@ -171,10 +194,8 @@ void main() {
         forwardWarning(
           const Tunnel(
             id: 'r5',
-            kind: TunnelKind.remote,
             sshHost: 'bastion',
-            localPort: 3000,
-            remotePort: 8080,
+            forward: RemoteForward(remotePort: 8080, localPort: 3000),
           ),
         ),
         "Can't reach localhost:3000 from this computer.",
@@ -186,9 +207,8 @@ void main() {
         forwardWarning(
           const Tunnel(
             id: 'b2',
-            kind: TunnelKind.socks,
             sshHost: 'bastion',
-            localPort: 1080,
+            forward: SocksProxy(localPort: 1080),
           ),
         ),
         "A site through the SOCKS proxy couldn't be reached.",

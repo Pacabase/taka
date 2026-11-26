@@ -85,10 +85,16 @@ void main() {
     expect(
       saved.single,
       isA<Tunnel>()
-          .having((tunnel) => tunnel.localPort, 'localPort', 15432)
           .having((tunnel) => tunnel.sshHost, 'sshHost', 'db')
-          .having((tunnel) => tunnel.remoteHost, 'remoteHost', 'localhost')
-          .having((tunnel) => tunnel.remotePort, 'remotePort', 5432),
+          .having(
+            (tunnel) => tunnel.forward,
+            'forward',
+            const LocalForward(
+              localPort: 15432,
+              remoteHost: 'localhost',
+              remotePort: 5432,
+            ),
+          ),
     );
   });
 
@@ -107,8 +113,7 @@ void main() {
     await tester.enterText(field(3), '1080');
     await tester.enterText(field(4), 'user@jump');
     await tester.testTextInput.receiveAction(TextInputAction.done);
-    expect(saved.single.kind, TunnelKind.socks);
-    expect(saved.single.remoteHost, isNull);
+    expect(saved.single.forward, const SocksProxy(localPort: 1080));
   });
 
   testWidgets('a path as the destination is a socket, and needs no port', (
@@ -125,16 +130,14 @@ void main() {
 
     expect(
       saved.single,
-      isA<Tunnel>()
-          .having((tunnel) => tunnel.kind, 'kind', TunnelKind.local)
-          .having((tunnel) => tunnel.localPort, 'localPort', 2375)
-          .having((tunnel) => tunnel.remoteHost, 'remoteHost', isNull)
-          .having((tunnel) => tunnel.remotePort, 'remotePort', isNull)
-          .having(
-            (tunnel) => tunnel.remoteSocket,
-            'remoteSocket',
-            '/var/run/docker.sock',
-          ),
+      isA<Tunnel>().having(
+        (tunnel) => tunnel.forward,
+        'forward',
+        const SocketForward(
+          localPort: 2375,
+          remoteSocket: '/var/run/docker.sock',
+        ),
+      ),
     );
   });
 
@@ -169,8 +172,14 @@ void main() {
 
     expect(addEnabled(tester), isTrue);
     await tester.tap(find.text('Add'));
-    expect(saved.single.remotePort, isNull);
-    expect(saved.single.remoteSocket, '/var/run/docker.sock');
+    expect(
+      saved.single.forward,
+      isA<SocketForward>().having(
+        (forward) => forward.remoteSocket,
+        'remoteSocket',
+        '/var/run/docker.sock',
+      ),
+    );
   });
 
   testWidgets('a socket path carried into an exposed port turns Add off', (
@@ -201,7 +210,7 @@ void main() {
         '127.0.0.1',
       );
       await tester.tap(find.text('Add'));
-      expect(saved.single.bindAddress, isNull);
+      expect(bindAddressOf(saved.single), '127.0.0.1');
     });
 
     testWidgets('can be another address, with a note on who can use it', (
@@ -220,7 +229,7 @@ void main() {
         findsOneWidget,
       );
       await tester.tap(find.text('Add'));
-      expect(saved.single.bindAddress, '172.17.0.1');
+      expect(bindAddressOf(saved.single), '172.17.0.1');
     });
 
     testWidgets('on every address says other computers can use it', (
@@ -272,7 +281,7 @@ void main() {
         await tester.pump();
         await tester.tap(find.text('Add'));
 
-        expect(saved.single.bindAddress, kept);
+        expect(bindAddressOf(saved.single), kept);
       });
     }
 
@@ -284,7 +293,7 @@ void main() {
         await tester.pump();
         await tester.tap(find.text('Add'));
 
-        expect(saved.single.bindAddress, isNull);
+        expect(bindAddressOf(saved.single), '127.0.0.1');
       });
     }
 
@@ -296,16 +305,14 @@ void main() {
 
       expect(find.textContaining('with no login'), findsNothing);
       await tester.tap(find.text('Add'));
-      expect(saved.single.bindAddress, '127.0.0.2');
+      expect(bindAddressOf(saved.single), '127.0.0.2');
     });
 
     testWidgets('is kept when a tunnel is edited', (tester) async {
       const tunnel = Tunnel(
         id: 'p',
-        kind: TunnelKind.socks,
         sshHost: 'bastion',
-        bindAddress: '0.0.0.0',
-        localPort: 1080,
+        forward: SocksProxy(bindAddress: '0.0.0.0', localPort: 1080),
       );
       await pumpForm(tester, initial: tunnel);
 
@@ -343,7 +350,7 @@ void main() {
       await tester.tap(find.text('Expose a port'));
       await tester.pump();
       await tester.tap(find.text('Add'));
-      expect(saved.single.bindAddress, isNull);
+      expect(saved.single.forward, isA<RemoteForward>());
     });
   });
 
@@ -351,8 +358,10 @@ void main() {
     const tunnel = Tunnel(
       id: 's',
       sshHost: 'bastion',
-      localPort: 2375,
-      remoteSocket: '/var/run/docker.sock',
+      forward: SocketForward(
+        localPort: 2375,
+        remoteSocket: '/var/run/docker.sock',
+      ),
     );
     await pumpForm(tester, initial: tunnel);
 
@@ -382,12 +391,12 @@ void main() {
     expect(
       saved.single,
       isA<Tunnel>()
-          .having((tunnel) => tunnel.kind, 'kind', TunnelKind.remote)
           .having((tunnel) => tunnel.sshHost, 'sshHost', 'bastion')
-          .having((tunnel) => tunnel.remotePort, 'remotePort', 8080)
-          .having((tunnel) => tunnel.localHost, 'localHost', isNull)
-          .having((tunnel) => tunnel.localPort, 'localPort', 3000)
-          .having((tunnel) => tunnel.remoteHost, 'remoteHost', isNull),
+          .having(
+            (tunnel) => tunnel.forward,
+            'forward',
+            const RemoteForward(remotePort: 8080, localPort: 3000),
+          ),
     );
   });
 
@@ -403,12 +412,11 @@ void main() {
 
     expect(
       saved.single,
-      isA<Tunnel>()
-          .having((tunnel) => tunnel.kind, 'kind', TunnelKind.remote)
-          .having((tunnel) => tunnel.remotePort, 'remotePort', 15432)
-          .having((tunnel) => tunnel.localHost, 'localHost', 'localhost')
-          .having((tunnel) => tunnel.localPort, 'localPort', 5432)
-          .having((tunnel) => tunnel.remoteHost, 'remoteHost', isNull),
+      isA<Tunnel>().having(
+        (tunnel) => tunnel.forward,
+        'forward',
+        const RemoteForward(remotePort: 15432, localPort: 5432),
+      ),
     );
   });
 
@@ -429,23 +437,27 @@ void main() {
 
     expect(
       saved.single,
-      isA<Tunnel>()
-          .having((tunnel) => tunnel.kind, 'kind', TunnelKind.local)
-          .having((tunnel) => tunnel.localPort, 'localPort', 8080)
-          .having((tunnel) => tunnel.remoteHost, 'remoteHost', '192.168.1.1')
-          .having((tunnel) => tunnel.remotePort, 'remotePort', 3000)
-          .having((tunnel) => tunnel.localHost, 'localHost', isNull),
+      isA<Tunnel>().having(
+        (tunnel) => tunnel.forward,
+        'forward',
+        const LocalForward(
+          localPort: 8080,
+          remoteHost: '192.168.1.1',
+          remotePort: 3000,
+        ),
+      ),
     );
   });
 
   testWidgets('editing an exposed port prefills every field', (tester) async {
     const tunnel = Tunnel(
       id: 'r',
-      kind: TunnelKind.remote,
       sshHost: 'bastion',
-      localHost: '192.168.1.1',
-      localPort: 80,
-      remotePort: 8080,
+      forward: RemoteForward(
+        remotePort: 8080,
+        localHost: '192.168.1.1',
+        localPort: 80,
+      ),
     );
     await pumpForm(tester, initial: tunnel);
 
@@ -534,9 +546,11 @@ void main() {
       const tunnel = Tunnel(
         id: 'a',
         sshHost: 'db',
-        localPort: 15432,
-        remoteHost: 'localhost',
-        remotePort: 5432,
+        forward: LocalForward(
+          localPort: 15432,
+          remoteHost: 'localhost',
+          remotePort: 5432,
+        ),
         group: 'Prod',
         colour: TunnelColour.red,
       );
@@ -597,9 +611,11 @@ void main() {
       const tunnel = Tunnel(
         id: 'a',
         sshHost: 'db',
-        localPort: 15432,
-        remoteHost: 'localhost',
-        remotePort: 5432,
+        forward: LocalForward(
+          localPort: 15432,
+          remoteHost: 'localhost',
+          remotePort: 5432,
+        ),
         group: 'prod',
       );
       await pumpForm(tester, initial: tunnel, groups: ['prod']);
@@ -673,9 +689,11 @@ void main() {
       const tunnel = Tunnel(
         id: 'a',
         sshHost: 'db',
-        localPort: 15432,
-        remoteHost: 'localhost',
-        remotePort: 5432,
+        forward: LocalForward(
+          localPort: 15432,
+          remoteHost: 'localhost',
+          remotePort: 5432,
+        ),
         group: 'Production',
       );
       await pumpForm(tester, initial: tunnel);
@@ -691,9 +709,11 @@ void main() {
       id: 'a',
       name: 'Prod',
       sshHost: 'db',
-      localPort: 15432,
-      remoteHost: 'localhost',
-      remotePort: 5432,
+      forward: LocalForward(
+        localPort: 15432,
+        remoteHost: 'localhost',
+        remotePort: 5432,
+      ),
     );
     await pumpForm(tester, initial: tunnel);
     await tester.tap(find.text('Save'));
@@ -753,11 +773,16 @@ void main() {
       expect(
         saved.single,
         isA<Tunnel>()
-            .having((tunnel) => tunnel.kind, 'kind', TunnelKind.local)
-            .having((tunnel) => tunnel.localPort, 'localPort', 15432)
             .having((tunnel) => tunnel.sshHost, 'sshHost', 'deploy@bastion')
-            .having((tunnel) => tunnel.remoteHost, 'remoteHost', 'db')
-            .having((tunnel) => tunnel.remotePort, 'remotePort', 5432)
+            .having(
+              (tunnel) => tunnel.forward,
+              'forward',
+              const LocalForward(
+                localPort: 15432,
+                remoteHost: 'db',
+                remotePort: 5432,
+              ),
+            )
             .having((tunnel) => tunnel.name, 'name', ''),
       );
     }, variant: macOS);
@@ -768,8 +793,13 @@ void main() {
 
       expect(find.byType(TextField), findsNWidgets(6));
       await tester.tap(find.text('Add'));
-      expect(saved.single.remoteSocket, '/var/run/docker.sock');
-      expect(saved.single.localPort, 2375);
+      expect(
+        saved.single.forward,
+        const SocketForward(
+          localPort: 2375,
+          remoteSocket: '/var/run/docker.sock',
+        ),
+      );
     }, variant: macOS);
 
     testWidgets('keeps the address a forward listens on', (tester) async {
@@ -778,7 +808,7 @@ void main() {
 
       expect(find.text('172.17.0.1'), findsOneWidget);
       await tester.tap(find.text('Add'));
-      expect(saved.single.bindAddress, '172.17.0.1');
+      expect(bindAddressOf(saved.single), '172.17.0.1');
     }, variant: macOS);
 
     testWidgets('switches to an exposed port', (tester) async {
@@ -786,11 +816,17 @@ void main() {
       await paste(tester, 2, 'ssh -R 8080:localhost:3000 bastion');
 
       expect(find.text('To, on this computer'), findsOneWidget);
+      expect(
+        tester
+            .widgetList<TextField>(find.byType(TextField))
+            .map((field) => field.controller?.text),
+        isNot(contains('localhost')),
+      );
       await tester.tap(find.text('Add'));
-      expect(saved.single.kind, TunnelKind.remote);
-      expect(saved.single.remotePort, 8080);
-      expect(saved.single.localHost, 'localhost');
-      expect(saved.single.localPort, 3000);
+      expect(
+        saved.single.forward,
+        const RemoteForward(remotePort: 8080, localPort: 3000),
+      );
     }, variant: macOS);
 
     testWidgets('switches to a SOCKS proxy', (tester) async {
@@ -800,9 +836,8 @@ void main() {
 
       expect(find.text('To'), findsNothing);
       await tester.tap(find.text('Add'));
-      expect(saved.single.kind, TunnelKind.socks);
       expect(saved.single.sshHost, 'bastion');
-      expect(saved.single.localPort, 1080);
+      expect(saved.single.forward, const SocksProxy(localPort: 1080));
     }, variant: macOS);
 
     testWidgets('replaces what an edited SOCKS proxy had', (tester) async {
@@ -811,9 +846,8 @@ void main() {
         initial: const Tunnel(
           id: 'a',
           name: 'Prod',
-          kind: TunnelKind.socks,
           sshHost: 'jump',
-          localPort: 1080,
+          forward: SocksProxy(localPort: 1080),
         ),
       );
 
@@ -826,9 +860,11 @@ void main() {
           id: 'a',
           name: 'Prod',
           sshHost: 'deploy@bastion',
-          localPort: 15432,
-          remoteHost: 'db',
-          remotePort: 5432,
+          forward: LocalForward(
+            localPort: 15432,
+            remoteHost: 'db',
+            remotePort: 5432,
+          ),
         ),
       );
     }, variant: macOS);
@@ -970,3 +1006,10 @@ TextEditingController? focusedController(WidgetTester tester) => tester
     ?.context
     ?.findAncestorWidgetOfExactType<EditableText>()
     ?.controller;
+
+String? bindAddressOf(Tunnel tunnel) => switch (tunnel.forward) {
+  LocalForward(:final bindAddress) ||
+  SocketForward(:final bindAddress) ||
+  SocksProxy(:final bindAddress) => bindAddress,
+  RemoteForward() => null,
+};

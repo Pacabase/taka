@@ -29,16 +29,17 @@ void main() {
     id: 'a1',
     name: 'Database',
     sshHost: 'bastion',
-    localPort: 15432,
-    remoteHost: 'db.internal',
-    remotePort: 5432,
+    forward: LocalForward(
+      localPort: 15432,
+      remoteHost: 'db.internal',
+      remotePort: 5432,
+    ),
   );
   const proxy = Tunnel(
     id: 'b2',
     name: 'Proxy',
-    kind: TunnelKind.socks,
     sshHost: 'bastion',
-    localPort: 1080,
+    forward: SocksProxy(localPort: 1080),
   );
 
   Future<_MockTunnelsBloc> pumpPage(
@@ -244,7 +245,7 @@ void main() {
             const Tunnel(
               id: 'c3',
               name: 'Cache',
-              localPort: 6379,
+              forward: SocksProxy(localPort: 6379),
               group: 'Prod',
             ),
           ],
@@ -285,7 +286,7 @@ void main() {
             const Tunnel(
               id: 'c3',
               name: 'Cache',
-              localPort: 6379,
+              forward: SocksProxy(localPort: 6379),
               group: 'monolith',
             ),
           ],
@@ -351,7 +352,13 @@ void main() {
         tester,
         initialState: const Ready(
           TunnelsSnapshot(
-            tunnels: [Tunnel(id: 'a1', localPort: 1, group: 'monolith')],
+            tunnels: [
+              Tunnel(
+                id: 'a1',
+                forward: SocksProxy(localPort: 1),
+                group: 'monolith',
+              ),
+            ],
           ),
         ),
         states: states.stream,
@@ -468,8 +475,18 @@ void main() {
         TunnelsSnapshot(
           tunnels: [
             database.copyWith(group: 'Prod'),
-            const Tunnel(id: 'c3', name: 'Cache', localPort: 1, group: 'Prod'),
-            const Tunnel(id: 'd4', name: 'Docs', localPort: 2, group: 'Prod'),
+            const Tunnel(
+              id: 'c3',
+              name: 'Cache',
+              forward: SocksProxy(localPort: 1),
+              group: 'Prod',
+            ),
+            const Tunnel(
+              id: 'd4',
+              name: 'Docs',
+              forward: SocksProxy(localPort: 2),
+              group: 'Prod',
+            ),
             proxy.copyWith(group: 'Solo'),
           ],
         ),
@@ -496,7 +513,7 @@ void main() {
     const cache = Tunnel(
       id: 'c3',
       name: 'Cache',
-      localPort: 6379,
+      forward: SocksProxy(localPort: 6379),
       group: 'Prod',
     );
     final bloc = await pumpPage(

@@ -16,9 +16,11 @@ void main() {
   const database = Tunnel(
     id: 'a1',
     sshHost: 'bastion',
-    localPort: 15432,
-    remoteHost: 'db.internal',
-    remotePort: 5432,
+    forward: LocalForward(
+      localPort: 15432,
+      remoteHost: 'db.internal',
+      remotePort: 5432,
+    ),
   );
   const dropped = SshDroppedException('Connection reset by 10.0.0.1 port 22');
   const retryDelays = [Duration(seconds: 1), Duration(seconds: 2)];

@@ -70,32 +70,41 @@ const database = Tunnel(
   id: 'a1',
   name: 'Production database',
   sshHost: 'deploy@bastion',
-  localPort: 15432,
-  remoteHost: 'db.internal',
-  remotePort: 5432,
+  forward: LocalForward(
+    localPort: 15432,
+    remoteHost: 'db.internal',
+    remotePort: 5432,
+  ),
 );
 
 const proxy = Tunnel(
   id: 'b2',
-  kind: TunnelKind.socks,
   sshHost: 'bastion',
-  localPort: 1080,
+  forward: SocksProxy(localPort: 1080),
 );
 
 const docker = Tunnel(
   id: 's6',
   sshHost: 'bastion',
-  localPort: 2375,
-  remoteSocket: '/var/run/docker.sock',
+  forward: SocketForward(localPort: 2375, remoteSocket: '/var/run/docker.sock'),
 );
 
 const preview = Tunnel(
   id: 'r5',
-  kind: TunnelKind.remote,
   sshHost: 'bastion',
-  localPort: 3000,
-  remotePort: 8080,
+  forward: RemoteForward(remotePort: 8080, localPort: 3000),
 );
+
+extension ListeningOn on Tunnel {
+  Tunnel listeningOn(String bindAddress) => copyWith(
+    forward: switch (forward) {
+      final LocalForward local => local.copyWith(bindAddress: bindAddress),
+      final SocketForward socket => socket.copyWith(bindAddress: bindAddress),
+      final SocksProxy socks => socks.copyWith(bindAddress: bindAddress),
+      RemoteForward() => throw ArgumentError('Listens on the SSH host'),
+    },
+  );
+}
 
 class FakePreferences implements AgentPreferences {
   final _changes = StreamController<AgentSettings>.broadcast();

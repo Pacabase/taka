@@ -141,7 +141,11 @@ void main() {
   group('save', () {
     test('adds a new tunnel at the end and saves it', () async {
       final manager = await loaded();
-      const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
+      const added = Tunnel(
+        id: 'c3',
+        sshHost: 'web',
+        forward: SocksProxy(localPort: 8080),
+      );
 
       await manager.save(added);
 
@@ -164,7 +168,7 @@ void main() {
       () async {
         final manager = await loaded();
         await manager.toggle('a1');
-        final moved = database.copyWith(localPort: 15433);
+        final moved = database.copyWith.forward(localPort: 15433);
 
         await manager.save(moved);
 
@@ -199,7 +203,11 @@ void main() {
     );
 
     test('puts a tunnel that joins a group after its tunnels', () async {
-      const cache = Tunnel(id: 'c3', localPort: 6379, group: 'Prod');
+      const cache = Tunnel(
+        id: 'c3',
+        forward: SocksProxy(localPort: 6379),
+        group: 'Prod',
+      );
       store = FakeStore([proxy, database.copyWith(group: 'Prod'), cache]);
       final manager = await loaded();
 
@@ -256,7 +264,13 @@ void main() {
       final manager = await loaded();
 
       await manager.import(
-        [const Tunnel(id: 'c3', localPort: 6379, group: 'cache')],
+        [
+          const Tunnel(
+            id: 'c3',
+            forward: SocksProxy(localPort: 6379),
+            group: 'cache',
+          ),
+        ],
         groupColours: const {' cache ': TunnelColour.green},
       );
 
@@ -270,8 +284,16 @@ void main() {
 
       await manager.import(
         [
-          const Tunnel(id: 'c3', localPort: 6379, group: 'cache'),
-          const Tunnel(id: 'd4', localPort: 1, group: 'prod'),
+          const Tunnel(
+            id: 'c3',
+            forward: SocksProxy(localPort: 6379),
+            group: 'cache',
+          ),
+          const Tunnel(
+            id: 'd4',
+            forward: SocksProxy(localPort: 1),
+            group: 'prod',
+          ),
         ],
         groupColours: const {
           'cache': TunnelColour.green,
@@ -288,7 +310,11 @@ void main() {
 
     test('adds new tunnels after the others and saves them', () async {
       final manager = await loaded();
-      const added = Tunnel(id: 'c3', sshHost: 'web', localPort: 8080);
+      const added = Tunnel(
+        id: 'c3',
+        sshHost: 'web',
+        forward: SocksProxy(localPort: 8080),
+      );
 
       await manager.import([added]);
 
@@ -314,7 +340,11 @@ void main() {
     test("puts a tunnel in a group in use, whatever the name's case", () async {
       store = FakeStore([database.copyWith(group: 'Prod')]);
       final manager = await loaded();
-      const added = Tunnel(id: 'c3', localPort: 8080, group: 'prod');
+      const added = Tunnel(
+        id: 'c3',
+        forward: SocksProxy(localPort: 8080),
+        group: 'prod',
+      );
 
       await manager.import([added]);
 
@@ -323,7 +353,11 @@ void main() {
 
     test('keeps the group of a tunnel it adds', () async {
       final manager = await loaded();
-      const added = Tunnel(id: 'c3', localPort: 8080, group: 'Web');
+      const added = Tunnel(
+        id: 'c3',
+        forward: SocksProxy(localPort: 8080),
+        group: 'Web',
+      );
 
       await manager.import([added]);
 
@@ -341,9 +375,9 @@ void main() {
 
     test('gives a new id to a tunnel whose id is taken', () async {
       final manager = await loaded();
-      final other = database.copyWith(localPort: 15433);
+      final other = database.copyWith.forward(localPort: 15433);
 
-      await manager.import([other, other.copyWith(localPort: 15434)]);
+      await manager.import([other, other.copyWith.forward(localPort: 15434)]);
 
       expect(manager.state.tunnels.map((tunnel) => tunnel.id), [
         'a1',
@@ -576,8 +610,8 @@ void main() {
 
     test('a SOCKS proxy and a socket listen on their bind address', () async {
       store = FakeStore([
-        proxy.copyWith(bindAddress: '0.0.0.0'),
-        docker.copyWith(bindAddress: '172.17.0.1'),
+        proxy.listeningOn('0.0.0.0'),
+        docker.listeningOn('172.17.0.1'),
       ]);
       when(openAnySocksProxy).thenAnswer((_) async => tunnel);
       when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
@@ -607,17 +641,6 @@ void main() {
           abortTrigger: any(named: 'abortTrigger'),
         ),
       ).called(1);
-    });
-
-    test('opens the socket even with a host and port left over', () async {
-      store = FakeStore([docker.copyWith(remoteHost: 'db', remotePort: 5432)]);
-      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
-      final manager = await loaded();
-
-      await manager.toggle('s6');
-
-      expect(manager.state.statusOf('s6'), const Connected());
-      verifyNever(openAnyTunnel);
     });
 
     group('a remote tunnel', () {
@@ -659,7 +682,15 @@ void main() {
       });
 
       test('opens back to its local host when it has one', () async {
-        store = FakeStore([preview.copyWith(localHost: '192.168.1.1')]);
+        store = FakeStore([
+          preview.copyWith(
+            forward: const RemoteForward(
+              remotePort: 8080,
+              localHost: '192.168.1.1',
+              localPort: 3000,
+            ),
+          ),
+        ]);
         final manager = await loaded();
 
         await manager.toggle('r5');
@@ -769,18 +800,6 @@ void main() {
         expect(
           manager.state.statusOf('r5'),
           const Failed(message, failure: TunnelFailure.remotePortRefused),
-        );
-      });
-
-      test('fails without a port on the SSH host', () async {
-        store = FakeStore([preview.copyWith(remotePort: null)]);
-        final manager = await loaded();
-
-        await manager.toggle('r5');
-
-        expect(
-          manager.state.statusOf('r5'),
-          const Failed('A remote tunnel needs a port on the SSH host'),
         );
       });
     });
@@ -925,18 +944,6 @@ void main() {
         expect(manager.state.statusOf('a1').isOn, isFalse);
       });
     }
-
-    test('fails a local tunnel without a remote host', () async {
-      store = FakeStore([const Tunnel(id: 'c3', sshHost: 'web', localPort: 1)]);
-      final manager = await loaded();
-
-      await manager.toggle('c3');
-
-      expect(
-        manager.state.statusOf('c3'),
-        const Failed('A local tunnel needs a remote host and port'),
-      );
-    });
 
     group('to a server whose host key is new', () {
       const hostKey = SshHostKey(
@@ -1768,7 +1775,7 @@ void main() {
       ('172.17.0.1', '172.17.0.1'),
     ]) {
       test('listens on $address, and checks it at $reached', () async {
-        store = FakeStore([database.copyWith(bindAddress: address)]);
+        store = FakeStore([database.listeningOn(address)]);
         final manager = await checking();
 
         await manager.toggle('a1');
@@ -2287,7 +2294,7 @@ void main() {
       final manager = await loaded();
       await manager.toggle('a1');
 
-      await manager.save(database.copyWith(localPort: 15433));
+      await manager.save(database.copyWith.forward(localPort: 15433));
       expect(store.on, {'a1'});
 
       await manager.arrange([(id: 'b2', group: null), (id: 'a1', group: null)]);
@@ -2299,7 +2306,7 @@ void main() {
       await manager.toggle('a1');
       final saves = store.saveCount;
 
-      await manager.save(database.copyWith(localPort: 15433));
+      await manager.save(database.copyWith.forward(localPort: 15433));
 
       expect(store.saveCount, saves + 1);
       expect(manager.state.statusOf('a1'), const Connected());
@@ -2817,7 +2824,7 @@ void main() {
       final manager = await loaded();
       await manager.toggle('a1');
 
-      final saving = manager.save(database.copyWith(localPort: 15433));
+      final saving = manager.save(database.copyWith.forward(localPort: 15433));
       await pumpEventQueue();
       await manager.toggle('a1');
       stopping.complete();
