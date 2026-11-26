@@ -191,7 +191,7 @@ class TunnelSession({
 
       // Not on reconnects or at login: each check hits the service for real.
       final checks =
-          (tunnel.forward is LocalForward || tunnel.forward is SocketForward) &&
+          tunnel.kind == TunnelKind.local &&
           !isRestored &&
           !state.hasConnected &&
           checkDestination != null;
@@ -518,7 +518,7 @@ class TunnelSession({
       case RemoteForward(:final remotePort, :final localHost, :final localPort):
         final remote = await client.openRemoteTunnel(
           tunnel.target,
-          localHost: localHost ?? 'localhost',
+          localHost: localHost,
           localPort: localPort,
           remotePort: remotePort,
           onLog: onLog,

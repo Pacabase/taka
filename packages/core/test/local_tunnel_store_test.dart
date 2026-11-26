@@ -115,6 +115,10 @@ void main() {
     ('missing tunnels', '{"version": 1}'),
     ('a tunnel without an id', '{"version": 1, "tunnels": [{"localPort": 1}]}'),
     ('a tunnel that is not an object', '{"version": 1, "tunnels": [3]}'),
+    (
+      'a local tunnel without a destination',
+      '{"version": 1, "tunnels": [{"id": "c3", "localPort": 1}]}',
+    ),
   ]) {
     test('load rejects $name with a FormatException', () async {
       await file.create(recursive: true);

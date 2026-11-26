@@ -643,23 +643,6 @@ void main() {
       ).called(1);
     });
 
-    test('opens the socket even with a host and port left over', () async {
-      store = FakeStore([
-        Tunnel.fromJson({
-          ...docker.toJson(),
-          'remoteHost': 'db',
-          'remotePort': 5432,
-        }),
-      ]);
-      when(openAnySocketTunnel).thenAnswer((_) async => tunnel);
-      final manager = await loaded();
-
-      await manager.toggle('s6');
-
-      expect(manager.state.statusOf('s6'), const Connected());
-      verifyNever(openAnyTunnel);
-    });
-
     group('a remote tunnel', () {
       late FakeRemoteTunnel remote;
 

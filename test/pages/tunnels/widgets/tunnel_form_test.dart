@@ -415,11 +415,7 @@ void main() {
       isA<Tunnel>().having(
         (tunnel) => tunnel.forward,
         'forward',
-        const RemoteForward(
-          remotePort: 15432,
-          localHost: 'localhost',
-          localPort: 5432,
-        ),
+        const RemoteForward(remotePort: 15432, localPort: 5432),
       ),
     );
   });
@@ -820,14 +816,16 @@ void main() {
       await paste(tester, 2, 'ssh -R 8080:localhost:3000 bastion');
 
       expect(find.text('To, on this computer'), findsOneWidget);
+      expect(
+        tester
+            .widgetList<TextField>(find.byType(TextField))
+            .map((field) => field.controller?.text),
+        isNot(contains('localhost')),
+      );
       await tester.tap(find.text('Add'));
       expect(
         saved.single.forward,
-        const RemoteForward(
-          remotePort: 8080,
-          localHost: 'localhost',
-          localPort: 3000,
-        ),
+        const RemoteForward(remotePort: 8080, localPort: 3000),
       );
     }, variant: macOS);
 

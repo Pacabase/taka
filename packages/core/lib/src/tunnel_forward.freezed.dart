@@ -162,7 +162,7 @@ return remote(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String bindAddress,  int localPort,  String remoteHost,  int remotePort)?  local,TResult Function( String bindAddress,  int localPort,  String remoteSocket)?  socket,TResult Function( String bindAddress,  int localPort)?  socks,TResult Function( int remotePort,  String? localHost,  int localPort)?  remote,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String bindAddress,  int localPort,  String remoteHost,  int remotePort)?  local,TResult Function( String bindAddress,  int localPort,  String remoteSocket)?  socket,TResult Function( String bindAddress,  int localPort)?  socks,TResult Function( int remotePort,  String localHost,  int localPort)?  remote,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case LocalForward() when local != null:
 return local(_that.bindAddress,_that.localPort,_that.remoteHost,_that.remotePort);case SocketForward() when socket != null:
@@ -186,7 +186,7 @@ return remote(_that.remotePort,_that.localHost,_that.localPort);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String bindAddress,  int localPort,  String remoteHost,  int remotePort)  local,required TResult Function( String bindAddress,  int localPort,  String remoteSocket)  socket,required TResult Function( String bindAddress,  int localPort)  socks,required TResult Function( int remotePort,  String? localHost,  int localPort)  remote,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String bindAddress,  int localPort,  String remoteHost,  int remotePort)  local,required TResult Function( String bindAddress,  int localPort,  String remoteSocket)  socket,required TResult Function( String bindAddress,  int localPort)  socks,required TResult Function( int remotePort,  String localHost,  int localPort)  remote,}) {final _that = this;
 switch (_that) {
 case LocalForward():
 return local(_that.bindAddress,_that.localPort,_that.remoteHost,_that.remotePort);case SocketForward():
@@ -206,7 +206,7 @@ return remote(_that.remotePort,_that.localHost,_that.localPort);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String bindAddress,  int localPort,  String remoteHost,  int remotePort)?  local,TResult? Function( String bindAddress,  int localPort,  String remoteSocket)?  socket,TResult? Function( String bindAddress,  int localPort)?  socks,TResult? Function( int remotePort,  String? localHost,  int localPort)?  remote,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String bindAddress,  int localPort,  String remoteHost,  int remotePort)?  local,TResult? Function( String bindAddress,  int localPort,  String remoteSocket)?  socket,TResult? Function( String bindAddress,  int localPort)?  socks,TResult? Function( int remotePort,  String localHost,  int localPort)?  remote,}) {final _that = this;
 switch (_that) {
 case LocalForward() when local != null:
 return local(_that.bindAddress,_that.localPort,_that.remoteHost,_that.remotePort);case SocketForward() when socket != null:
@@ -440,11 +440,11 @@ as int,
 
 
 class RemoteForward extends TunnelForward {
-  const RemoteForward({required this.remotePort, this.localHost, required this.localPort}): super._();
+  const RemoteForward({required this.remotePort, this.localHost = 'localhost', required this.localPort}): super._();
   
 
  final  int remotePort;
- final  String? localHost;
+@JsonKey() final  String localHost;
 @override final  int localPort;
 
 /// Create a copy of TunnelForward
@@ -479,7 +479,7 @@ abstract mixin class $RemoteForwardCopyWith<$Res> implements $TunnelForwardCopyW
   factory $RemoteForwardCopyWith(RemoteForward value, $Res Function(RemoteForward) _then) = _$RemoteForwardCopyWithImpl;
 @override @useResult
 $Res call({
- int remotePort, String? localHost, int localPort
+ int remotePort, String localHost, int localPort
 });
 
 
@@ -496,11 +496,11 @@ class _$RemoteForwardCopyWithImpl<$Res>
 
 /// Create a copy of TunnelForward
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? remotePort = null,Object? localHost = freezed,Object? localPort = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? remotePort = null,Object? localHost = null,Object? localPort = null,}) {
   return _then(RemoteForward(
 remotePort: null == remotePort ? _self.remotePort : remotePort // ignore: cast_nullable_to_non_nullable
-as int,localHost: freezed == localHost ? _self.localHost : localHost // ignore: cast_nullable_to_non_nullable
-as String?,localPort: null == localPort ? _self.localPort : localPort // ignore: cast_nullable_to_non_nullable
+as int,localHost: null == localHost ? _self.localHost : localHost // ignore: cast_nullable_to_non_nullable
+as String,localPort: null == localPort ? _self.localPort : localPort // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }

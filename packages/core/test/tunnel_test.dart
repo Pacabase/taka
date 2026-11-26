@@ -50,6 +50,15 @@ void main() {
 
   group('JSON', () {
     test('a local tunnel round-trips', () {
+      expect(database.toJson(), {
+        'id': 'a1',
+        'name': 'Production database',
+        'kind': 'local',
+        'sshHost': 'deploy@bastion.example.com',
+        'localPort': 15432,
+        'remoteHost': 'db.internal',
+        'remotePort': 5432,
+      });
       expect(Tunnel.fromJson(database.toJson()), database);
     });
 
@@ -74,6 +83,10 @@ void main() {
         'remotePort': 8080,
       });
       expect(Tunnel.fromJson(preview.toJson()), preview);
+      expect(
+        Tunnel.fromJson({...preview.toJson(), 'localHost': 'localhost'}),
+        preview,
+      );
 
       expect(toRouter.toJson()['localHost'], '192.168.1.1');
       expect(Tunnel.fromJson(toRouter.toJson()), toRouter);
@@ -138,10 +151,37 @@ void main() {
       }
     });
 
+    test('says which field a tunnel of its kind is missing', () {
+      for (final (json, message) in [
+        (
+          {'id': 'a1', 'localPort': 15432, 'remotePort': 5432},
+          'A local tunnel needs remoteHost',
+        ),
+        ({'id': 'b2', 'kind': 'socks'}, 'A socks tunnel needs localPort'),
+      ]) {
+        expect(
+          () => Tunnel.fromJson(json),
+          throwsA(
+            isA<FormatException>().having(
+              (exception) => exception.message,
+              'message',
+              message,
+            ),
+          ),
+        );
+      }
+    });
+
     test('an unknown kind is not a tunnel', () {
       expect(
         () => Tunnel.fromJson({'id': 'c3', 'localPort': 8080, 'kind': 'vpn'}),
-        throwsFormatException,
+        throwsA(
+          isA<FormatException>().having(
+            (exception) => exception.message,
+            'message',
+            'Not a kind of tunnel: vpn',
+          ),
+        ),
       );
     });
 
@@ -231,13 +271,13 @@ void main() {
       );
       expect(database.listeningOn('0.0.0.0').address, '127.0.0.1:15432');
       expect(proxy.listeningOn('::').summary, 'SOCKS on [::]:1080 via bastion');
-      expect(reachableAt('0.0.0.0'), '127.0.0.1');
       expect(proxy.listeningOn('::').address, 'socks5h://[::1]:1080');
-      expect(reachableAt('127.0.0.1'), '127.0.0.1');
     });
 
     test('reaches every address on loopback however it is written', () {
       for (final (address, reached) in [
+        ('0.0.0.0', '127.0.0.1'),
+        ('127.0.0.1', '127.0.0.1'),
         ('::0', '::1'),
         ('0:0:0:0:0:0:0:0', '::1'),
         ('172.17.0.1', '172.17.0.1'),
@@ -553,6 +593,14 @@ void main() {
 
     test('is null for a tunnel ssh cannot open', () {
       expect(proxy.copyWith.forward(localPort: 0).sshCommand, isNull);
+      expect(
+        preview
+            .copyWith(
+              forward: const RemoteForward(remotePort: 65536, localPort: 3000),
+            )
+            .sshCommand,
+        isNull,
+      );
       expect(database.copyWith.forward(localPort: 65536).sshCommand, isNull);
       expect(proxy.copyWith(sshHost: '-oProxyCommand=x').sshCommand, isNull);
     });

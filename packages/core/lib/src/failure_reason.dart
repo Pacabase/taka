@@ -23,7 +23,7 @@ String failureShort(Tunnel tunnel, Failed failed) => switch (failed.failure) {
     SocketForward(:final remoteSocket) => "can't open $remoteSocket",
     SocksProxy() => "can't reach a site",
     RemoteForward(:final localHost, :final localPort) =>
-      "can't reach ${localHost ?? 'localhost'}:$localPort",
+      "can't reach $localHost:$localPort",
   },
   TunnelFailure.other => failed.message.trim(),
 };
@@ -63,7 +63,7 @@ String forwardWarning(Tunnel tunnel) => switch (tunnel.forward) {
     "Can't open $remoteSocket on the server.",
   SocksProxy() => "A site through the SOCKS proxy couldn't be reached.",
   RemoteForward(:final localHost, :final localPort) =>
-    "Can't reach ${localHost ?? 'localhost'}:$localPort from this computer.",
+    "Can't reach $localHost:$localPort from this computer.",
 };
 
 // Only a remote tunnel has the server listen.

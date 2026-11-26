@@ -80,11 +80,7 @@ void main() {
         const Tunnel(
           id: '',
           sshHost: 'bastion',
-          forward: RemoteForward(
-            remotePort: 8080,
-            localHost: 'localhost',
-            localPort: 3000,
-          ),
+          forward: RemoteForward(remotePort: 8080, localPort: 3000),
         ),
       );
       expect(pasted?.leftOut, isEmpty);
@@ -295,11 +291,7 @@ void main() {
         parseSshCommand('ssh -R 0.0.0.0:8080:localhost:3000 bastion')
             ?.tunnel
             .forward,
-        const RemoteForward(
-          remotePort: 8080,
-          localHost: 'localhost',
-          localPort: 3000,
-        ),
+        const RemoteForward(remotePort: 8080, localPort: 3000),
       );
     });
 

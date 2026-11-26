@@ -60,22 +60,19 @@ sealed class const TunnelForward._() with _$TunnelForward {
     required String remoteSocket,
   }) = SocketForward;
 
-  /// `ssh -D`.
   const factory socks({
     @Default('127.0.0.1') String bindAddress,
     required int localPort,
   }) = SocksProxy;
 
   /// `ssh -R`: the SSH host listens on its own [remotePort], and brings each
-  /// connection back to [localHost], or localhost when null, on [localPort].
+  /// connection back to [localHost] on [localPort].
   const factory remote({
     required int remotePort,
-    String? localHost,
+    @Default('localhost') String localHost,
     required int localPort,
   }) = RemoteForward;
 
-  /// Reads the fields [toJson] writes into a tunnel, or throws a
-  /// [FormatException] when one its kind needs is missing.
   static TunnelForward fromJson(Map<Object?, Object?> fields) {
     T? field<T>(String key) => switch (fields[key]) {
       final T value => value,
@@ -83,7 +80,9 @@ sealed class const TunnelForward._() with _$TunnelForward {
     };
     T required<T>(String key) =>
         field<T>(key) ??
-        (throw FormatException('A ${fields['kind']} tunnel needs $key'));
+        (throw FormatException(
+          'A ${fields['kind'] ?? 'local'} tunnel needs $key',
+        ));
 
     final bindAddress =
         bindAddressNamed(field<String>('bindAddress')) ?? '127.0.0.1';
@@ -107,7 +106,7 @@ sealed class const TunnelForward._() with _$TunnelForward {
       ),
       'remote' => RemoteForward(
         remotePort: required('remotePort'),
-        localHost: field('localHost'),
+        localHost: field('localHost') ?? 'localhost',
         localPort: required('localPort'),
       ),
       final kind => throw FormatException('Not a kind of tunnel: $kind'),
@@ -115,37 +114,40 @@ sealed class const TunnelForward._() with _$TunnelForward {
   }
 
   /// Flat, in the keys tunnels have always been saved with.
-  Map<String, Object?> toJson() => switch (this) {
-    LocalForward(
-      :final bindAddress,
-      :final localPort,
-      :final remoteHost,
-      :final remotePort,
-    ) =>
-      {
-        'kind': kind.name,
+  Map<String, Object?> toJson() => {
+    'kind': kind.name,
+    ...switch (this) {
+      LocalForward(
+        :final bindAddress,
+        :final localPort,
+        :final remoteHost,
+        :final remotePort,
+      ) =>
+        {
+          'bindAddress': ?bindAddressNamed(bindAddress),
+          'localPort': localPort,
+          'remoteHost': remoteHost,
+          'remotePort': remotePort,
+        },
+      SocketForward(
+        :final bindAddress,
+        :final localPort,
+        :final remoteSocket,
+      ) =>
+        {
+          'bindAddress': ?bindAddressNamed(bindAddress),
+          'localPort': localPort,
+          'remoteSocket': remoteSocket,
+        },
+      SocksProxy(:final bindAddress, :final localPort) => {
         'bindAddress': ?bindAddressNamed(bindAddress),
         'localPort': localPort,
-        'remoteHost': remoteHost,
+      },
+      RemoteForward(:final remotePort, :final localHost, :final localPort) => {
+        if (localHost != 'localhost') 'localHost': localHost,
+        'localPort': localPort,
         'remotePort': remotePort,
       },
-    SocketForward(:final bindAddress, :final localPort, :final remoteSocket) =>
-      {
-        'kind': kind.name,
-        'bindAddress': ?bindAddressNamed(bindAddress),
-        'localPort': localPort,
-        'remoteSocket': remoteSocket,
-      },
-    SocksProxy(:final bindAddress, :final localPort) => {
-      'kind': kind.name,
-      'bindAddress': ?bindAddressNamed(bindAddress),
-      'localPort': localPort,
-    },
-    RemoteForward(:final remotePort, :final localHost, :final localPort) => {
-      'kind': kind.name,
-      'localHost': ?localHost,
-      'localPort': localPort,
-      'remotePort': remotePort,
     },
   };
 
@@ -197,7 +199,7 @@ sealed class const TunnelForward._() with _$TunnelForward {
     RemoteForward(:final remotePort, :final localHost, :final localPort) =>
       remoteTunnelCommand(
         target,
-        localHost: localHost ?? 'localhost',
+        localHost: localHost,
         localPort: localPort,
         remotePort: remotePort,
       ),
@@ -217,7 +219,7 @@ sealed class const TunnelForward._() with _$TunnelForward {
     SocksProxy(:final bindAddress, :final localPort) =>
       'SOCKS on ${_bracketed(bindAddress)}:$localPort via $sshHost',
     RemoteForward(:final remotePort, :final localHost, :final localPort) =>
-      'port $remotePort on $sshHost → ${localHost ?? 'localhost'}:$localPort',
+      'port $remotePort on $sshHost → $localHost:$localPort',
   };
 }
 

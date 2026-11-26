@@ -177,7 +177,7 @@ TunnelForward _forward(_Argument forward, {required bool gatewayPorts}) =>
       ),
       ('R', final remote?, _, _) => RemoteForward(
         remotePort: _port(remote[3]!),
-        localHost: remote[4] ?? remote[5],
+        localHost: remote[4] ?? remote[5]!,
         localPort: _port(remote[6]!),
       ),
       ('D', _, final socks?, _) => SocksProxy(
